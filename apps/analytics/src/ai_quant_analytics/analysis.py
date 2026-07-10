@@ -16,11 +16,11 @@ from ai_quant_analytics.contracts import (
     AnalysisStatus,
     FullAnalysisRequest,
     Metric,
+    TrendResult,
 )
 from ai_quant_analytics.core_metrics import (
     calculate_return_metrics,
     calculate_risk_metrics,
-    calculate_technical_metrics,
 )
 from ai_quant_analytics.errors import AnalyticsDomainError
 from ai_quant_analytics.fundamentals import (
@@ -30,6 +30,7 @@ from ai_quant_analytics.fundamentals import (
 from ai_quant_analytics.normalization import clean_price_series, decimal_from_string
 from ai_quant_analytics.scenarios import calculate_scenario_metrics
 from ai_quant_analytics.serialization import sort_warnings
+from ai_quant_analytics.technicals import calculate_technical_metrics
 
 router = APIRouter(prefix="/analytics/v1", tags=["analytics"])
 
@@ -88,17 +89,35 @@ def analyze(  # noqa: C901 - explicit dispatch keeps the endpoint module boundar
     )
 
     metrics: list[Metric] = []
+    trend: TrendResult | None = None
     for module in modules:
         if module is AnalysisModule.RETURNS:
-            metrics.extend(calculate_return_metrics(series))
+            metrics.extend(calculate_return_metrics(series, benchmark))
         elif module is AnalysisModule.RISK:
-            metrics.extend(calculate_risk_metrics(series, request.risk_free_rate_annual))
+            metrics.extend(
+                calculate_risk_metrics(
+                    series,
+                    benchmark,
+                    request.risk_free_rate_annual,
+                    request.minimum_accepted_return_annual,
+                ),
+            )
         elif module is AnalysisModule.TECHNICALS:
-            metrics.extend(calculate_technical_metrics(series))
+            technical_metrics, trend = calculate_technical_metrics(series)
+            metrics.extend(technical_metrics)
         elif module is AnalysisModule.FUNDAMENTALS:
-            metrics.extend(calculate_fundamental_metrics(request.fundamentals))
+            metrics.extend(
+                calculate_fundamental_metrics(request.fundamentals, request.security_type),
+            )
         elif module is AnalysisModule.VALUATION:
-            metrics.extend(calculate_valuation_metrics(request.scenario_input, series))
+            metrics.extend(
+                calculate_valuation_metrics(
+                    request.scenario_input,
+                    series,
+                    request.fundamentals,
+                    request.security_type,
+                ),
+            )
         elif module is AnalysisModule.SCENARIOS:
             metrics.extend(
                 calculate_scenario_metrics(
@@ -131,19 +150,20 @@ def analyze(  # noqa: C901 - explicit dispatch keeps the endpoint module boundar
         sample_size=len(series.bars),
         benchmark_sample_size=len(benchmark.bars),
         metrics=tuple(metrics),
+        trend=trend,
         warnings=response_warnings,
     )
 
 
 @router.post("/returns", response_model=AnalysisResponse, summary="Calculate return metrics")
 def analyze_returns(request: FullAnalysisRequest) -> AnalysisResponse:
-    """Calculate total return and CAGR."""
+    """Calculate standalone and aligned benchmark return metrics."""
     return analyze(request, (AnalysisModule.RETURNS,))
 
 
 @router.post("/risk", response_model=AnalysisResponse, summary="Calculate risk metrics")
 def analyze_risk(request: FullAnalysisRequest) -> AnalysisResponse:
-    """Calculate annualized volatility, maximum drawdown, and Sharpe ratio."""
+    """Calculate standalone, tail, drawdown, and benchmark risk metrics."""
     return analyze(request, (AnalysisModule.RISK,))
 
 
@@ -153,7 +173,7 @@ def analyze_risk(request: FullAnalysisRequest) -> AnalysisResponse:
     summary="Calculate technical metrics",
 )
 def analyze_technicals(request: FullAnalysisRequest) -> AnalysisResponse:
-    """Calculate final RSI-14, MACD, and MACD signal values."""
+    """Calculate technical indicators and deterministic trend classification."""
     return analyze(request, (AnalysisModule.TECHNICALS,))
 
 
@@ -190,8 +210,8 @@ def analyze_scenarios(request: FullAnalysisRequest) -> AnalysisResponse:
 @router.post(
     "/full-analysis",
     response_model=AnalysisResponse,
-    summary="Calculate the complete Phase 3 metric set",
+    summary="Calculate the complete quant_v1 metric set",
 )
 def analyze_full(request: FullAnalysisRequest) -> AnalysisResponse:
-    """Calculate all deterministic Phase 3 modules with one cleaning pass."""
+    """Calculate all deterministic quant_v1 modules with one cleaning pass."""
     return analyze(request, _FULL_ANALYSIS_ORDER)

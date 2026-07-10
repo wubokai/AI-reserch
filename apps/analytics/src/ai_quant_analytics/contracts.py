@@ -83,6 +83,16 @@ class AnalysisStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class TrendClassification(StrEnum):
+    """Deterministic long-horizon trend labels."""
+
+    STRONG_UPTREND = "STRONG_UPTREND"
+    UPTREND = "UPTREND"
+    RANGE = "RANGE"
+    DOWNTREND = "DOWNTREND"
+    STRONG_DOWNTREND = "STRONG_DOWNTREND"
+
+
 class PriceBar(StrictApiModel):
     """One adjusted daily OHLCV observation."""
 
@@ -203,6 +213,33 @@ class Metric(StrictApiModel):
         return self
 
 
+class TrendSignals(StrictApiModel):
+    """The five deterministic signals used to classify trend."""
+
+    close_above_sma20: Literal[-1, 1] = Field(alias="closeAboveSma20")
+    sma20_above_sma50: Literal[-1, 1] = Field(alias="sma20AboveSma50")
+    sma50_above_sma200: Literal[-1, 1] = Field(alias="sma50AboveSma200")
+    sma50_slope_20: Literal[-1, 0, 1] = Field(alias="sma50Slope20")
+    close_distance_sma200: Literal[-1, 0, 1] = Field(alias="closeDistanceSma200")
+
+
+class TrendResult(StrictApiModel):
+    """Versioned, explainable trend classification without LLM involvement."""
+
+    classification: TrendClassification
+    score: Annotated[int, Field(ge=-5, le=5)]
+    signals: TrendSignals
+    sample_size: Annotated[int, Field(ge=200)] = Field(alias="sampleSize")
+    period_start: date = Field(alias="periodStart")
+    period_end: date = Field(alias="periodEnd")
+    calculation_version: Literal["quant_v1"] = Field(alias="calculationVersion")
+    input_snapshot_ids: tuple[SnapshotId, ...] = Field(
+        alias="inputSnapshotIds",
+        max_length=100,
+    )
+    warnings: tuple[AnalyticsWarning, ...] = Field(max_length=20)
+
+
 class AnalysisResponse(StrictApiModel):
     """Deterministic response envelope returned by every POST endpoint."""
 
@@ -218,6 +255,7 @@ class AnalysisResponse(StrictApiModel):
         alias="benchmarkSampleSize",
     )
     metrics: tuple[Metric, ...] = Field(max_length=300)
+    trend: TrendResult | None
     warnings: tuple[AnalyticsWarning, ...] = Field(max_length=100)
 
 

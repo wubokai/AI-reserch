@@ -263,12 +263,13 @@ public class DeterministicMockReportGenerator {
         );
 
         ObjectNode dataQuality = report.putObject("dataQuality");
-        List<String> missingMetrics = new ArrayList<>(orderedQuant.stream()
+        List<String> optionalUnavailableMetrics = orderedQuant.stream()
                 .filter(item -> !"AVAILABLE".equals(item.status()) || item.value() == null)
                 .map(StoredQuantResult::metricName)
                 .distinct()
                 .sorted()
-                .toList());
+                .toList();
+        List<String> missingMetrics = new ArrayList<>();
         if (!fundamentalRequested) {
             missingMetrics.add("fundamental_analysis: NOT_AVAILABLE (not requested)");
         }
@@ -282,11 +283,16 @@ public class DeterministicMockReportGenerator {
         missingMetrics.forEach(missingData::add);
         dataQuality.putArray("staleEvidenceIds");
         dataQuality.putArray("sourceConflicts");
-        dataQuality.putArray("limitations")
+        ArrayNode limitations = dataQuality.putArray("limitations");
+        limitations
                 .add(DEMO_WATERMARK)
                 .add(chinese
                         ? "固定演示数据不代表真实市场、公司或宏观状况。"
                         : "Fixed demo data does not represent real market, company, or macro conditions.");
+        optionalUnavailableMetrics.stream()
+                .limit(28)
+                .map(name -> "Optional quant metric unavailable: " + name)
+                .forEach(limitations::add);
 
         report.putArray("conclusion").add(claims.calculation(
                 "conclusion_weighted_price",

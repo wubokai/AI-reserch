@@ -21,6 +21,7 @@
 | `progress.md` | 当前实现、验证状态和受控限制 |
 | `phase2-test-matrix.md` | Gate G2 已通过的持久任务与状态机验证记录 |
 | `phase3-test-matrix.md` | Gate G3 Mock 纵向闭环的本地与远程通过证据 |
+| `phase4-test-matrix.md` | Gate G4 完整量化、黄金数据和数值边界的通过证据 |
 | `adr/` | 关键、可追溯的架构决策 |
 
 ## 决策优先级

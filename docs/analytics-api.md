@@ -54,6 +54,22 @@ warnings[]
 
 响应级 `status` 为 `COMPLETED | COMPLETED_WITH_WARNINGS | FAILED`，不映射 Java Research 终态。Java 根据所请求模块、Evidence 和报告策略裁决 `COMPLETED/PARTIALLY_COMPLETED/FAILED`。
 
+技术模块另返回 `trend`：样本少于 200 个有效价格时为 `null`；否则包含固定五项信号、
+`score=-5..5`、分类、区间、样本、版本和 Snapshot lineage。Trend 完全由确定性公式产生，不调用 LLM。
+
+`full-analysis` 的规范指标顺序为：
+
+1. 9 项收益与基准收益；
+2. 13 项风险、回撤和配对风险；
+3. 16 项技术指标与独立 `trend`；
+4. 16 项基本面指标；
+5. 9 项估值指标；
+6. 10 项 Bull/Base/Bear 情景结果。
+
+某个可选指标为 `NOT_AVAILABLE` 只会使 Analytics 响应成为 `COMPLETED_WITH_WARNINGS`；Java 只在
+报告必需的核心收益/风险或三情景指标缺失时把量化步骤标记为 partial。Forward P/E 等受控缺失
+不能把原有 Mock 研究闭环误判为降级。
+
 ## 5. 错误与 HTTP
 
 - `200`：请求格式和核心输入合法；单个指标不可用通过 Metric status/warning 表达。
@@ -96,3 +112,5 @@ Java consumer 与 Python provider 共享 JSON fixture，至少覆盖：
 4. 未知字段拒绝；
 5. 相同输入哈希的确定性输出；
 6. schemaVersion/calculationVersion 不兼容时快速失败。
+7. Metric 自身的 calculationVersion、sampleSize、warnings 与 Phase 4 `trend` 结构；
+8. 可选 `NOT_AVAILABLE` 不触发研究降级，报告必需指标缺失则触发 partial。

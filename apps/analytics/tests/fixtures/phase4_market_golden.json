@@ -1,0 +1,32 @@
+{
+  "description": "Reviewed quant_v1 market golden set: five-return cycles repeated 20 times, producing exactly 100 daily returns.",
+  "initialAssetPrice": "100",
+  "initialBenchmarkPrice": "200",
+  "assetReturnCycle": ["0.0100", "-0.0050", "0.0020", "-0.0080", "0.0060"],
+  "benchmarkReturnCycle": ["0.0050", "-0.0020", "0.0010", "-0.0030", "0.0040"],
+  "cycleCount": 20,
+  "expected": {
+    "latest_daily_return": "0.00600000",
+    "total_return": "0.10264720",
+    "annualized_return": "0.27920509",
+    "cagr": "0.42888218",
+    "rolling_return_20": "0.01973498",
+    "benchmark_total_return": "0.10456438",
+    "excess_total_return": "-0.00191718",
+    "benchmark_annualized_return": "0.28481738",
+    "excess_annualized_return": "-0.00561229",
+    "daily_volatility": "0.00672700",
+    "annualized_volatility": "0.10678781",
+    "downside_deviation": "0.06697462",
+    "max_drawdown": "-0.01098592",
+    "drawdown_duration": "4",
+    "historical_var_95": "0.00800000",
+    "historical_cvar_95": "0.00800000",
+    "sharpe_ratio": "1.99251426",
+    "sortino_ratio": "3.76261922",
+    "calmar_ratio": "25.41481172",
+    "beta": "2.10000000",
+    "alpha": "-0.23405386",
+    "correlation": "0.99215674"
+  }
+}

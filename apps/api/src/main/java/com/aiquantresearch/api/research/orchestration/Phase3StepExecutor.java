@@ -30,12 +30,43 @@ import org.springframework.stereotype.Component;
 public class Phase3StepExecutor {
 
     private static final Set<String> FUNDAMENTAL_METRICS = Set.of(
+            "revenue_growth_yoy",
+            "revenue_cagr",
             "gross_margin",
             "operating_margin",
             "net_margin",
             "free_cash_flow_margin",
+            "eps_growth",
+            "debt_to_equity",
+            "net_debt",
+            "current_ratio",
+            "interest_coverage",
+            "return_on_equity",
+            "return_on_assets",
+            "return_on_invested_capital",
+            "share_dilution",
+            "capex_trend_slope",
             "market_capitalization",
-            "enterprise_value"
+            "price_to_earnings",
+            "forward_price_to_earnings",
+            "price_to_sales",
+            "price_to_book",
+            "enterprise_value",
+            "enterprise_value_to_revenue",
+            "enterprise_value_to_ebitda",
+            "free_cash_flow_yield"
+    );
+
+    private static final Set<String> REQUIRED_REPORT_METRICS = Set.of(
+            "total_return",
+            "cagr",
+            "annualized_volatility",
+            "max_drawdown",
+            "sharpe_ratio",
+            "scenario_bull_implied_price",
+            "scenario_base_implied_price",
+            "scenario_bear_implied_price",
+            "weighted_scenario_value"
     );
 
     private final Phase3ArtifactStore artifactStore;
@@ -225,9 +256,14 @@ public class Phase3StepExecutor {
         );
         try {
             JsonNode response = analyticsClient.runFullAnalysis(request);
-            boolean partial = "COMPLETED_WITH_WARNINGS".equals(response.path("status").asText());
+            boolean partial = hasUnavailableRequiredReportMetric(response);
             List<String> warnings = new java.util.ArrayList<>();
-            response.path("warnings").forEach(item -> warnings.add(item.path("code").asText()));
+            response.path("warnings").forEach(item -> {
+                String metricName = item.path("metricName").asText();
+                if (metricName.isBlank() || REQUIRED_REPORT_METRICS.contains(metricName)) {
+                    warnings.add(item.path("code").asText());
+                }
+            });
             return new StepExecutionResult(response, partial, warnings);
         } catch (AnalyticsServiceException exception) {
             throw new StepExecutionException(
@@ -237,6 +273,16 @@ public class Phase3StepExecutor {
                     exception
             );
         }
+    }
+
+    static boolean hasUnavailableRequiredReportMetric(JsonNode response) {
+        java.util.Map<String, String> statuses = new java.util.HashMap<>();
+        response.path("metrics").forEach(metric -> statuses.put(
+                metric.path("name").asText(),
+                metric.path("status").asText()
+        ));
+        return REQUIRED_REPORT_METRICS.stream()
+                .anyMatch(name -> !"AVAILABLE".equals(statuses.get(name)));
     }
 
     private StepExecutionResult analyzeFundamentals(ResearchExecutionContext context) {

@@ -1,8 +1,8 @@
 # AI Quant Research Assistant 风险登记册
 
-文档版本：0.2
+文档版本：0.3
 
-状态：Gate G3 已通过；Phase 4+ 前向风险持续跟踪
+状态：Gate G4 已通过；Phase 5+ 前向风险持续跟踪
 
 日期：2026-07-10
 
@@ -30,7 +30,7 @@
 | R-001 | 项目范围同时覆盖 MVP、完整 v1 和生产级能力，导致长期没有可运行闭环 | 高 | 高 | 大量模块只有占位代码；连续阶段无法演示创建到报告 | Mock First；Phase 3 必须形成纵向闭环；Should/Could 不得阻塞 Must | Phase 0-3 | 已缓解 |
 | R-002 | LLM 伪造价格、财务数字、日期或增长率 | 高 | 严重 | 报告出现 Evidence 中不存在的数值；自由文本包含未结构化数字 | Claim/Evidence 模型；数值引用；确定性验证器；不合格 Claim 隔离；LLM 不计算指标 | Phase 3-6 | Phase 3 已缓解；Phase 6 开放 |
 | R-003 | 报告纯文本字段绕过四类 Claim 和 Evidence 要求 | 高 | 严重 | executive summary 或 conclusion 无 evidenceIds | 所有可验证叙事改为 Claim；模板只渲染已验证 Claim | Phase 0、5 | Phase 3 已缓解；Phase 5 开放 |
-| R-004 | 指标口径含糊造成结果看似正确但实际错误 | 高 | 严重 | Java/Python/文档得到不同 CAGR、VaR、Alpha；测试只检查不报错 | 固化 calculation_version、公式、符号、年化、对齐和舍入；黄金数据测试 | Phase 0、4 | 缓解中 |
+| R-004 | 指标口径含糊造成结果看似正确但实际错误 | 高 | 严重 | Java/Python/文档得到不同 CAGR、VaR、Alpha；测试只检查不报错 | 固化 calculation_version、公式、符号、年化、对齐和舍入；黄金数据测试 | Phase 0、4 | 已缓解 |
 | R-005 | 使用内存线程或 Spring @Async 导致任务在重启时丢失 | 高 | 高 | 重启后 RUNNING 任务永久卡住；无 Worker 所有权 | PostgreSQL 持久队列、lease、heartbeat、超时回收和锁 | Phase 2 | 已缓解 |
 | R-006 | 步骤重试产生重复数据、报告版本或 LLM 费用 | 高 | 高 | attempt 增加时重复行；相同调用多次计费 | 步骤幂等键、输入哈希、唯一约束、调用去重键和事务边界 | Phase 2、6 | Phase 3 已缓解；Phase 6 开放 |
 | R-007 | 行情或基本面 Provider 许可不允许持久化、缓存、展示或导出 | 中 | 严重 | 服务条款限制再分发；供应商要求删除历史数据 | Phase 7 前不选定；完成书面许可矩阵；不满足存储/导出权即停止接入 | Phase 7 | 延后决策 |
@@ -39,10 +39,10 @@
 | R-010 | SEC 或网页内容包含 Prompt Injection 并诱导模型改变规则或调用工具 | 中 | 严重 | Filing 文本出现指令；模型尝试引用未授权来源 | 外部文本不可信标记、指令/数据隔离、工具白名单、Schema、Evidence 验证、禁止执行抓取内容命令 | Phase 5-7 | 开放 |
 | R-011 | API Key、密码或 Token 进入代码、Git、日志或错误响应 | 中 | 严重 | secret scan 命中；日志出现 Authorization | 环境变量、.env.example、日志脱敏、错误过滤、CI secret scan、测试伪密钥 | Phase 1、9 | 开放 |
 | R-012 | 证券资源缺少所有权检查，用户可通过 UUID 读取或删除他人报告 | 中 | 严重 | 按 ID Repository 查询不含 user_id | Service 层统一 currentUser；Repository 查询包含 owner；IDOR 集成测试 | Phase 2、9 | 缓解中 |
-| R-013 | ETF 被套用普通公司财务和 SEC 分析，产生错误结论 | 高 | 高 | ETF 报告出现 ROIC、公司客户、10-K 结论 | SecurityType 能力矩阵；NOT_APPLICABLE；按类型选择报告模板和步骤 | Phase 2-5 | 开放 |
+| R-013 | ETF 被套用普通公司财务和 SEC 分析，产生错误结论 | 高 | 高 | ETF 报告出现 ROIC、公司客户、10-K 结论 | SecurityType 能力矩阵；NOT_APPLICABLE；按类型选择报告模板和步骤 | Phase 2-5 | Analytics 已缓解；Phase 5 报告开放 |
 | R-014 | 数据过期、缺失或冲突却在报告中被描述为当前数据 | 中 | 严重 | asOfDate 晚于 Evidence；页面无 stale 标记 | Freshness 规则版本化；asOfDate 取证据有效期；Data Quality；冲突进入 limitations | Phase 3-7 | 开放 |
-| R-015 | 公司行动、复权方式或交易日对齐错误，扭曲收益和 Beta | 中 | 严重 | 拆股附近出现异常收益；标的和基准长度不一致 | adjustedClose 为收益真源；保留原始 OHLCV；共同日期 inner join；公司行动测试 | Phase 4、7 | 开放 |
-| R-016 | 财务指标概念映射错误，尤其 SEC XBRL 标签和正负号 | 高 | 严重 | 同一公司年份指标跳变；现金流符号相反 | 标准指标字典、映射版本、来源 concept 记录、跨期校验、人工黄金样例 | Phase 4、7 | 开放 |
+| R-015 | 公司行动、复权方式或交易日对齐错误，扭曲收益和 Beta | 中 | 严重 | 拆股附近出现异常收益；标的和基准长度不一致 | adjustedClose 为收益真源；保留原始 OHLCV；共同日期 inner join；公司行动测试 | Phase 4、7 | 计算层已缓解；真实 Provider 开放 |
+| R-016 | 财务指标概念映射错误，尤其 SEC XBRL 标签和正负号 | 高 | 严重 | 同一公司年份指标跳变；现金流符号相反 | 标准指标字典、映射版本、来源 concept 记录、跨期校验、人工黄金样例 | Phase 4、7 | 计算层已缓解；Provider 映射开放 |
 | R-017 | Forward P/E、同行估值、催化剂缺少数据源却被强制输出 | 高 | 高 | 报告使用未注册预测或虚构日期 | 默认 NOT_AVAILABLE；不作为 MVP/v1 硬数据项；仅在许可数据源可用时启用 | Phase 0、7 | 缓解中 |
 | R-018 | Bull/Bear 各三条的数量要求驱动模型编造 | 高 | 严重 | Evidence 不足仍固定生成三条 | 数据真实性优先；允许少于三条；记录 INSUFFICIENT_EVIDENCE | Phase 0、5-6 | 已缓解 |
 | R-019 | Mock 数据看起来像真实当前行情，误导用户 | 中 | 严重 | 页面或 PDF 缺 Demo 标记；asOfDate 使用当天 | 每条 Mock 快照 isDemoData=true；页面、报告、导出永久水印；E2E 检查 | Phase 3 | 已缓解 |
@@ -87,6 +87,22 @@
 | R-025 | 报告绑定不可变 Source Snapshot、Evidence、Quant Result、calculation version 和内容哈希；历史按版本读取，重复导出字节一致 | Phase 5 仍需对真实来源修订、长期保留和更多报告版本做回归 |
 | R-029 | Phase 3 使用版本化确定性 Data Quality/Confidence 逻辑，不允许 Mock 生成器自由评分；相同输入报告哈希稳定 | Phase 5 需完善各分项解释和与 Freshness/来源冲突的系统评测 |
 | R-032 | HTML 转义恶意 script/link fixture，输出无 `<script>`、外部 `href/src/url`；PDF 只使用本地字体/资源；远程 HTML/PDF 导出通过 | Phase 9 在引入新图表/资源时重新评审 CSP/SSRF |
+
+### 2.3 Gate G4 风险处置（2026-07-10）
+
+[GitHub Actions run 29111976669](https://github.com/wubokai/AI-reserch/actions/runs/29111976669)
+的 Web/Playwright、Analytics、API/Testcontainers、secret scan 和 Compose 全部通过。首次远程 run
+`29111664939` 暴露了可选指标缺失被报告层误判为 partial 的真实回归；修复后新增 policy/report
+回归测试并重新完成五服务闭环。详细证据见 [`phase4-test-matrix.md`](./phase4-test-matrix.md)。
+
+| 风险 | Phase 4 已实现的控制与验证证据 | 剩余风险/下一 Gate |
+|---|---|---|
+| R-004 | 73 个 Metric 的公式、阈值、符号、舍入、状态和顺序固化在 `quant_v1`；市场/财务黄金集、手算样例、性质测试与 59/60、99/100、199/200 边界通过 | 新 calculationVersion 或公式变更时必须重新建立黄金基线 |
+| R-009 | Pydantic/JSON Schema 新增 Trend；Java 校验根/Metric/Trend 版本和结构；可选缺失与报告必需缺失的降级策略分别有 consumer test | Phase 5 新增 Evidence 契约时继续同步机器 Schema 和多语言测试 |
+| R-013 | ETF 的 16 项公司基本面和 9 项公司估值统一返回 `NOT_APPLICABLE` + `ETF_NOT_APPLICABLE` | Phase 5 仍需在报告模板/SEC 步骤贯彻能力矩阵 |
+| R-015 | adjustedClose 收益真源、ATR 同比缩放 OHLC、共同日期 inner join、错位 warning 和乱序稳定性已验证 | Phase 7 真实 Provider 仍需公司行动/分红/交易日历 contract test |
+| R-016 | 财务期间、单位、TTM/年度/季度选择、CapEx 符号、EPS 跨零、税率/权益/EBITDA 边界和人工多期黄金样例已验证 | Phase 7 真实 Provider/XBRL concept 映射仍需人工黄金公司样本 |
+| R-017 | 无可追踪预测时 Forward P/E 明确 `FORECAST_DATA_UNAVAILABLE`；可选缺失保留 limitation 但不误判整个报告 partial | Phase 7 只有经许可且带 lineage 的预期数据才能启用 |
 
 ## 3. MVP 接受的受控限制
 
