@@ -6,3 +6,7 @@ Canonical Java-to-Python contracts:
 - `full-analysis-response.schema.json`
 
 The schemas deliberately include adjusted OHLCV and complete benchmark price bars. Java and Python contract tests must validate the same fixtures against these files.
+
+Phase 3 freezes `calculationVersion=quant_v1`. Decimal values remain JSON strings at the
+service boundary; implementations must reject non-finite values and serialize results with
+HALF_EVEN rounding in deterministic metric and warning order.

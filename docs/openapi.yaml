@@ -9,7 +9,7 @@ info:
     traceable to registered evidence. Research created with mock providers is
     marked as MOCK; the UI and exports render DEMO DATA - NOT REAL MARKET DATA.
     MIXED_TEST is test-only and cannot be published through ordinary user flows.
-    During Phase 2, Basic authentication is available only through an explicitly
+    During Phase 2 and the Phase 3 closed-loop MVP, Basic authentication is available only through an explicitly
     enabled development/test demo principal. Bearer authentication is the production
     contract but is not activated until the formal auth integration is delivered;
     the Phase 2 production profile therefore fails closed at startup.
@@ -825,11 +825,13 @@ components:
       type: string
       enum: [QUICK, STANDARD, DEEP]
       default: STANDARD
+      description: Phase 3 implements STANDARD; QUICK/DEEP return NOT_IMPLEMENTED_FOR_DEPTH.
 
     ResearchPeriod:
       type: string
       enum: [1y, 3y, 5y, 10y, max]
       default: 5y
+      description: Phase 3 implements the deterministic 5y Mock fixture only.
 
     Locale:
       type: string
@@ -847,6 +849,10 @@ components:
     ClaimType:
       type: string
       enum: [FACT, CALCULATION, INFERENCE, OPINION]
+
+    ClaimMateriality:
+      type: string
+      enum: [MATERIAL, SUPPORTING]
 
     EvidenceType:
       type: string
@@ -1198,40 +1204,103 @@ components:
       type: object
       additionalProperties: false
       required:
-        - claimId
-        - text
+        - id
+        - statement
         - claimType
-        - confidence
-        - material
+        - materiality
         - evidenceIds
+        - calculationIds
+        - numericReferences
+        - confidence
+        - limitations
       properties:
-        claimId:
+        id:
           type: string
           pattern: '^cl_[A-Za-z0-9_-]{1,64}$'
-        text:
+        statement:
           type: string
           minLength: 1
+          maxLength: 1200
         claimType:
           $ref: '#/components/schemas/ClaimType'
+        materiality:
+          $ref: '#/components/schemas/ClaimMateriality'
+        evidenceIds:
+          type: array
+          minItems: 1
+          maxItems: 12
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^ev_[A-Za-z0-9_-]{1,64}$'
+        calculationIds:
+          type: array
+          maxItems: 12
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^calc_[A-Za-z0-9_-]{1,64}$'
+        numericReferences:
+          type: array
+          maxItems: 24
+          items:
+            $ref: '#/components/schemas/NumericReference'
         confidence:
           type: number
           minimum: 0
           maximum: 1
           description: Support level for this Claim based on its linked Evidence and Calculations.
-        material:
-          type: boolean
-        evidenceIds:
+        limitations:
           type: array
-          uniqueItems: true
+          maxItems: 10
           items:
             type: string
-            pattern: '^ev_[A-Za-z0-9]+$'
+            minLength: 1
+            maxLength: 500
         validationStatus:
           $ref: '#/components/schemas/ValidationStatus'
         validationNotes:
           type: array
           items:
             type: string
+
+    NumericReference:
+      type: object
+      additionalProperties: false
+      required:
+        - token
+        - normalizedValue
+        - unit
+        - sourceKind
+        - sourceId
+        - jsonPointer
+        - tolerance
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 100
+        normalizedValue:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 32
+        sourceKind:
+          type: string
+          enum: [EVIDENCE, CALCULATION]
+        sourceId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        jsonPointer:
+          type: string
+          minLength: 1
+          maxLength: 300
+        tolerance:
+          type: string
+          pattern: '^[0-9]+(?:\.[0-9]+)?$'
 
     Evidence:
       type: object
@@ -1253,7 +1322,7 @@ components:
       properties:
         evidenceId:
           type: string
-          pattern: '^ev_[A-Za-z0-9]+$'
+          pattern: '^ev_[A-Za-z0-9_-]{1,64}$'
         evidenceType:
           $ref: '#/components/schemas/EvidenceType'
         title:
@@ -1319,7 +1388,7 @@ components:
     DataQuality:
       type: object
       additionalProperties: false
-      required: [score, missingData, staleData, conflictingData, limitations]
+      required: [score, missingData, staleEvidenceIds, sourceConflicts, limitations]
       properties:
         score:
           type: number
@@ -1329,11 +1398,13 @@ components:
           type: array
           items:
             type: string
-        staleData:
+        staleEvidenceIds:
           type: array
+          uniqueItems: true
           items:
             type: string
-        conflictingData:
+            pattern: '^ev_[A-Za-z0-9_-]{1,64}$'
+        sourceConflicts:
           type: array
           items:
             type: string
@@ -1342,6 +1413,134 @@ components:
           items:
             type: string
 
+    ReportSection:
+      type: object
+      additionalProperties: false
+      required: [id, heading, claims, transitionText]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z][a-z0-9_-]{1,63}$'
+        heading:
+          type: string
+          minLength: 1
+          maxLength: 120
+        claims:
+          type: array
+          maxItems: 30
+          items:
+            $ref: '#/components/schemas/Claim'
+        transitionText:
+          type: string
+          maxLength: 500
+          description: Non-factual connective text; numbers and dates belong in Claims.
+
+    ReportRisk:
+      type: object
+      additionalProperties: false
+      required: [category, claim]
+      properties:
+        category:
+          type: string
+          enum:
+            - BUSINESS
+            - FINANCIAL
+            - VALUATION
+            - MARKET
+            - REGULATORY
+            - EXECUTION
+            - DATA_QUALITY
+        claim:
+          $ref: '#/components/schemas/Claim'
+
+    ScenarioResult:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - probability
+        - revenueGrowth
+        - targetEbitdaMargin
+        - evToEbitdaMultiple
+        - impliedEquityValue
+        - impliedPrice
+        - upsideDownside
+      properties:
+        name:
+          type: string
+          enum: [BULL, BASE, BEAR]
+        probability:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        revenueGrowth:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        targetEbitdaMargin:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        evToEbitdaMultiple:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        impliedEquityValue:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        impliedPrice:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        upsideDownside:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+
+    ScenarioAnalysis:
+      type: object
+      additionalProperties: false
+      required: [calculationId, scenarios, weightedImpliedPrice, summaryClaims]
+      properties:
+        calculationId:
+          type: string
+          pattern: '^calc_[A-Za-z0-9_-]{1,64}$'
+        scenarios:
+          type: array
+          minItems: 3
+          maxItems: 3
+          uniqueItems: true
+          description: Exactly one BULL, one BASE, and one BEAR scenario.
+          items:
+            $ref: '#/components/schemas/ScenarioResult'
+          allOf:
+            - contains:
+                type: object
+                required: [name]
+                properties:
+                  name:
+                    const: BULL
+              minContains: 1
+              maxContains: 1
+            - contains:
+                type: object
+                required: [name]
+                properties:
+                  name:
+                    const: BASE
+              minContains: 1
+              maxContains: 1
+            - contains:
+                type: object
+                required: [name]
+                properties:
+                  name:
+                    const: BEAR
+              minContains: 1
+              maxContains: 1
+        weightedImpliedPrice:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        summaryClaims:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/Claim'
+
     ReportVersionSummary:
       type: object
       required:
@@ -1349,6 +1548,8 @@ components:
         - version
         - title
         - symbol
+        - securityType
+        - locale
         - asOfDate
         - validationStatus
         - dataMode
@@ -1364,6 +1565,10 @@ components:
           type: string
         symbol:
           type: string
+        securityType:
+          $ref: '#/components/schemas/SecurityType'
+        locale:
+          $ref: '#/components/schemas/Locale'
         asOfDate:
           type: string
           format: date
@@ -1383,40 +1588,61 @@ components:
         - $ref: '#/components/schemas/ReportVersionSummary'
         - type: object
           required:
-            - reportSchemaVersion
+            - schemaVersion
             - generatedAt
-            - executiveSummary
-            - claims
             - sections
-            - evidenceIds
+            - bullCase
+            - bearCase
+            - catalysts
+            - risks
+            - scenarioAnalysis
             - dataQuality
+            - conclusion
             - warnings
             - disclaimer
           properties:
-            reportSchemaVersion:
+            schemaVersion:
               type: string
-              const: research_report_schema_v1
+              const: research_report_v1
             generatedAt:
               type: string
               format: date-time
-            executiveSummary:
-              type: string
-            claims:
+            sections:
               type: array
+              minItems: 4
+              maxItems: 16
+              items:
+                $ref: '#/components/schemas/ReportSection'
+            bullCase:
+              type: array
+              maxItems: 8
               items:
                 $ref: '#/components/schemas/Claim'
-            sections:
-              type: object
-              description: Versioned structured report sections; never unvalidated free-form JSON.
-              additionalProperties: true
-            evidenceIds:
+            bearCase:
               type: array
-              uniqueItems: true
+              maxItems: 8
               items:
-                type: string
-                pattern: '^ev_[A-Za-z0-9]+$'
+                $ref: '#/components/schemas/Claim'
+            catalysts:
+              type: array
+              maxItems: 12
+              items:
+                $ref: '#/components/schemas/Claim'
+            risks:
+              type: array
+              maxItems: 24
+              items:
+                $ref: '#/components/schemas/ReportRisk'
+            scenarioAnalysis:
+              $ref: '#/components/schemas/ScenarioAnalysis'
             dataQuality:
               $ref: '#/components/schemas/DataQuality'
+            conclusion:
+              type: array
+              minItems: 1
+              maxItems: 8
+              items:
+                $ref: '#/components/schemas/Claim'
             warnings:
               type: array
               items:
@@ -1618,7 +1844,7 @@ components:
           uniqueItems: true
           items:
             type: string
-            pattern: '^ev_[A-Za-z0-9]+$'
+            pattern: '^ev_[A-Za-z0-9_-]{1,64}$'
 
     ErrorSummary:
       type: object

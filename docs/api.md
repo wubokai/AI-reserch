@@ -64,12 +64,15 @@ CREATED -> QUEUED -> RESOLVING_SECURITY
 
 ```json
 {
-  "claimId": "cl_01J...",
-  "text": "FY2025 revenue increased year over year.",
+  "id": "cl_01J...",
+  "statement": "FY2025 revenue increased year over year.",
   "claimType": "FACT",
+  "materiality": "MATERIAL",
+  "evidenceIds": ["ev_01J..."],
+  "calculationIds": [],
+  "numericReferences": [],
   "confidence": 0.96,
-  "material": true,
-  "evidenceIds": ["ev_01J..."]
+  "limitations": []
 }
 ```
 
@@ -82,7 +85,7 @@ CREATED -> QUEUED -> RESOLVING_SECURITY
 
 Claim 的 `confidence` 表示该结论在已关联 Evidence 和 Calculation 支持下的可信/支持程度，范围为 0–1；它不是来源自身的质量评分。
 
-重要 Claim（`material=true`）至少关联一个 Evidence。Evidence 是 Evidence Registry 中的不可变记录：
+重要 Claim（`materiality=MATERIAL`）至少关联一个 Evidence。Evidence 是 Evidence Registry 中的不可变记录：
 
 ```json
 {

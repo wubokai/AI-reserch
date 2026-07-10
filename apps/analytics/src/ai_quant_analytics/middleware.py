@@ -46,6 +46,8 @@ class RequestIdMiddleware:
 
         headers = Headers(scope=scope)
         request_id = _request_id_from(headers.get(REQUEST_ID_HEADER))
+        state = scope.setdefault("state", {})
+        state["request_id"] = request_id
         context_token = set_request_id(request_id)
         method = str(scope.get("method", ""))
         path = str(scope.get("path", ""))

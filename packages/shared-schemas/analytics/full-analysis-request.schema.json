@@ -7,6 +7,7 @@
   "$defs": {
     "decimal": {
       "type": "string",
+      "maxLength": 64,
       "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$"
     },
     "snapshotId": {
@@ -176,6 +177,10 @@
       "type": "string",
       "const": "analytics_full_request_v1"
     },
+    "calculationVersion": {
+      "type": "string",
+      "const": "quant_v1"
+    },
     "inputHash": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
@@ -241,6 +246,7 @@
   },
   "required": [
     "schemaVersion",
+    "calculationVersion",
     "inputHash",
     "symbol",
     "securityType",
