@@ -2,7 +2,7 @@
 
 文档版本：0.1
 
-状态：Phase 0–6 已实现；Gate G6 最终 CI 终验中
+状态：Phase 0–6 已完成；Gate G6 已通过
 
 日期：2026-07-10
 
@@ -265,7 +265,7 @@
 
 ## 9. Phase 6：真实 LLM
 
-状态：已实现；Gate G6 最终 CI 终验中。实现与证据见 [`phase6-test-matrix.md`](./phase6-test-matrix.md)。
+状态：已完成；Gate G6 已通过。实现与证据见 [`phase6-test-matrix.md`](./phase6-test-matrix.md)。
 
 ### 9.1 实施内容
 
@@ -465,7 +465,7 @@ Market 和 Fundamental Provider 尚未选择。选择前必须完成：
 
 ## 16. 当前下一步
 
-Phase 0–6 已实现。Gate G6 最终 CI 通过后进入 Phase 7：
+Phase 0–6 与 Gate G0–G6 已完成。下一步进入 Phase 7：
 
 1. 先接 SEC EDGAR，建立真实 Filing/Chunk/快照的 Contract Test 与来源归属；
 2. 再接 FRED，验证 vintage、有效日期、限流和缓存；

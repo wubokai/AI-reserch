@@ -2,7 +2,7 @@
 
 文档版本：0.4
 
-状态：Phase 6 已实现、Gate G6 终验中；Phase 7+ 前向风险持续跟踪
+状态：Gate G6 已通过；Phase 7+ 前向风险持续跟踪
 
 日期：2026-07-10
 
@@ -103,6 +103,20 @@
 | R-015 | adjustedClose 收益真源、ATR 同比缩放 OHLC、共同日期 inner join、错位 warning 和乱序稳定性已验证 | Phase 7 真实 Provider 仍需公司行动/分红/交易日历 contract test |
 | R-016 | 财务期间、单位、TTM/年度/季度选择、CapEx 符号、EPS 跨零、税率/权益/EBITDA 边界和人工多期黄金样例已验证 | Phase 7 真实 Provider/XBRL concept 映射仍需人工黄金公司样本 |
 | R-017 | 无可追踪预测时 Forward P/E 明确 `FORECAST_DATA_UNAVAILABLE`；可选缺失保留 limitation 但不误判整个报告 partial | Phase 7 只有经许可且带 lineage 的预期数据才能启用 |
+
+### 2.4 Gate G6 风险处置（2026-07-10）
+
+[GitHub Actions run 29118462224](https://github.com/wubokai/AI-reserch/actions/runs/29118462224)
+的 Web/Playwright、Analytics、167 个 Surefire、44 个 Failsafe/Testcontainers、secret scan
+和五服务 Compose 全部通过。详细证据见 [`phase6-test-matrix.md`](./phase6-test-matrix.md)。
+
+| 风险 | Phase 6 已实现的控制与验证证据 | 剩余风险/下一 Gate |
+|---|---|---|
+| R-002 | Final Report 使用严格 Schema；Evidence/Calculation ID 受当前 Research allowlist 约束；模型输出继续经过数字、日期、类型和发布 Validator | 生产模型或 Schema 版本变化时重跑质量/对抗集 |
+| R-006 | 请求哈希、attempt 唯一键、预算 reservation 唯一键、成功/失败追加审计和报告原子提交已覆盖重放 | Provider 是否实际计费仍以其账单为外部事实，需生产对账 |
+| R-010 | 外部文本标记为不可信数据；系统指令分离；只允许三个 research-scoped 只读工具；禁并行工具调用且限制轮次/输出 | Phase 7 真实 SEC 文本接入后扩大对抗 fixture |
+| R-020 | Research 行锁下同时预留最坏成本与最多 HTTP 次数；多轮上下文/工具输出计入上界；实际 usage/调用数结算；失败先审计再释放预留 | 生产价格版本需在生效日更新；模型计价变化时失败关闭 |
+| R-030 | 真实模型失败只进入显式安全回退；回退与模型候选都复用完整 Validator 和最多一次确定性修复，不安全内容不发布 | 若未来启用模型修复，必须新版本并重新开 Gate |
 
 ## 3. MVP 接受的受控限制
 

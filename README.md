@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0–6 已实现，Gate G6 正在进行最终 CI 终验。Responses API、严格 Structured Outputs、Evidence 工具白名单、输入/调用/成本预算和脱敏审计已接入；无模型配置时仍运行确定性 Mock 闭环。当前业务数据仍是固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 0–6 与 Gate G6 已完成。Responses API、严格 Structured Outputs、Evidence 工具白名单、输入/调用/成本预算和脱敏审计已接入，并通过 [GitHub Actions run 29118462224](https://github.com/wubokai/AI-reserch/actions/runs/29118462224) 终验；无模型配置时仍运行确定性 Mock 闭环。当前业务数据仍是固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -74,7 +74,7 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前 Phase 6 本地基线：Web 与 Analytics 的既有 Gate 保持不变；API 167 个 Surefire 测试通过，新增 Failsafe/Testcontainers 用例已编译并交由 GitHub Actions 的 PostgreSQL 17 环境执行。新增覆盖 Responses HTTP mock、严格 Schema、`store=false`、只读工具循环、Prompt Injection、429/非法输出、输入上限、版本化计价、并发预算预留、真实网络调用计数和失败审计。详见 [Phase 6 Gate 测试矩阵](docs/phase6-test-matrix.md)。
+当前 Phase 6 验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API 167 个 Surefire 与 44 个 Failsafe/Testcontainers 测试通过；Analytics 的 Ruff、strict mypy 与 41 个 pytest 继续通过。新增覆盖 Responses HTTP mock、严格 Schema、`store=false`、只读工具循环、Prompt Injection、429/非法输出、输入上限、版本化计价、并发预算预留、真实网络调用计数和失败审计。详见 [Phase 6 Gate 测试矩阵](docs/phase6-test-matrix.md)。
 
 当前尚未接入真实市场/基本面 Provider，也未在测试或 CI 中发送真实 OpenAI 请求。Phase 6 的真实 Adapter 由本地 HTTP mock 验证；部署只有同时提供 API Key、模型、HMAC secret 和带生效日期的价格版本时才会启用。成功终态仍必须与通过验证的不可变报告和运行 manifest 同事务发布。
 

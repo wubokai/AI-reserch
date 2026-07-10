@@ -34,12 +34,12 @@ CI 或默认开发环境调用真实外部模型：
 | 工具调用安全 | `parallel_tool_calls=false`；每轮只允许一个调用；Evidence/Calculation 必须在当前请求 allowlist；轮次有上限 | 通过 |
 | 输入/输出边界 | Evidence Pack/完整首轮请求 byte 上限网络前拒绝；工具输出有独立 byte 上限；output token 与 Schema 上限同时生效 | 通过 |
 | 版本化价格 | 单测覆盖输入、缓存输入、输出成本；价格版本/生效日/费率缺失时真实调用失败关闭 | 通过 |
-| 并发成本预算 | V8 + Testcontainers 锁定 Research，聚合已花费与活跃预留，超预算不发网络；预留身份不可变 | 远程终验中 |
-| 多轮调用预算 | 按 `maxToolRounds + 1` 预留真实 HTTP 次数及上下文增长成本，按实际 `networkCallCount` 结算 | 远程终验中 |
-| 成功/失败审计 | 成功记录 request/response hash、usage、价格/Prompt/Schema 版本、延迟和 provider ID；失败不存 Prompt/body | 远程终验中 |
+| 并发成本预算 | V8 + Testcontainers 锁定 Research，聚合已花费与活跃预留，超预算不发网络；预留身份不可变 | 通过 |
+| 多轮调用预算 | 按 `maxToolRounds + 1` 预留真实 HTTP 次数及上下文增长成本，按实际 `networkCallCount` 结算 | 通过 |
+| 成功/失败审计 | 成功记录 request/response hash、usage、价格/Prompt/Schema 版本、延迟和 provider ID；失败不存 Prompt/body | 通过 |
 | 拒绝与故障分类 | HTTP mock 覆盖 429 可重试、非法结构不可重试；Adapter 独立映射 refusal、incomplete、502/503、网络/超时 | 通过 |
 | 最终总结安全降级 | Router 测试验证失败码与 `LLM_FINAL_SUMMARY_FAILED_SAFE_FALLBACK` warning；回退报告仍走发布验证 | 通过 |
-| 既有闭环无回归 | Web、Analytics、API、secret scan 与五服务 Compose 使用无 Key 的 Mock 路径 | 远程终验中 |
+| 既有闭环无回归 | Web、Analytics、API、secret scan 与五服务 Compose 使用无 Key 的 Mock 路径 | 通过 |
 
 ## 3. 验证结果
 
@@ -59,16 +59,21 @@ CI 或默认开发环境调用真实外部模型：
 - 第二检查点 [run 29117946214](https://github.com/wubokai/AI-reserch/actions/runs/29117946214)：
   V8 已成功迁移；Phase 6 新集成测试的手写 Research fixture 使用了不合法的
   `RUNNING/80/GENERATE_REPORT` 组合，被既有 V4 生命周期约束正确拒绝。Fixture 已改为
-  `GENERATING_REPORT/90/GENERATE_REPORT`，没有修改或放宽生产约束；下一检查点继续终验。
+  `GENERATING_REPORT/90/GENERATE_REPORT`，没有修改或放宽生产约束；随后由后续检查点继续终验。
 - 第三检查点 [run 29118287703](https://github.com/wubokai/AI-reserch/actions/runs/29118287703)：
   167 个 Surefire 全通过，43/44 个 Failsafe 通过；唯一失败是失败审计测试构造了空
   Evidence allowlist，被 `ResearchLanguageModelRequest` 的生产不变量正确拒绝。测试已改为
   注册最小 Evidence fixture，没有弱化请求边界。
+- 最终检查点 [run 29118462224](https://github.com/wubokai/AI-reserch/actions/runs/29118462224)：
+  Web/Playwright、Analytics、167 个 Surefire、44 个 Failsafe/Testcontainers、secret scan
+  与五服务 Compose 闭环全部通过；V8、预算 ledger、失败审计和 Mock 无 Key 路径均在最终
+  head 验证。
 
-## 4. Gate G6 当前结论
+## 4. Gate G6 结论
 
-实现项和本地测试已完成；Gate G6 只有在最终 head 的 Web、Analytics、API/Testcontainers、
-secret scan 与 Compose 全绿后关闭。在此之前不得进入 Phase 7 的完整实现。
+Gate G6 已关闭。最终 head 的 Web、Analytics、API/Testcontainers、secret scan 与 Compose
+全部通过，并满足：模型/价格不硬编码；模型无法新增 Evidence；成本和真实网络调用次数在
+网络前原子预留；最终总结失败保留经过完整验证的确定性安全报告。
 
 ## 5. 受控限制
 
