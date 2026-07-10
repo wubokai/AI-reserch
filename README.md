@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0–2 与 Gate G2 已完成。Phase 3 的确定性 Mock 纵向闭环已实现，本地已验证创建、持久 Worker、量化、Evidence/Claim、安全报告、情景、历史和 Markdown/HTML/PDF 导出。Gate G3 仍等待 GitHub Actions 的远程 Testcontainers 与 Compose 终验，在此之前不声称 G3 已通过。当前仅使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 0–3 与 Gate G3 已完成。确定性 Mock 纵向闭环已通过本地与 [GitHub Actions run 29107016327](https://github.com/wubokai/AI-reserch/actions/runs/29107016327) 终验，覆盖创建、持久 Worker、量化、Evidence/Claim、安全报告、情景、历史和 Markdown/HTML/PDF 导出。当前仅使用固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -74,7 +74,7 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前 Phase 3 本地验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API 139 个 Surefire 测试通过，PostgreSQL 17 Flyway V1–V6 与真实 Java→Python→PostgreSQL 闭环已本地验证；Analytics 的 Ruff、strict mypy 与 23 个 pytest 通过，覆盖率 91.29%。Gate G2 的远程终验保持通过；Gate G3 的远程终验待完成。详见 [Phase 3 Gate 测试矩阵](docs/phase3-test-matrix.md)。
+当前 Phase 3 验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API 139 个 Surefire 与 38 个 Failsafe/Testcontainers 测试及 PostgreSQL 17/Flyway V1–V6 集成验证通过；Analytics 的 Ruff、strict mypy 与 23 个 pytest 通过，覆盖率 91.29%。Gate G3 的远程 Compose 终验还验证了五服务健康、创建幂等重放、任务完成、Evidence、通过校验的报告 v1、历史、三格式导出、确定性 PDF 与 Web BFF 透传。详见 [Phase 3 Gate 测试矩阵](docs/phase3-test-matrix.md)。
 
 当前尚未接入真实市场/基本面 Provider 或 OpenAI。Phase 3 使用版本化固定 fixture、确定性 Python 计算和确定性 Mock 报告生成器；成功终态必须与通过验证的不可变报告和运行 manifest 同事务发布。
 
@@ -102,7 +102,7 @@ Phase 3 不需要 `OPENAI_API_KEY`，报告由确定性 Mock 生成器完成。P
 
 ## 下一步
 
-先在 GitHub Actions 完成 Gate G3 的 Testcontainers 和 Compose 闭环终验；远程全绿后再进入 Phase 4，扩展完整量化口径与黄金数据边界测试。
+进入 Phase 4：扩展完整量化口径、黄金数据集和数值边界测试，在不改变 Phase 3 可复现闭环的前提下提高分析深度。
 
 ## 免责声明
 

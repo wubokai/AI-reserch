@@ -1,6 +1,6 @@
 # Research、Step 与 Attempt 状态机
 
-状态：Phase 3 实现基线；Gate G3 远程终验待通过
+状态：Phase 3 实现基线；Gate G3 已通过
 
 最后更新：2026-07-10
 

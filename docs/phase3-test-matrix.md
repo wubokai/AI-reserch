@@ -1,10 +1,10 @@
 # Phase 3 Gate 测试矩阵
 
-状态：Phase 3 实现完成，本地闭环已验证；Gate G3 远程 CI 终验待通过
+状态：Gate G3 已通过
 
 日期：2026-07-10
 
-> 本文档严格区分“实现/本地验证完成”与“Gate G3 已通过”。只有 GitHub Actions Linux runner 上的 API Testcontainers、全服务 Compose smoke、Web、Analytics 和 secret scan 全绿后，才能将 Gate 状态改为“已通过”并补充远程 run 链接。
+> 远程证据：[GitHub Actions run 29107016327](https://github.com/wubokai/AI-reserch/actions/runs/29107016327)。Web、Analytics、API、secret scan 和全服务 Docker Compose 闭环均通过。
 
 ## 1. Phase 3 可执行边界
 
@@ -62,18 +62,23 @@
 | 导出 | 三种格式均返回正确内容类型、文件名、ETag、SHA-256、报告版本和 `MOCK` 模式；重复 PDF 字节完全相同 |
 | Web BFF 实际转发 | 历史查询成功；BFF 转发的 PDF 字节与 API 完全一致，并保留 `X-Content-SHA256` 等安全响应头 |
 
-## 5. Gate G3 远程通过条件
+## 5. Gate G3 远程终验证据
 
-当前未通过的不是业务实现项，而是缺少最终远程环境证据。远程必须同时满足：
+[GitHub Actions run 29107016327](https://github.com/wubokai/AI-reserch/actions/runs/29107016327) 在 Linux runner 上提供了以下闭环证据：
 
-1. Web lint/typecheck/unit/build/Playwright 全绿；
-2. API Surefire 与所有 Failsafe/Testcontainers 用例全绿，无跳过的 `*IT`；
-3. Analytics Ruff/format/strict mypy/pytest 全绿；
-4. Docker Compose 构建并启动 Web、API、Analytics、PostgreSQL、Redis，然后以真实 HTTP 完成 MU 创建、终态、Evidence、报告、三种导出和历史检查；
-5. 容器中的 PDF 保持 Demo 水印、中文字体和本地资源边界；
-6. secret scan 通过，无真实 Provider/OpenAI Key 依赖。
+| 远程检查 | 结果 |
+| --- | --- |
+| Web | lint、typecheck、Vitest、production build 和 Playwright 全绿 |
+| Analytics | Ruff check/format、strict mypy 与 23 个 pytest 全绿；本地覆盖率为 91.29% |
+| API | 139 个 Surefire、38 个 Failsafe/Testcontainers、Flyway/PostgreSQL 约束与 package 全绿 |
+| Secret scan | 通过，无真实 Provider/OpenAI Key 依赖 |
+| Compose 启动 | Web、API、Analytics 镜像成功构建，PostgreSQL、Redis 与三个应用服务全部健康；Web 聚合健康接口确认 Web/API/Analytics 均为 `UP` |
+| 创建与幂等 | NVDA 创建成功；相同 `Idempotency-Key` 重放返回同一 Research；3 次状态轮询后进入 `COMPLETED` |
+| Evidence/报告/历史 | Evidence Registry 可读；报告 v1 已发布且验证通过；历史列表可重新定位该 Research |
+| 三种导出 | Markdown、HTML 与 PDF 均通过；重复 PDF 导出字节/哈希一致 |
+| Web BFF | 通过 BFF 读取历史并下载 PDF，字节和安全响应头与 Java API 一致 |
 
-全部通过后，在本文档、[`progress.md`](./progress.md) 和 [`risk-register.md`](./risk-register.md) 记录同一 GitHub Actions run，再将 Gate G3 标记为已通过。
+结论：Gate G3 通过，Phase 4 可按 [`implementation-plan.md`](./implementation-plan.md) 进入完整量化服务实施。
 
 ## 6. 受控限制
 

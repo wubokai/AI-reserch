@@ -2,9 +2,9 @@
 
 文档版本：0.1
 
-状态：Phase 0 与 Phase 1 已完成；Gate G1 已通过
+状态：Phase 0–3 已完成；Gate G3 已通过
 
-日期：2026-07-09
+日期：2026-07-10
 
 ## 1. 实施原则
 
@@ -153,7 +153,7 @@
 
 ## 6. Phase 3：Mock 纵向闭环
 
-状态：实现完成，本地闭环已验证；Gate G3 远程 CI 终验待通过。详见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)。
+状态：已完成；Gate G3 已通过。远程证据见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)。
 
 这是第一个真正的产品 Gate，不允许只做 Provider 或 UI 的孤立演示。
 
