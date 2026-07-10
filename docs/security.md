@@ -44,6 +44,8 @@ flowchart LR
 | 列表 page size | 默认 20，最大 100 |
 | 导出 | 每份最大 25 MB，最多 200 页（可配置） |
 | Provider 响应 | 按类型限制 body 大小；HTML/Filing 默认 20 MB |
+| LLM 输入 | 规范化 Evidence Pack 默认最大 500,000 UTF-8 bytes，网络前拒绝超限 |
+| LLM 工具输出 | 每次默认最大 32,768 UTF-8 bytes，超过时不进入下一轮模型请求 |
 | LLM 输出 | Schema 数组/字符串上限 + API output token 上限 |
 
 - Bean Validation/Pydantic/Zod 只负责边界格式；领域规则在服务层复验。
@@ -86,6 +88,13 @@ flowchart LR
 - Responses 请求显式 `store=false`；未来改变前需要隐私和保留评审。
 - `safety_identifier` 为 HMAC 派生的不透明值，不发送邮箱、用户名或数据库 ID。
 - 默认不记录完整 Prompt、Evidence Pack 或模型原始响应；保存哈希、大小、版本、usage 和验证后的结构。
+- Prompt cache key 只由 Prompt/Schema/Evidence Pack/工具版本构成；`safety_identifier` 使用
+  HMAC 派生值，二者都不包含原始用户身份、问题或密钥。
+- `parallel_tool_calls=false`，每轮最多一个只读工具；工具总轮次、输入 bytes、输出 token、
+  单任务真实 HTTP 调用数和美元成本分别设置硬上限。
+- 真实调用前在 PostgreSQL 原子预留最坏成本与调用数；未知价格或预算不足时不发网络请求。
+- 已发出的失败调用只记录请求/响应哈希、usage、价格版本、延迟、provider request ID、
+  稳定错误码和网络调用数；不保存错误 body 或 Authorization。
 - Prompt 诊断采样默认关闭；启用时需要管理员开关、脱敏、访问控制和短保留期。
 - 不向模型发送 Provider Key、密码、内部网络地址、无关用户数据或完整原始 Filing。
 

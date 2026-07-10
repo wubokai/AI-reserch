@@ -34,8 +34,11 @@ public class LlmPricingPolicy {
         }
         long priorOutputContext = (long) properties.maxOutputTokens()
                 * maximumNetworkCalls * (maximumNetworkCalls - 1) / 2;
+        long priorToolContext = (long) properties.maxToolOutputBytes()
+                * maximumNetworkCalls * (maximumNetworkCalls - 1) / 2;
         long inputUpperBound = (long) inputUtf8Bytes * maximumNetworkCalls
-                + priorOutputContext;
+                + priorOutputContext
+                + priorToolContext;
         long outputUpperBound = (long) properties.maxOutputTokens() * maximumNetworkCalls;
         BigDecimal cost = properties.inputPrice().multiply(BigDecimal.valueOf(inputUpperBound))
                 .add(properties.outputPrice()

@@ -26,6 +26,7 @@ final class LlmTestFixtures {
                 "low",
                 2_000,
                 500_000,
+                32_768,
                 2,
                 Duration.ofMinutes(3),
                 true,

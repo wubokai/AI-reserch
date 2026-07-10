@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,11 +70,22 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
         );
         PreparedLlmRequest prepared = promptFactory.prepare(request, baseline);
         int maximumNetworkCalls = properties.maxToolRounds() + 1;
+        int initialRequestBytes = requestBody(prepared, prepared.input())
+                .toString()
+                .getBytes(StandardCharsets.UTF_8)
+                .length;
+        if (initialRequestBytes > properties.maxInputBytes()) {
+            throw new OpenAiResponseException(
+                    "LLM_INPUT_TOO_LARGE",
+                    "The complete LLM request exceeds the configured input boundary",
+                    false
+            );
+        }
         LlmBudgetReservation reservation = budgetService.reserve(
                 request.context().researchId(),
                 request.attemptId(),
                 prepared.requestHash(),
-                pricingPolicy.reserveUpperBound(prepared.inputUtf8Bytes(), maximumNetworkCalls),
+                pricingPolicy.reserveUpperBound(initialRequestBytes, maximumNetworkCalls),
                 maximumNetworkCalls
         );
         ArrayNode conversation = prepared.input().deepCopy();
@@ -114,6 +126,14 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                             arguments,
                             request
                     );
+                    if (toolOutput.getBytes(StandardCharsets.UTF_8).length
+                            > properties.maxToolOutputBytes()) {
+                        throw new OpenAiResponseException(
+                                "LLM_TOOL_OUTPUT_TOO_LARGE",
+                                "The read-only tool result exceeds the configured LLM boundary",
+                                false
+                        );
+                    }
                     ObjectNode output = conversation.addObject();
                     output.put("type", "function_call_output");
                     output.put("call_id", requiredText(call, "call_id"));

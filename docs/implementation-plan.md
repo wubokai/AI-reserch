@@ -2,7 +2,7 @@
 
 文档版本：0.1
 
-状态：Phase 0–3 已完成；Gate G3 已通过
+状态：Phase 0–6 已实现；Gate G6 最终 CI 终验中
 
 日期：2026-07-10
 
@@ -265,6 +265,8 @@
 
 ## 9. Phase 6：真实 LLM
 
+状态：已实现；Gate G6 最终 CI 终验中。实现与证据见 [`phase6-test-matrix.md`](./phase6-test-matrix.md)。
+
 ### 9.1 实施内容
 
 - ResearchLanguageModel 接口。
@@ -463,10 +465,10 @@ Market 和 Fundamental Provider 尚未选择。选择前必须完成：
 
 ## 16. 当前下一步
 
-Phase 0–5 与 Gate G0–G5 已完成。下一步进入 Phase 6：
+Phase 0–6 已实现。Gate G6 最终 CI 通过后进入 Phase 7：
 
-1. 定义 `ResearchLanguageModel` 端口，保留确定性 Mock 实现；
-2. 接入 OpenAI Responses API Adapter、Strict Structured Outputs 与 `store=false`；
-3. 把 Evidence Pack、只读工具 allowlist、Prompt/Schema 版本和调用预算纳入审计；
-4. 扩展真实模型拒绝、截断、超时、单次修复和 Mock/Real 隔离测试；
-5. 在进入 Phase 7 前完成 Gate G6，且不把模型输出当作金融数字来源。
+1. 先接 SEC EDGAR，建立真实 Filing/Chunk/快照的 Contract Test 与来源归属；
+2. 再接 FRED，验证 vintage、有效日期、限流和缓存；
+3. 在书面许可矩阵通过后选择并接入 Market Provider；
+4. 最后接入 Fundamental Provider，并建立 XBRL/标准概念人工黄金样例；
+5. 每个 REAL Adapter 独立通过数据模式隔离、失败降级、缓存、重试、许可和旧报告复现 Gate，不允许静默混入 Mock。

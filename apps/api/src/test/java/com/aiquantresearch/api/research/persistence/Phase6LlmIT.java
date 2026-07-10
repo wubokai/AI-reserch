@@ -70,7 +70,8 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
                     created_by, updated_by
                 ) values (?, ?, '00000000-0000-4000-8000-000000000001', 'MU',
                           'Validate Phase 6 LLM budget', 'en-US', '{}'::jsonb,
-                          'RUNNING', 80, 'GENERATE_REPORT', 'MOCK', statement_timestamp(),
+                          'GENERATING_REPORT', 90, 'GENERATE_REPORT', 'MOCK',
+                          statement_timestamp(),
                           ?, ?)
                 """, researchId, ownerId, ownerId, ownerId);
     }

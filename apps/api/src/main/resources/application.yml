@@ -71,6 +71,7 @@ app:
     reasoning-effort: ${OPENAI_REASONING_EFFORT:low}
     max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:12000}
     max-input-bytes: ${OPENAI_MAX_INPUT_BYTES:500000}
+    max-tool-output-bytes: ${OPENAI_MAX_TOOL_OUTPUT_BYTES:32768}
     max-tool-rounds: ${OPENAI_MAX_TOOL_ROUNDS:3}
     reservation-ttl: ${OPENAI_BUDGET_RESERVATION_TTL:3m}
     allow-safe-fallback: ${OPENAI_ALLOW_SAFE_FALLBACK:true}

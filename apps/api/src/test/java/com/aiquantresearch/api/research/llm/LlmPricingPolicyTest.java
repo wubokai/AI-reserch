@@ -16,6 +16,6 @@ class LlmPricingPolicyTest {
         assertThat(policy.calculate(new LlmUsage(1_000, 500, 250)))
                 .isEqualByComparingTo("0.00277500");
         assertThat(policy.reserveUpperBound(4_000, 3))
-                .isEqualByComparingTo("0.04200000");
+                .isEqualByComparingTo("0.14030400");
     }
 }

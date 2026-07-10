@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0–5 与 Gate G5 已完成。Evidence 数值/日期/来源验证、确定性评分、安全删减、Filing Chunk 全文检索与快照复现已通过本地和 [GitHub Actions run 29115859586](https://github.com/wubokai/AI-reserch/actions/runs/29115859586) 终验；Mock 纵向闭环仍保持 `COMPLETED`。当前仅使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 0–6 已实现，Gate G6 正在进行最终 CI 终验。Responses API、严格 Structured Outputs、Evidence 工具白名单、输入/调用/成本预算和脱敏审计已接入；无模型配置时仍运行确定性 Mock 闭环。当前业务数据仍是固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -20,7 +20,7 @@
 | 模块 | 技术 | 当前能力 |
 | --- | --- | --- |
 | `apps/web` | Next.js 16、React 19、TypeScript、Tailwind、TanStack Query、Zod | 研究创建、2 秒状态轮询、报告/Evidence/情景、Filing Chunk 检索、三种导出与历史重开的 Mock 闭环 |
-| `apps/api` | Java 21、Spring Boot 3.5、Spring Security、JPA、Flyway、Redis、Resilience4j | Research API、durable Worker、Mock Provider、确定性 Evidence/Claim 校验与修复、Filing 全文检索、报告原子发布/版本/导出 |
+| `apps/api` | Java 21、Spring Boot 3.5、Spring Security、JPA、Flyway、Redis、Resilience4j、OpenAI Responses API | Research API、durable Worker、Mock Provider、确定性 Evidence/Claim 校验与修复、Filing 检索、Mock/Real LLM 路由、调用预算与审计、报告原子发布/版本/导出 |
 | `apps/analytics` | Python 3.12、FastAPI、Pydantic、Ruff、mypy、pytest | 版本化无状态分析 API：73 个收益/风险/技术/基本面/估值/情景 Metric 与可解释 Trend |
 | 基础设施 | PostgreSQL 17、Redis 7.4、Docker Compose、GitHub Actions | 本地五服务编排与 CI 定义 |
 
@@ -74,9 +74,9 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前 Phase 5 验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API 156 个 Surefire 与 40 个 Failsafe/Testcontainers 测试及 PostgreSQL 17/Flyway V1–V7 集成验证通过；Analytics 的 Ruff、strict mypy 与 41 个 pytest 继续通过，branch coverage 93.92%。Gate G5 还验证了 GIN Filing 检索、Prompt Injection 数据边界、一次安全修复、旧报告 Snapshot 绑定与原有五服务 Compose 闭环。详见 [Phase 5 Gate 测试矩阵](docs/phase5-test-matrix.md)。
+当前 Phase 6 本地基线：Web 与 Analytics 的既有 Gate 保持不变；API 167 个 Surefire 测试通过，新增 Failsafe/Testcontainers 用例已编译并交由 GitHub Actions 的 PostgreSQL 17 环境执行。新增覆盖 Responses HTTP mock、严格 Schema、`store=false`、只读工具循环、Prompt Injection、429/非法输出、输入上限、版本化计价、并发预算预留、真实网络调用计数和失败审计。详见 [Phase 6 Gate 测试矩阵](docs/phase6-test-matrix.md)。
 
-当前尚未接入真实市场/基本面 Provider 或 OpenAI。Phase 3 使用版本化固定 fixture、确定性 Python 计算和确定性 Mock 报告生成器；成功终态必须与通过验证的不可变报告和运行 manifest 同事务发布。
+当前尚未接入真实市场/基本面 Provider，也未在测试或 CI 中发送真实 OpenAI 请求。Phase 6 的真实 Adapter 由本地 HTTP mock 验证；部署只有同时提供 API Key、模型、HMAC secret 和带生效日期的价格版本时才会启用。成功终态仍必须与通过验证的不可变报告和运行 manifest 同事务发布。
 
 ## 数据与模型配置
 
@@ -86,7 +86,7 @@ pnpm dev:web
 - `REAL`：只允许使用已批准的真实 Provider，不得静默混入 Mock；
 - `MIXED_TEST`：仅自动化集成测试使用，不得生成普通用户报告或导出。
 
-Phase 3 不需要 `OPENAI_API_KEY`，报告由确定性 Mock 生成器完成。Phase 6 才会引入真实模型适配器，并采用 Responses API、严格 JSON Schema 输出、`store=false`、预算控制和结构化调用审计。
+缺少 `OPENAI_API_KEY` 与 `OPENAI_REPORT_MODEL` 时，报告由确定性 Mock 生成器完成；只配置其中一个会失败关闭。真实模式采用 Responses API、严格 JSON Schema、`store=false`、`parallel_tool_calls=false`、HMAC `safety_identifier`、输入/输出/工具轮次上限和数据库预算预留。价格未知时不允许真实调用，不会伪造成本。
 
 ## 文档入口
 
@@ -102,7 +102,7 @@ Phase 3 不需要 `OPENAI_API_KEY`，报告由确定性 Mock 生成器完成。P
 
 ## 下一步
 
-进入 Phase 6：在现有 Evidence allowlist、严格报告 Schema、单次修复和发布门禁之上接入 `ResearchLanguageModel` 与 OpenAI Responses API；缺少 Key 时继续确定性 Mock，不允许隐式切换数据模式。
+Gate G6 终验通过后进入 Phase 7，按 SEC → FRED → 经许可的 Market → Fundamental 顺序接入真实 Provider。任何行情或基本面 Provider 都必须先通过持久化、缓存、展示、导出和再分发许可门禁；REAL 任务不得静默混入 Mock 数据。
 
 ## 免责声明
 
