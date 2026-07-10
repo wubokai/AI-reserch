@@ -37,6 +37,26 @@ public class CanonicalHashService {
         return hashText(canonicalJson(value));
     }
 
+    /**
+     * Hashes JSON by value instead of by its database text representation.
+     *
+     * <p>PostgreSQL {@code jsonb} may reorder object keys and add whitespace when a value is
+     * read back. Parsing into ordinary maps before canonical serialization keeps execution
+     * fingerprints stable across that round trip.
+     */
+    public String hashCanonicalJsonText(String value) {
+        try {
+            Object parsed = canonicalMapper.readValue(value, Object.class);
+            return hashText(canonicalMapper.writeValueAsString(parsed));
+        } catch (JsonProcessingException exception) {
+            throw new ResearchApplicationException(
+                    "REQUEST_SERIALIZATION_FAILED",
+                    "The stored request could not be normalized",
+                    false
+            );
+        }
+    }
+
     public String hashText(String value) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")

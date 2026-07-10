@@ -154,9 +154,9 @@ class ResearchJobConstraintsIT extends PostgresRedisIntegrationTestSupport {
 
         assertThatThrownBy(() -> jdbc.update("""
                 update research_jobs
-                   set status = 'RESOLVING_SECURITY',
-                       progress = 5,
-                       current_step = 'RESOLVE_SECURITY',
+                   set status = 'FETCHING_FILINGS',
+                       progress = 35,
+                       current_step = 'FETCH_FILINGS',
                        row_version = row_version + 1
                  where id = ?
                 """, arbitraryJump))

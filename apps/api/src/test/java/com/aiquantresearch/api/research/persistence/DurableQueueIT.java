@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.aiquantresearch.api.support.PostgresRedisIntegrationTestSupport;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -211,7 +212,8 @@ class DurableQueueIT extends PostgresRedisIntegrationTestSupport {
         assertThat(jdbc.queryForObject("""
                 select lease_expires_at >= ?
                   from step_attempts where id = ?
-                """, Boolean.class, longLease.leaseExpiresAt(), longLease.attemptId())).isTrue();
+                """, Boolean.class, Timestamp.from(longLease.leaseExpiresAt()),
+                longLease.attemptId())).isTrue();
     }
 
     @Test

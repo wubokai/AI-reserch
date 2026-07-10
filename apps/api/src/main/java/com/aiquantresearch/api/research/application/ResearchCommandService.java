@@ -80,7 +80,7 @@ public class ResearchCommandService {
         ownerProvisioningService.ensureOwner(ownerId, principalName, principalEmail);
         Instant now = clock.instant();
         String requestJson = hashService.canonicalJson(command);
-        String requestHash = hashService.hashText(requestJson);
+        String requestHash = hashService.hashCanonicalJsonText(requestJson);
         IdempotencyReservation reservation = idempotencyBoundary.reserve(
                 new IdempotencyScope(ownerId, "POST", CREATE_PATH, idempotencyKey, requestHash),
                 now
@@ -428,7 +428,7 @@ public class ResearchCommandService {
             ResearchJobEntity research,
             List<ResearchStepEntity> steps
     ) {
-        String requestHash = hashService.hashText(research.getRequestJson());
+        String requestHash = hashService.hashCanonicalJsonText(research.getRequestJson());
         String upstreamFingerprint = ROOT_UPSTREAM_FINGERPRINT;
         List<StepRetryPlan> result = new ArrayList<>(steps.size());
         for (ResearchStepEntity step : steps) {

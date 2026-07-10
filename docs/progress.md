@@ -16,7 +16,7 @@
 - OpenAPI 3.1 YAML 可解析，本地引用与必需操作完整；
 - LLM/Analytics JSON Schema 是合法 JSON；
 - Web：ESLint、TypeScript、8 个 Vitest 测试和 Next.js production build 通过；Phase 1 的 3 个 Playwright E2E 保持通过；
-- API：Java 21 / Spring Boot 3.5，88 个 Surefire 测试与 package 通过；
+- API：Java 21 / Spring Boot 3.5，89 个 Surefire 测试与 package 通过；
 - PostgreSQL 17：Flyway V1–V4、重复 validate/migrate、Hibernate validate、真实 HTTP 生命周期、幂等、取消、软删除与查询筛选通过；
 - Analytics：Ruff、strict mypy、7 个 pytest 测试通过，覆盖率 97%；
 - GitHub Actions：Gate G1 的 Web、API、Analytics、secret scan、Docker Compose build/up/smoke/down 全部通过；Phase 2 Testcontainers 终验待本次推送；

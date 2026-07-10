@@ -74,7 +74,7 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前本地验证基线：Web 8 个 Vitest、ESLint、TypeScript 与 production build；API 88 个 Surefire 测试、Java 21 package、PostgreSQL 17 Flyway V1–V4、Hibernate validate 和真实 HTTP 验收；Analytics 7 个 pytest、Ruff、strict mypy，覆盖率 97%。本机未安装 Docker；Gate G2 的 Testcontainers 与 Compose 终验由 GitHub Actions Linux runner 执行。
+当前本地验证基线：Web 8 个 Vitest、ESLint、TypeScript 与 production build；API 89 个 Surefire 测试、Java 21 package、PostgreSQL 17 Flyway V1–V4、Hibernate validate 和真实 HTTP 验收；Analytics 7 个 pytest、Ruff、strict mypy，覆盖率 97%。本机未安装 Docker；Gate G2 的 Testcontainers 与 Compose 终验由 GitHub Actions Linux runner 执行。
 
 当前尚未实现量化指标、数据 Provider、Evidence/Claim 存储、报告与导出，以及 OpenAI 调用。这些能力从 Phase 3 起按 Gate 逐步加入；Phase 2 对没有已发布验证报告的成功终态明确失败关闭。
 

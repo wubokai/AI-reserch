@@ -136,6 +136,22 @@ class ResearchCommandServiceTest {
     }
 
     @Test
+    void canonicalRequestHashSurvivesJsonbKeyOrderAndWhitespaceChanges() {
+        var hashService = new CanonicalHashService(objectMapper);
+
+        String applicationJson = """
+                {"benchmark":"SPY","options":{"includeMacro":true,"period":5},"symbol":"MU"}
+                """;
+        String databaseJson = """
+                { "symbol": "MU", "options": { "period": 5, "includeMacro": true },
+                  "benchmark": "SPY" }
+                """;
+
+        assertThat(hashService.hashCanonicalJsonText(databaseJson))
+                .isEqualTo(hashService.hashCanonicalJsonText(applicationJson));
+    }
+
+    @Test
     void idempotencyReplayDoesNotPersistOrAppendAgain() throws Exception {
         UUID ownerId = UUID.randomUUID();
         UUID researchId = UUID.randomUUID();
