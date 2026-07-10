@@ -14,6 +14,7 @@ import com.aiquantresearch.api.research.llm.OpenAiResponseException;
 import com.aiquantresearch.api.research.llm.PreparedLlmRequest;
 import com.aiquantresearch.api.research.llm.ResearchLanguageModelRequest;
 import com.aiquantresearch.api.research.orchestration.ResearchExecutionContext;
+import com.aiquantresearch.api.research.orchestration.StoredEvidence;
 import com.aiquantresearch.api.research.orchestration.Phase3ArtifactStore;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.aiquantresearch.api.research.domain.StepType;
@@ -165,7 +166,17 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
                 ),
                 List.of(),
                 List.of(),
-                List.of(),
+                List.of(new StoredEvidence(
+                        UUID.randomUUID(),
+                        "ev_phase6_failure",
+                        "SEC_FILING",
+                        "Failure audit fixture",
+                        "Registered Evidence allowlist fixture",
+                        objectMapper.createObjectNode().put("asOfDate", "2024-12-31"),
+                        null,
+                        UUID.randomUUID(),
+                        null
+                )),
                 1
         );
         PreparedLlmRequest prepared = new PreparedLlmRequest(

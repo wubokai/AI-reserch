@@ -60,6 +60,10 @@ CI 或默认开发环境调用真实外部模型：
   V8 已成功迁移；Phase 6 新集成测试的手写 Research fixture 使用了不合法的
   `RUNNING/80/GENERATE_REPORT` 组合，被既有 V4 生命周期约束正确拒绝。Fixture 已改为
   `GENERATING_REPORT/90/GENERATE_REPORT`，没有修改或放宽生产约束；下一检查点继续终验。
+- 第三检查点 [run 29118287703](https://github.com/wubokai/AI-reserch/actions/runs/29118287703)：
+  167 个 Surefire 全通过，43/44 个 Failsafe 通过；唯一失败是失败审计测试构造了空
+  Evidence allowlist，被 `ResearchLanguageModelRequest` 的生产不变量正确拒绝。测试已改为
+  注册最小 Evidence fixture，没有弱化请求边界。
 
 ## 4. Gate G6 当前结论
 
