@@ -222,11 +222,11 @@ class ResearchWorkflowServiceTest {
     }
 
     @Test
-    void phaseTwoCannotPublishSuccessfulTerminalStateWithoutAReportPublication() {
+    void genericFinalizerCannotBypassTheAtomicReportPublicationBoundary() {
         assertThatThrownBy(() -> service.finalizeResearch(researchId, true, true))
                 .isInstanceOf(InvalidStateTransitionException.class)
                 .hasMessageContaining("atomically published")
-                .hasMessageContaining("Phase 3");
+                .hasMessageContaining("report publication boundary");
         assertThatThrownBy(() -> service.finalizeResearch(researchId, false, true))
                 .isInstanceOf(InvalidStateTransitionException.class)
                 .hasMessageContaining("atomically published");
