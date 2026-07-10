@@ -26,6 +26,7 @@ Claim {
   evidenceIds[]
   calculationIds[]
   numericReferences[]
+  dateReferences[]
   confidence
   limitations[]
 }
@@ -48,6 +49,11 @@ NumericReference {
 ```
 
 验证器把 `statement` 中的数字和日期与 `numericReferences` 一一对应。格式化差异允许在明确 tolerance 内比较；方向、数量级、币种和期间必须一致。
+
+日期使用独立的 `DateReference`：`token`、`normalizedDate`、`sourceKind`、
+`sourceId` 和 `jsonPointer`。它必须解析到同一 Research 的 Evidence 或 Calculation，
+且 Claim 文本中的每个 ISO 日期必须被显式覆盖。Phase 3 旧报告读取端把缺失的
+`dateReferences` 兼容为 `[]`，已发布 JSON 本身不重写；Phase 5 新生成报告始终写入该字段。
 
 ## 3. Evidence Pack
 
@@ -200,6 +206,11 @@ score = 0.40 * requiredDataCoverage
 11. 必备免责声明和 Mock 标识存在。
 
 第一次失败可把精简的验证错误和原始结构发送给修复模型；不得加入新 Evidence。修复仍失败时保留已验证的定量内容，状态为 `PARTIALLY_COMPLETED`，UI 展示验证问题。
+
+Phase 5 的 Mock 路径先实现同一政策的确定性版本：只允许一次修复；Confidence、
+Data Quality 和 stale 列表可以从既有注册项重算，数值、日期、ID 或来源支持失败的
+Claim 直接安全删减。删减后必须重新执行完整验证；第二次仍失败则不发布。修复过程
+不会创建 Evidence、Calculation 或来源，也不会把已知错误包装成 warning 后继续发布。
 
 ## 10. 成本与日志
 

@@ -85,6 +85,17 @@ public class ArtifactApiController {
         );
     }
 
+    @GetMapping("/research/{researchId}/evidence/search")
+    public ArtifactApiResponses.EvidenceSearchResponse searchEvidence(
+            @PathVariable UUID researchId,
+            @RequestParam("q") @NotBlank @Size(max = 200) String query,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(25) int limit,
+            Authentication authentication
+    ) {
+        UUID ownerId = authenticatedOwnerService.requireActive(authentication).id();
+        return queryService.searchEvidence(ownerId, researchId, query.strip(), limit);
+    }
+
     @GetMapping("/research/{researchId}/reports")
     public ArtifactApiResponses.ReportVersionPage reports(
             @PathVariable UUID researchId,

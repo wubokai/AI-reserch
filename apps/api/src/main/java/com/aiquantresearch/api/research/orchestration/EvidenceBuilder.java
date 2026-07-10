@@ -1,6 +1,8 @@
 package com.aiquantresearch.api.research.orchestration;
 
+import com.aiquantresearch.api.research.report.EvidenceScoringPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +35,9 @@ public class EvidenceBuilder {
                     quant.unit(),
                     null,
                     quant.id(),
-                    0.98
+                    EvidenceScoringPolicy.evidenceQuality(
+                            true, true, "FRESH", true, true
+                    ).doubleValue()
             ));
         }
         for (StoredSource source : sources) {
@@ -81,7 +85,18 @@ public class EvidenceBuilder {
                 type = "SEC_FILING";
                 title = source.externalSourceId() + " synthetic filings";
                 summary = "Two fixed synthetic filing summaries used only for demo Evidence.";
-                value.set("filings", source.payload().path("filings"));
+                ArrayNode filings = value.putArray("filings");
+                source.payload().path("filings").forEach(document -> {
+                    ObjectNode metadata = filings.addObject();
+                    for (String field : List.of(
+                            "documentId", "accessionNumber", "formType", "filingDate",
+                            "reportPeriod", "title", "summary"
+                    )) {
+                        if (document.hasNonNull(field)) {
+                            metadata.set(field, document.path(field));
+                        }
+                    }
+                });
                 value.put("asOfDate", source.payload().path("asOfDate").asText());
             }
             case "MACRO" -> {
@@ -107,7 +122,13 @@ public class EvidenceBuilder {
                 null,
                 source.id(),
                 null,
-                0.95
+                EvidenceScoringPolicy.evidenceQuality(
+                        source.primarySource(),
+                        source.provider().startsWith("MOCK_"),
+                        source.freshnessStatus(),
+                        source.contentHash() != null && !source.contentHash().isBlank(),
+                        true
+                ).doubleValue()
         );
     }
 

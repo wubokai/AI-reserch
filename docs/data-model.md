@@ -657,10 +657,11 @@ CREATE INDEX ix_claim_links_evidence
 5. `V5__phase3_research_artifacts.sql`（SourceSnapshot、QuantResult、Evidence、
    Claim、ReportVersion、Export、LLM Call、run manifest、Mock seed 与血缘守卫）
 6. `V6__atomic_step_advancement.sql`（fenced 完成与后继步骤原子解锁）
-7. 后续迁移从 `V7` 起按 Phase 3 剩余模型与 Phase 4/5 增量顺序追加，不得改写
-   已发布迁移 checksum。
+7. `V7__phase5_evidence_and_filing_search.sql`（Source Snapshot 元数据、Claim 日期引用、
+   Filing、不可变 Filing Chunk、生成式 `tsvector` 与 GIN 全文索引）
+8. 后续迁移从 `V8` 起按 Phase 6+ 增量顺序追加，不得改写已发布迁移 checksum。
 
 Phase 2 已实现的迁移、函数签名和实测范围见
 [Phase 2 PostgreSQL 与 Durable Queue](./database-phase2.md)。
 
-每个迁移必须由 Testcontainers PostgreSQL 集成测试验证：全新建库、从上一版本升级、唯一约束、软删除可见性、并发版本分配、同一步并发 attempt、Evidence 跨任务引用拒绝、报告不可变、Mock 血缘和 `MIXED_TEST` 发布阻断。
+每个迁移必须由 Testcontainers PostgreSQL 集成测试验证：全新建库、从上一版本升级、唯一约束、软删除可见性、并发版本分配、同一步并发 attempt、Evidence 跨任务引用拒绝、报告不可变、Mock 血缘、Filing/Chunk 不可变、GIN 检索、旧报告 Snapshot 绑定和 `MIXED_TEST` 发布阻断。

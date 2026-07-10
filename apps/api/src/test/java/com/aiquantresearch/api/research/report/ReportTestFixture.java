@@ -210,7 +210,13 @@ final class ReportTestFixture {
         return new StoredEvidence(
                 uuid("evidence-" + source.purpose()),
                 publicId,
-                "SOURCE",
+                switch (source.purpose()) {
+                    case "MARKET_DATA", "BENCHMARK_DATA" -> "MARKET_PRICE";
+                    case "FUNDAMENTALS" -> "FINANCIAL_METRIC";
+                    case "FILING" -> "SEC_FILING";
+                    case "MACRO" -> "MACRO_OBSERVATION";
+                    default -> "COMPANY_PROFILE";
+                },
                 title,
                 "Fixed local demo source.",
                 value,

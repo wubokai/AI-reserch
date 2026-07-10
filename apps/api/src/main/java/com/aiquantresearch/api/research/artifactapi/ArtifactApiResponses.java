@@ -102,13 +102,66 @@ public final class ArtifactApiResponses {
             double qualityScore,
             String rawDataHash,
             boolean isDemoData,
-            List<String> relatedClaimIds
+            List<String> relatedClaimIds,
+            @JsonInclude(JsonInclude.Include.ALWAYS) UUID sourceSnapshotId,
+            @JsonInclude(JsonInclude.Include.ALWAYS) String sourceSchemaVersion,
+            @JsonInclude(JsonInclude.Include.ALWAYS) String normalizedDataHash
     ) {
+        public EvidenceItem(
+                String evidenceId,
+                String evidenceType,
+                String title,
+                String summary,
+                JsonNode value,
+                String unit,
+                String sourceName,
+                String sourceUrl,
+                String sourceType,
+                Instant publishedAt,
+                Instant retrievedAt,
+                LocalDate effectiveDate,
+                boolean isPrimarySource,
+                String freshnessStatus,
+                double qualityScore,
+                String rawDataHash,
+                boolean isDemoData,
+                List<String> relatedClaimIds
+        ) {
+            this(
+                    evidenceId, evidenceType, title, summary, value, unit,
+                    sourceName, sourceUrl, sourceType, publishedAt, retrievedAt,
+                    effectiveDate, isPrimarySource, freshnessStatus, qualityScore,
+                    rawDataHash, isDemoData, relatedClaimIds, null, null, null
+            );
+        }
     }
 
     public record EvidencePage(
             List<EvidenceItem> items,
             PageMetadata page,
+            DataMode dataMode
+    ) {
+    }
+
+    public record EvidenceSearchResult(
+            String evidenceId,
+            UUID filingId,
+            UUID chunkId,
+            String externalDocumentId,
+            String formType,
+            LocalDate filingDate,
+            String sectionName,
+            int chunkIndex,
+            String excerpt,
+            String citationLocator,
+            double rank,
+            boolean isDemoData
+    ) {
+    }
+
+    public record EvidenceSearchResponse(
+            String query,
+            List<EvidenceSearchResult> items,
             DataMode dataMode
     ) {
     }

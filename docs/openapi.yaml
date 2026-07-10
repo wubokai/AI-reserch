@@ -426,6 +426,48 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/research/{researchId}/evidence/search:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - $ref: '#/components/parameters/XRequestId'
+    get:
+      tags: [Evidence]
+      operationId: searchResearchEvidence
+      summary: Search immutable filing chunks for a research job
+      description: |
+        Owner-scoped PostgreSQL full-text search. Results are untrusted source data
+        and include an exact filing/section/chunk locator.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 10
+      responses:
+        '200':
+          description: Ranked filing chunk matches
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/research/{researchId}/reports/{version}:
     parameters:
       - $ref: '#/components/parameters/ResearchId'
@@ -1249,6 +1291,7 @@ components:
         - evidenceIds
         - calculationIds
         - numericReferences
+        - dateReferences
         - confidence
         - limitations
       properties:
@@ -1283,6 +1326,11 @@ components:
           maxItems: 24
           items:
             $ref: '#/components/schemas/NumericReference'
+        dateReferences:
+          type: array
+          maxItems: 12
+          items:
+            $ref: '#/components/schemas/DateReference'
         confidence:
           type: number
           minimum: 0
@@ -1340,6 +1388,29 @@ components:
           type: string
           pattern: '^[0-9]+(?:\.[0-9]+)?$'
 
+    DateReference:
+      type: object
+      additionalProperties: false
+      required: [token, normalizedDate, sourceKind, sourceId, jsonPointer]
+      properties:
+        token:
+          type: string
+          format: date
+        normalizedDate:
+          type: string
+          format: date
+        sourceKind:
+          type: string
+          enum: [EVIDENCE, CALCULATION]
+        sourceId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        jsonPointer:
+          type: string
+          minLength: 1
+          maxLength: 300
+
     Evidence:
       type: object
       additionalProperties: false
@@ -1357,6 +1428,9 @@ components:
         - rawDataHash
         - isDemoData
         - relatedClaimIds
+        - sourceSnapshotId
+        - sourceSchemaVersion
+        - normalizedDataHash
       properties:
         evidenceId:
           type: string
@@ -1408,6 +1482,14 @@ components:
           items:
             type: string
             pattern: '^cl_[A-Za-z0-9_-]{1,64}$'
+        sourceSnapshotId:
+          type: [string, 'null']
+          format: uuid
+        sourceSchemaVersion:
+          type: [string, 'null']
+        normalizedDataHash:
+          type: [string, 'null']
+          pattern: '^[a-f0-9]{64}$'
 
     EvidencePage:
       type: object
@@ -1420,6 +1502,68 @@ components:
             $ref: '#/components/schemas/Evidence'
         page:
           $ref: '#/components/schemas/PageMetadata'
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+
+    EvidenceSearchResult:
+      type: object
+      additionalProperties: false
+      required:
+        - evidenceId
+        - filingId
+        - chunkId
+        - externalDocumentId
+        - formType
+        - filingDate
+        - sectionName
+        - chunkIndex
+        - excerpt
+        - citationLocator
+        - rank
+        - isDemoData
+      properties:
+        evidenceId:
+          type: string
+          pattern: '^ev_[A-Za-z0-9_-]{1,64}$'
+        filingId:
+          type: string
+          format: uuid
+        chunkId:
+          type: string
+          format: uuid
+        externalDocumentId:
+          type: string
+        formType:
+          type: string
+        filingDate:
+          type: string
+          format: date
+        sectionName:
+          type: string
+        chunkIndex:
+          type: integer
+          minimum: 0
+        excerpt:
+          type: string
+        citationLocator:
+          type: string
+        rank:
+          type: number
+          minimum: 0
+        isDemoData:
+          type: boolean
+
+    EvidenceSearchResponse:
+      type: object
+      additionalProperties: false
+      required: [query, items, dataMode]
+      properties:
+        query:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceSearchResult'
         dataMode:
           $ref: '#/components/schemas/DataMode'
 

@@ -2,6 +2,7 @@ import type { CanonicalResearchReport } from "@/lib/schemas";
 
 export const phase3ResearchId = "11111111-1111-4111-8111-111111111111";
 export const phase3EvidenceId = "ev_MU_RETURN_01";
+export const phase3FilingEvidenceId = "ev_MU_FILING_01";
 
 const calculationClaim = {
   id: "cl_return_01",
@@ -21,6 +22,7 @@ const calculationClaim = {
       tolerance: "0.0001",
     },
   ],
+  dateReferences: [],
   confidence: 0.96,
   limitations: ["结果仅适用于固定 Mock fixture。"],
 };
@@ -97,8 +99,53 @@ export const phase3EvidencePage = {
       rawDataHash: "b".repeat(64),
       isDemoData: true,
       relatedClaimIds: ["cl_return_01"],
+      sourceSnapshotId: null,
+      sourceSchemaVersion: null,
+      normalizedDataHash: null,
+    },
+    {
+      evidenceId: phase3FilingEvidenceId,
+      evidenceType: "SEC_FILING",
+      title: "Synthetic annual filing",
+      summary: "Fixed filing metadata with searchable section chunks.",
+      value: { asOfDate: "2025-12-31", filings: [{ formType: "10-K" }] },
+      unit: null,
+      sourceName: "Mock Filing Provider",
+      sourceUrl: null,
+      sourceType: "MOCK",
+      publishedAt: null,
+      retrievedAt: "2026-07-10T12:00:05Z",
+      effectiveDate: "2025-12-31",
+      isPrimarySource: true,
+      freshnessStatus: "FRESH",
+      qualityScore: 1,
+      rawDataHash: "d".repeat(64),
+      isDemoData: true,
+      relatedClaimIds: [],
+      sourceSnapshotId: "22222222-2222-4222-8222-222222222222",
+      sourceSchemaVersion: "mock_filings_v1",
+      normalizedDataHash: "e".repeat(64),
     },
   ],
-  page: { number: 0, size: 100, totalElements: 1, totalPages: 1, first: true, last: true },
+  page: { number: 0, size: 100, totalElements: 2, totalPages: 1, first: true, last: true },
+  dataMode: "MOCK",
+};
+
+export const phase3EvidenceSearchResponse = {
+  query: "supply risk",
+  items: [{
+    evidenceId: phase3FilingEvidenceId,
+    filingId: "33333333-3333-4333-8333-333333333333",
+    chunkId: "44444444-4444-4444-8444-444444444444",
+    externalDocumentId: "mock-mu-10k-2025",
+    formType: "10-K",
+    filingDate: "2025-10-01",
+    sectionName: "ITEM_1A_RISK_FACTORS",
+    chunkIndex: 0,
+    excerpt: "<mark>Supply</mark> concentration creates inventory <mark>risk</mark>.",
+    citationLocator: "filing:mock-mu-10k-2025#ITEM_1A_RISK_FACTORS:chunk=0:chars=0-120",
+    rank: 0.75,
+    isDemoData: true,
+  }],
   dataMode: "MOCK",
 };

@@ -73,7 +73,8 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
     @Override
     public Optional<StoredSource> source(UUID researchId, String purpose) {
         return jdbcTemplate.query("""
-                select s.id, l.purpose, s.external_source_id,
+                select s.id, l.purpose, s.external_source_id, s.provider,
+                       s.is_primary_source, s.freshness_status, s.is_demo_data,
                        s.payload_json::text as payload_json,
                        s.normalized_data_hash
                   from research_source_links l
@@ -88,7 +89,8 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
     @Override
     public List<StoredSource> sources(UUID researchId) {
         return jdbcTemplate.query("""
-                select s.id, l.purpose, s.external_source_id,
+                select s.id, l.purpose, s.external_source_id, s.provider,
+                       s.is_primary_source, s.freshness_status, s.is_demo_data,
                        s.payload_json::text as payload_json,
                        s.normalized_data_hash
                   from research_source_links l
@@ -122,7 +124,19 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
         return jdbcTemplate.query("""
                 select id, public_id, evidence_type, title, summary,
                        value_json::text as value_json, unit,
-                       source_snapshot_id, quant_result_id
+                       source_snapshot_id, quant_result_id, quality_score,
+                       is_demo_data,
+                       coalesce((select is_primary_source from source_snapshots
+                                  where id = evidence_items.source_snapshot_id), true)
+                           as is_primary_source,
+                       coalesce((select freshness_status from source_snapshots
+                                  where id = evidence_items.source_snapshot_id), 'FRESH')
+                           as freshness_status,
+                       coalesce((select effective_date from source_snapshots
+                                  where id = evidence_items.source_snapshot_id),
+                                (select input_data_end from quant_results
+                                  where id = evidence_items.quant_result_id))
+                           as effective_date
                   from evidence_items
                  where research_job_id = ?
                  order by public_id
@@ -135,7 +149,12 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                 json(row.getString("value_json")),
                 row.getString("unit"),
                 row.getObject("source_snapshot_id", UUID.class),
-                row.getObject("quant_result_id", UUID.class)
+                row.getObject("quant_result_id", UUID.class),
+                row.getBigDecimal("quality_score"),
+                row.getBoolean("is_primary_source"),
+                row.getString("freshness_status"),
+                row.getObject("effective_date", LocalDate.class),
+                row.getBoolean("is_demo_data")
         ), researchId);
     }
 
@@ -184,8 +203,15 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                     id, provider, source_type, external_source_id,
                     request_fingerprint, retrieved_at, effective_date,
                     raw_data_hash, normalized_data_hash, payload_json,
-                    is_primary_source, freshness_status, is_demo_data, schema_version
-                ) values (?, ?, 'MOCK', ?, ?, ?, ?, ?, ?, ?::jsonb, ?, 'FRESH', true, ?)
+                    is_primary_source, freshness_status, is_demo_data, schema_version,
+                    metadata_json
+                ) values (?, ?, 'MOCK', ?, ?, ?, ?, ?, ?, ?::jsonb, ?, 'FRESH', true, ?,
+                          jsonb_build_object(
+                              'missingPublishedAtReason',
+                              'synthetic fixture uses its effective date',
+                              'snapshotPolicyVersion', 'source_snapshot_v1',
+                              'rawEqualsNormalized', true
+                          ))
                 on conflict (provider, raw_data_hash, schema_version) do nothing
                 """,
                 proposedId,
@@ -217,7 +243,17 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                 ) values (?, ?, ?, ?)
                 on conflict (research_job_id, source_snapshot_id, purpose) do nothing
                 """, claim.researchJobId(), sourceId, claim.attemptId(), purpose);
-        return new StoredSource(sourceId, purpose, externalSourceId, payload, contentHash);
+        return new StoredSource(
+                sourceId,
+                purpose,
+                externalSourceId,
+                payload,
+                contentHash,
+                provider,
+                primary,
+                "FRESH",
+                true
+        );
     }
 
     @Override
@@ -337,7 +373,11 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                 row.getString("purpose"),
                 row.getString("external_source_id"),
                 json(row.getString("payload_json")),
-                row.getString("normalized_data_hash")
+                row.getString("normalized_data_hash"),
+                row.getString("provider"),
+                row.getBoolean("is_primary_source"),
+                row.getString("freshness_status"),
+                row.getBoolean("is_demo_data")
         );
     }
 

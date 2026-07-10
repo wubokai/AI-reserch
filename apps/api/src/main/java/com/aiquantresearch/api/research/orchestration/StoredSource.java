@@ -8,6 +8,21 @@ public record StoredSource(
         String purpose,
         String externalSourceId,
         JsonNode payload,
-        String contentHash
+        String contentHash,
+        String provider,
+        boolean primarySource,
+        String freshnessStatus,
+        boolean demoData
 ) {
+
+    public StoredSource(
+            UUID id,
+            String purpose,
+            String externalSourceId,
+            JsonNode payload,
+            String contentHash
+    ) {
+        this(id, purpose, externalSourceId, payload, contentHash,
+                "MOCK_FIXTURE", true, "FRESH", true);
+    }
 }

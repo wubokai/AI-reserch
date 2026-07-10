@@ -155,6 +155,36 @@ class ArtifactQueryServiceTest {
     }
 
     @Test
+    void filingSearchIsOwnerScopedAndReturnsExactChunkLocator() {
+        when(jdbc.queryForList(anyString(), any(Object[].class)))
+                .thenReturn(List.of(ownerRow()))
+                .thenReturn(List.of(searchRow()));
+
+        ArtifactApiResponses.EvidenceSearchResponse response = service.searchEvidence(
+                OWNER_ID,
+                RESEARCH_ID,
+                "supply risk",
+                10
+        );
+
+        assertThat(response.items()).singleElement().satisfies(item -> {
+            assertThat(item.evidenceId()).isEqualTo("ev_MU_filing-01");
+            assertThat(item.sectionName()).isEqualTo("ITEM_1A_RISK_FACTORS");
+            assertThat(item.citationLocator())
+                    .isEqualTo("filing:mock-mu-10k#ITEM_1A_RISK_FACTORS:chunk=0:chars=0-120");
+        });
+        verify(jdbc).queryForList(
+                contains("websearch_to_tsquery"),
+                eq("supply risk"),
+                eq("supply risk"),
+                eq(RESEARCH_ID),
+                eq(OWNER_ID),
+                eq("supply risk"),
+                eq(10)
+        );
+    }
+
+    @Test
     void mockSecuritySearchEscapesWildcardInput() {
         when(jdbc.queryForList(anyString(), any(Object[].class))).thenReturn(List.of());
 
@@ -206,6 +236,23 @@ class ArtifactQueryServiceTest {
                 "report_json", """
                         {"schemaVersion":"research_report_v1","sections":[]}
                         """
+        );
+    }
+
+    private static Map<String, Object> searchRow() {
+        return Map.ofEntries(
+                Map.entry("evidence_id", "ev_MU_filing-01"),
+                Map.entry("filing_id", UUID.fromString("22222222-2222-4222-8222-222222222222")),
+                Map.entry("chunk_id", UUID.fromString("33333333-3333-4333-8333-333333333333")),
+                Map.entry("external_document_id", "mock-mu-10k"),
+                Map.entry("form_type", "10-K"),
+                Map.entry("filing_date", LocalDate.parse("2025-10-01")),
+                Map.entry("section_name", "ITEM_1A_RISK_FACTORS"),
+                Map.entry("chunk_index", 0),
+                Map.entry("excerpt", "Supply concentration may create risk."),
+                Map.entry("citation_locator", "filing:mock-mu-10k#ITEM_1A_RISK_FACTORS:chunk=0:chars=0-120"),
+                Map.entry("rank", new BigDecimal("0.75")),
+                Map.entry("is_demo_data", true)
         );
     }
 

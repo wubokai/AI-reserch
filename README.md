@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0–4 与 Gate G4 已完成。完整 `quant_v1` 量化、黄金数据和数值边界已通过本地与 [GitHub Actions run 29111976669](https://github.com/wubokai/AI-reserch/actions/runs/29111976669) 终验；原有 Mock 纵向闭环仍保持 `COMPLETED`。当前仅使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 0–5 与 Gate G5 已完成。Evidence 数值/日期/来源验证、确定性评分、安全删减、Filing Chunk 全文检索与快照复现已通过本地和 [GitHub Actions run 29115859586](https://github.com/wubokai/AI-reserch/actions/runs/29115859586) 终验；Mock 纵向闭环仍保持 `COMPLETED`。当前仅使用固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -19,8 +19,8 @@
 
 | 模块 | 技术 | 当前能力 |
 | --- | --- | --- |
-| `apps/web` | Next.js 16、React 19、TypeScript、Tailwind、TanStack Query、Zod | 研究创建、2 秒状态轮询、报告/Evidence/情景、三种导出与历史重开的 Mock 闭环 |
-| `apps/api` | Java 21、Spring Boot 3.5、Spring Security、JPA、Flyway、Redis、Resilience4j | Research API、PostgreSQL durable Worker、lease/fencing/reaper、幂等/重试、Mock Provider、Evidence/Claim、报告校验/原子发布、版本与导出 |
+| `apps/web` | Next.js 16、React 19、TypeScript、Tailwind、TanStack Query、Zod | 研究创建、2 秒状态轮询、报告/Evidence/情景、Filing Chunk 检索、三种导出与历史重开的 Mock 闭环 |
+| `apps/api` | Java 21、Spring Boot 3.5、Spring Security、JPA、Flyway、Redis、Resilience4j | Research API、durable Worker、Mock Provider、确定性 Evidence/Claim 校验与修复、Filing 全文检索、报告原子发布/版本/导出 |
 | `apps/analytics` | Python 3.12、FastAPI、Pydantic、Ruff、mypy、pytest | 版本化无状态分析 API：73 个收益/风险/技术/基本面/估值/情景 Metric 与可解释 Trend |
 | 基础设施 | PostgreSQL 17、Redis 7.4、Docker Compose、GitHub Actions | 本地五服务编排与 CI 定义 |
 
@@ -74,7 +74,7 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前 Phase 4 验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API 144 个 Surefire 与 38 个 Failsafe/Testcontainers 测试及 PostgreSQL 17/Flyway V1–V6 集成验证通过；Analytics 的 Ruff、strict mypy 与 41 个 pytest 通过，branch coverage 93.92%。Gate G4 的远程 Compose 终验还验证了五服务健康、幂等重放、3 次轮询后 `COMPLETED`、Evidence、报告 v1、历史、三格式导出、确定性 PDF 与 Web BFF 透传。详见 [Phase 4 Gate 测试矩阵](docs/phase4-test-matrix.md)。
+当前 Phase 5 验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API 156 个 Surefire 与 40 个 Failsafe/Testcontainers 测试及 PostgreSQL 17/Flyway V1–V7 集成验证通过；Analytics 的 Ruff、strict mypy 与 41 个 pytest 继续通过，branch coverage 93.92%。Gate G5 还验证了 GIN Filing 检索、Prompt Injection 数据边界、一次安全修复、旧报告 Snapshot 绑定与原有五服务 Compose 闭环。详见 [Phase 5 Gate 测试矩阵](docs/phase5-test-matrix.md)。
 
 当前尚未接入真实市场/基本面 Provider 或 OpenAI。Phase 3 使用版本化固定 fixture、确定性 Python 计算和确定性 Mock 报告生成器；成功终态必须与通过验证的不可变报告和运行 manifest 同事务发布。
 
@@ -102,7 +102,7 @@ Phase 3 不需要 `OPENAI_API_KEY`，报告由确定性 Mock 生成器完成。P
 
 ## 下一步
 
-进入 Phase 5：扩展 Evidence Registry、数值/日期/来源验证和 SEC 检索基础，在现有确定性量化与报告发布门禁之上提高证据质量。
+进入 Phase 6：在现有 Evidence allowlist、严格报告 Schema、单次修复和发布门禁之上接入 `ResearchLanguageModel` 与 OpenAI Responses API；缺少 Key 时继续确定性 Mock，不允许隐式切换数据模式。
 
 ## 免责声明
 

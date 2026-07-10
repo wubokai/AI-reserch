@@ -223,7 +223,9 @@ public class ArtifactQueryService {
                        coalesce(ss.is_primary_source, true) as is_primary_source,
                        coalesce(ss.freshness_status, 'FRESH') as freshness_status,
                        e.quality_score, coalesce(ss.raw_data_hash, qr.input_hash) as raw_data_hash,
-                       e.is_demo_data,
+                       e.is_demo_data, ss.id as source_snapshot_id,
+                       ss.schema_version as source_schema_version,
+                       ss.normalized_data_hash,
                        coalesce((
                            select jsonb_agg(distinct c.public_id order by c.public_id)
                              from claim_evidence_links cel
@@ -246,6 +248,50 @@ public class ArtifactQueryService {
         return new ArtifactApiResponses.EvidencePage(
                 items,
                 ArtifactApiResponses.PageMetadata.of(page, size, total),
+                research.dataMode()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ArtifactApiResponses.EvidenceSearchResponse searchEvidence(
+            UUID ownerId,
+            UUID researchId,
+            String query,
+            int limit
+    ) {
+        OwnedResearch research = requireOwned(ownerId, researchId);
+        List<ArtifactApiResponses.EvidenceSearchResult> items = jdbc.queryForList("""
+                select e.public_id as evidence_id, f.id as filing_id,
+                       fc.id as chunk_id, f.external_document_id, f.form_type,
+                       f.filing_date, fc.section_name, fc.chunk_index,
+                       ts_headline(
+                           'english', fc.content, websearch_to_tsquery('english', ?),
+                           'StartSel=<mark>, StopSel=</mark>, MaxWords=45, MinWords=15'
+                       ) as excerpt,
+                       'filing:' || f.external_document_id || '#'
+                           || fc.section_name || ':chunk=' || fc.chunk_index
+                           || ':chars=' || fc.character_start || '-' || fc.character_end
+                           as citation_locator,
+                       ts_rank_cd(fc.search_vector, websearch_to_tsquery('english', ?)) as rank,
+                       f.is_demo_data
+                  from filing_chunks fc
+                  join filings f on f.id = fc.filing_id
+                  join research_source_links rsl on rsl.source_snapshot_id = f.source_snapshot_id
+                  join research_jobs r on r.id = rsl.research_job_id
+                  join evidence_items e
+                    on e.research_job_id = r.id
+                   and e.source_snapshot_id = f.source_snapshot_id
+                 where r.id = ? and r.user_id = ? and r.deleted_at is null
+                   and r.data_mode <> 'MIXED_TEST'
+                   and fc.search_vector @@ websearch_to_tsquery('english', ?)
+                 order by rank desc, f.filing_date desc, fc.section_name, fc.chunk_index
+                 limit ?
+                """, query, query, researchId, ownerId, query, limit).stream()
+                .map(this::evidenceSearchResult)
+                .toList();
+        return new ArtifactApiResponses.EvidenceSearchResponse(
+                query,
+                items,
                 research.dataMode()
         );
     }
@@ -383,7 +429,29 @@ public class ArtifactQueryService {
                 decimal(row, "quality_score").doubleValue(),
                 text(row, "raw_data_hash"),
                 bool(row, "is_demo_data"),
-                stringList(text(row, "related_claim_ids_json"))
+                stringList(text(row, "related_claim_ids_json")),
+                nullableUuid(row, "source_snapshot_id"),
+                nullableText(row, "source_schema_version"),
+                nullableText(row, "normalized_data_hash")
+        );
+    }
+
+    private ArtifactApiResponses.EvidenceSearchResult evidenceSearchResult(
+            Map<String, Object> row
+    ) {
+        return new ArtifactApiResponses.EvidenceSearchResult(
+                text(row, "evidence_id"),
+                uuid(row, "filing_id"),
+                uuid(row, "chunk_id"),
+                text(row, "external_document_id"),
+                text(row, "form_type"),
+                date(row, "filing_date"),
+                text(row, "section_name"),
+                integer(row, "chunk_index"),
+                text(row, "excerpt"),
+                text(row, "citation_locator"),
+                decimal(row, "rank").doubleValue(),
+                bool(row, "is_demo_data")
         );
     }
 
@@ -439,6 +507,11 @@ public class ArtifactQueryService {
     private static UUID uuid(Map<String, Object> row, String key) {
         Object value = row.get(key);
         return value instanceof UUID uuid ? uuid : UUID.fromString(text(row, key));
+    }
+
+    private static UUID nullableUuid(Map<String, Object> row, String key) {
+        Object value = row.get(key);
+        return value == null ? null : value instanceof UUID uuid ? uuid : UUID.fromString(value.toString());
     }
 
     private static int integer(Map<String, Object> row, String key) {
