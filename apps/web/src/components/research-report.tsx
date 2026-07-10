@@ -9,6 +9,7 @@ import {
   DEMO_DATA_NOTICE,
   RESEARCH_DISCLAIMER,
   evidencePageSchema,
+  evidenceSearchResponseSchema,
   reportVersionResponseSchema,
   type Claim,
   type Evidence,
@@ -103,12 +104,18 @@ function EvidenceDrawer({ evidence, onClose }: { evidence: Evidence; onClose: ()
           <dt className="text-[#647b70]">来源</dt><dd className="text-[#dce8e2]">{evidence.sourceName}</dd>
           <dt className="text-[#647b70]">来源类型</dt><dd className="text-[#dce8e2]">{evidence.sourceType}</dd>
           <dt className="text-[#647b70]">有效日期</dt><dd className="text-[#dce8e2]">{evidence.effectiveDate ?? "未提供"}</dd>
+          <dt className="text-[#647b70]">发布时间</dt><dd className="text-[#dce8e2]">{evidence.publishedAt ?? "未提供"}</dd>
+          <dt className="text-[#647b70]">抓取时间</dt><dd className="text-[#dce8e2]">{evidence.retrievedAt}</dd>
           <dt className="text-[#647b70]">新鲜度</dt><dd className="text-[#dce8e2]">{evidence.freshnessStatus}</dd>
           <dt className="text-[#647b70]">质量分</dt><dd className="text-[#dce8e2]">{percent(evidence.qualityScore)}</dd>
           <dt className="text-[#647b70]">主来源</dt><dd className="text-[#dce8e2]">{evidence.isPrimarySource ? "是" : "否"}</dd>
+          <dt className="text-[#647b70]">快照 Schema</dt><dd className="break-all text-[#dce8e2]">{evidence.sourceSchemaVersion ?? "内部计算"}</dd>
+          <dt className="text-[#647b70]">关联 Claim</dt><dd className="break-all text-[#dce8e2]">{evidence.relatedClaimIds.join(", ") || "暂无"}</dd>
         </dl>
+        {evidence.sourceUrl ? <a className="mt-5 inline-block text-xs text-emerald-200 underline" href={evidence.sourceUrl} rel="noreferrer" target="_blank">打开来源快照地址</a> : null}
         {evidence.value !== undefined ? <pre className="mt-6 overflow-x-auto rounded-lg border border-[#20342b] bg-[#07100d] p-4 text-[11px] leading-5 text-[#a6b8af]">{JSON.stringify(evidence.value, null, 2)}</pre> : null}
         <p className="mt-6 break-all font-mono text-[9px] leading-4 text-[#53695f]">SHA-256 {evidence.rawDataHash}</p>
+        {evidence.normalizedDataHash ? <p className="mt-2 break-all font-mono text-[9px] leading-4 text-[#53695f]">Normalized SHA-256 {evidence.normalizedDataHash}</p> : null}
         <p className="mt-6 rounded border border-amber-300/15 bg-amber-300/[0.04] p-3 text-[11px] text-amber-100/70">{DEMO_DATA_NOTICE}</p>
       </aside>
     </div>
@@ -117,6 +124,7 @@ function EvidenceDrawer({ evidence, onClose }: { evidence: Evidence; onClose: ()
 
 export function ResearchReport({ researchId, version }: { researchId: string; version: number }) {
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
+  const [evidenceQuery, setEvidenceQuery] = useState("");
   const report = useQuery({
     queryKey: ["research", researchId, "reports", version],
     queryFn: () => fetchApi(`/api/research/${researchId}/reports/${version}`, reportVersionResponseSchema),
@@ -129,6 +137,14 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
     () => new Map(evidence.data?.items.map((item) => [item.evidenceId, item]) ?? []),
     [evidence.data],
   );
+  const filingSearch = useQuery({
+    queryKey: ["research", researchId, "evidence-search", evidenceQuery.trim()],
+    queryFn: () => fetchApi(
+      `/api/research/${researchId}/evidence/search?q=${encodeURIComponent(evidenceQuery.trim())}&limit=10`,
+      evidenceSearchResponseSchema,
+    ),
+    enabled: evidenceQuery.trim().length >= 2,
+  });
   const selectedEvidence = selectedEvidenceId ? evidenceById.get(selectedEvidenceId) : undefined;
 
   if (report.isPending || evidence.isPending) {
@@ -221,6 +237,17 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
           </section>
           <section className="rounded-xl border border-[#20342b] bg-[#0c1713] p-5">
             <h2 className="text-sm font-semibold text-white">Evidence Registry</h2>
+            <label className="mt-4 block text-[10px] text-[#71887d]" htmlFor="filing-evidence-search">检索 Filing Chunk</label>
+            <input
+              className="mt-2 h-9 w-full rounded border border-[#294137] bg-[#09130f] px-3 text-xs text-[#dce8e2] placeholder:text-[#52685e]"
+              id="filing-evidence-search"
+              maxLength={200}
+              onChange={(event) => setEvidenceQuery(event.target.value)}
+              placeholder="例如 supply risk"
+              value={evidenceQuery}
+            />
+            {filingSearch.data?.items.length ? <div className="mt-3 space-y-2" aria-label="Filing 检索结果">{filingSearch.data.items.map((item) => <button className="block w-full rounded border border-emerald-300/15 bg-emerald-300/[0.03] p-3 text-left" key={item.chunkId} onClick={() => setSelectedEvidenceId(item.evidenceId)} type="button"><span className="block text-[10px] font-semibold text-emerald-100">{item.formType} · {item.sectionName}</span><span className="mt-1 block text-[10px] leading-4 text-[#8da59a]">{item.excerpt.replace(/<\/?mark>/g, "")}</span><span className="mt-2 block break-all font-mono text-[8px] text-[#53695f]">{item.citationLocator}</span></button>)}</div> : null}
+            {filingSearch.isError ? <p className="mt-3 text-[10px] text-rose-200">Filing 检索暂不可用。</p> : null}
             <div className="mt-4 space-y-2">
               {evidence.data.items.map((item) => <button className="block w-full rounded-lg border border-[#20342b] bg-[#09130f] p-3 text-left hover:border-emerald-300/30" key={item.evidenceId} onClick={() => setSelectedEvidenceId(item.evidenceId)} type="button"><span className="font-mono text-[9px] text-emerald-200">{item.evidenceId}</span><span className="mt-1 block text-xs text-[#dce8e2]">{item.title}</span></button>)}
             </div>

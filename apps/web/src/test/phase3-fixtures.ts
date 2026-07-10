@@ -21,6 +21,7 @@ const calculationClaim = {
       tolerance: "0.0001",
     },
   ],
+  dateReferences: [],
   confidence: 0.96,
   limitations: ["结果仅适用于固定 Mock fixture。"],
 };

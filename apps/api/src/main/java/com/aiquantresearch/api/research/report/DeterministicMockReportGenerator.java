@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
@@ -32,6 +34,7 @@ public class DeterministicMockReportGenerator {
             + ". Research use only; not investment advice.";
 
     private static final List<String> SCENARIO_ORDER = List.of("BULL", "BASE", "BEAR");
+    private static final Pattern ISO_DATE = Pattern.compile("\\b\\d{4}-\\d{2}-\\d{2}\\b");
 
     private final ObjectMapper objectMapper;
 
@@ -93,6 +96,13 @@ public class DeterministicMockReportGenerator {
                         (left, right) -> left,
                         LinkedHashMap::new
                 ));
+        Map<String, StoredEvidence> evidenceByPublicId = orderedEvidence.stream()
+                .collect(Collectors.toMap(
+                        StoredEvidence::publicId,
+                        Function.identity(),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
 
         boolean fundamentalRequested = context.request()
                 .path("includeFundamentalAnalysis")
@@ -123,6 +133,7 @@ public class DeterministicMockReportGenerator {
                 context.researchId(),
                 version,
                 evidenceByQuantId,
+                evidenceByPublicId,
                 chinese
         );
 
@@ -263,25 +274,23 @@ public class DeterministicMockReportGenerator {
         );
 
         ObjectNode dataQuality = report.putObject("dataQuality");
+        var qualityAssessment = EvidenceScoringPolicy.dataQuality(
+                context,
+                orderedEvidence,
+                orderedQuant,
+                List.of()
+        );
         List<String> optionalUnavailableMetrics = orderedQuant.stream()
                 .filter(item -> !"AVAILABLE".equals(item.status()) || item.value() == null)
                 .map(StoredQuantResult::metricName)
                 .distinct()
                 .sorted()
                 .toList();
-        List<String> missingMetrics = new ArrayList<>();
-        if (!fundamentalRequested) {
-            missingMetrics.add("fundamental_analysis: NOT_AVAILABLE (not requested)");
-        }
-        dataQuality.put(
-                "score",
-                BigDecimal.ONE.subtract(
-                        BigDecimal.valueOf(Math.min(0.50, missingMetrics.size() * 0.05))
-                )
-        );
+        dataQuality.put("score", qualityAssessment.score());
         ArrayNode missingData = dataQuality.putArray("missingData");
-        missingMetrics.forEach(missingData::add);
-        dataQuality.putArray("staleEvidenceIds");
+        qualityAssessment.missingData().forEach(missingData::add);
+        ArrayNode staleEvidenceIds = dataQuality.putArray("staleEvidenceIds");
+        qualityAssessment.staleEvidenceIds().forEach(staleEvidenceIds::add);
         dataQuality.putArray("sourceConflicts");
         ArrayNode limitations = dataQuality.putArray("limitations");
         limitations
@@ -515,18 +524,21 @@ public class DeterministicMockReportGenerator {
 
         private final String idPrefix;
         private final Map<UUID, StoredEvidence> evidenceByQuantId;
+        private final Map<String, StoredEvidence> evidenceByPublicId;
         private final boolean chinese;
 
         private ClaimFactory(
                 UUID researchId,
                 int version,
                 Map<UUID, StoredEvidence> evidenceByQuantId,
+                Map<String, StoredEvidence> evidenceByPublicId,
                 boolean chinese
         ) {
             this.idPrefix = "cl_"
                     + researchId.toString().replace("-", "").substring(0, 10)
                     + "_v" + version + "_";
             this.evidenceByQuantId = evidenceByQuantId;
+            this.evidenceByPublicId = evidenceByPublicId;
             this.chinese = chinese;
         }
 
@@ -540,6 +552,20 @@ public class DeterministicMockReportGenerator {
                 String materiality,
                 StoredEvidence evidence
         ) {
+            List<ObjectNode> dateReferences = new ArrayList<>();
+            Matcher dates = ISO_DATE.matcher(statement);
+            while (dates.find()) {
+                String token = dates.group();
+                if (token.equals(evidence.value().path("asOfDate").asText())) {
+                    ObjectNode reference = objectMapper.createObjectNode();
+                    reference.put("token", token);
+                    reference.put("normalizedDate", token);
+                    reference.put("sourceKind", "EVIDENCE");
+                    reference.put("sourceId", evidence.publicId());
+                    reference.put("jsonPointer", "/asOfDate");
+                    dateReferences.add(reference);
+                }
+            }
             return claim(
                     key,
                     statement,
@@ -547,7 +573,8 @@ public class DeterministicMockReportGenerator {
                     materiality,
                     List.of(evidence.publicId()),
                     List.of(),
-                    List.of()
+                    List.of(),
+                    dateReferences
             );
         }
 
@@ -584,7 +611,8 @@ public class DeterministicMockReportGenerator {
                     "MATERIAL",
                     List.of(quantEvidence.publicId()),
                     List.of(quant.publicId()),
-                    List.of(reference)
+                    List.of(reference),
+                    List.of()
             );
         }
 
@@ -595,7 +623,8 @@ public class DeterministicMockReportGenerator {
                 String materiality,
                 List<String> evidenceIds,
                 List<String> calculationIds,
-                List<ObjectNode> numericReferences
+                List<ObjectNode> numericReferences,
+                List<ObjectNode> dateReferences
         ) {
             ObjectNode claim = objectMapper.createObjectNode();
             claim.put("id", claimId(key));
@@ -608,7 +637,20 @@ public class DeterministicMockReportGenerator {
             calculationIds.forEach(calculationArray::add);
             ArrayNode referenceArray = claim.putArray("numericReferences");
             numericReferences.forEach(referenceArray::add);
-            claim.put("confidence", "FACT".equals(claimType) ? 0.95 : 0.98);
+            ArrayNode dateReferenceArray = claim.putArray("dateReferences");
+            dateReferences.forEach(dateReferenceArray::add);
+            List<StoredEvidence> supportingEvidence = evidenceIds.stream()
+                    .map(evidenceByPublicId::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+            claim.put(
+                    "confidence",
+                    EvidenceScoringPolicy.claimConfidence(
+                            claimType,
+                            supportingEvidence,
+                            false
+                    )
+            );
             claim.putArray("limitations");
             return claim;
         }

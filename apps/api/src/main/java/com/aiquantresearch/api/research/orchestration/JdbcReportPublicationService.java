@@ -233,9 +233,9 @@ public class JdbcReportPublicationService implements ReportPublicationService {
                     id, public_id, report_version_id, research_job_id,
                     claim_key, claim_type, statement, materiality, confidence,
                     calculation_ids_json, numeric_references_json, limitations_json,
-                    validation_status, validation_notes_json
+                    date_references_json, validation_status, validation_notes_json
                 ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb,
-                          ?::jsonb, 'PASSED', ?::jsonb)
+                          ?::jsonb, ?::jsonb, 'PASSED', ?::jsonb)
                 """,
                 claimId,
                 claim.path("id").asText(),
@@ -249,6 +249,7 @@ public class JdbcReportPublicationService implements ReportPublicationService {
                 jsonText(claim.path("calculationIds")),
                 jsonText(claim.path("numericReferences")),
                 jsonText(claim.path("limitations")),
+                jsonText(claim.path("dateReferences")),
                 jsonText(objectMapper.valueToTree(validationWarnings))
         );
         int index = 0;

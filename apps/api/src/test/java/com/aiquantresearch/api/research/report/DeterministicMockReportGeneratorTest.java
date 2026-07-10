@@ -76,7 +76,7 @@ class DeterministicMockReportGeneratorTest {
                 .doesNotContain("fundamentals");
         assertThat(report.path("dataQuality").path("missingData"))
                 .extracting(JsonNode::asText)
-                .contains("fundamental_analysis: NOT_AVAILABLE (not requested)");
+                .doesNotContain("fundamental_analysis: NOT_AVAILABLE (not requested)");
         assertThat(claims(report)).allSatisfy(claim ->
                 assertThat(claim.path("evidenceIds"))
                         .extracting(JsonNode::asText)
@@ -89,7 +89,7 @@ class DeterministicMockReportGeneratorTest {
                 context
         );
         assertThat(validation.valid()).as(validation.warnings().toString()).isTrue();
-        assertThat(validation.partial()).isTrue();
+        assertThat(validation.partial()).isFalse();
         assertThat(validation.warnings()).isEmpty();
     }
 

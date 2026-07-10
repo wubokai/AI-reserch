@@ -24,7 +24,8 @@ public class MockFilingProvider implements FilingProvider {
                         item.formType(),
                         item.filingDate(),
                         item.title(),
-                        item.summary()
+                        item.summary(),
+                        representativeHtml(item.title(), item.summary())
                 ))
                 .toList();
         return new FilingSnapshot(
@@ -34,5 +35,27 @@ public class MockFilingProvider implements FilingProvider {
                 documents,
                 manifest.watermark()
         );
+    }
+
+    private static String representativeHtml(String title, String summary) {
+        String safeTitle = escape(title);
+        String safeSummary = escape(summary);
+        return """
+                <!doctype html><html><body>
+                <h1>%s</h1>
+                <h2>Item 1. Business</h2><p>%s</p>
+                <h2>Item 1A. Risk Factors</h2><p>%s</p>
+                <h2>Item 7. Management's Discussion and Analysis</h2><p>%s</p>
+                <h2>Item 8. Financial Statements and Supplementary Data</h2>
+                <p>Fixed synthetic financial statement context for deterministic testing.</p>
+                </body></html>
+                """.formatted(safeTitle, safeSummary, safeSummary, safeSummary);
+    }
+
+    private static String escape(String value) {
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 }

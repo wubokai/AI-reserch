@@ -1,5 +1,6 @@
 package com.aiquantresearch.api.research.orchestration;
 
+import com.aiquantresearch.api.research.report.EvidenceScoringPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
@@ -33,7 +34,9 @@ public class EvidenceBuilder {
                     quant.unit(),
                     null,
                     quant.id(),
-                    0.98
+                    EvidenceScoringPolicy.evidenceQuality(
+                            true, true, "FRESH", true, true
+                    ).doubleValue()
             ));
         }
         for (StoredSource source : sources) {
@@ -107,7 +110,13 @@ public class EvidenceBuilder {
                 null,
                 source.id(),
                 null,
-                0.95
+                EvidenceScoringPolicy.evidenceQuality(
+                        source.primarySource(),
+                        source.provider().startsWith("MOCK_"),
+                        source.freshnessStatus(),
+                        source.contentHash() != null && !source.contentHash().isBlank(),
+                        true
+                ).doubleValue()
         );
     }
 

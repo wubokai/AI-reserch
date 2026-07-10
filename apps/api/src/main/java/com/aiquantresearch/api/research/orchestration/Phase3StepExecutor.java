@@ -14,6 +14,7 @@ import com.aiquantresearch.api.research.provider.ProviderDataNotFoundException;
 import com.aiquantresearch.api.research.provider.mock.MockFixtureCatalog;
 import com.aiquantresearch.api.research.report.DeterministicMockReportGenerator;
 import com.aiquantresearch.api.research.report.ReportValidator;
+import com.aiquantresearch.api.research.report.ReportRepairService;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.aiquantresearch.api.research.worker.StepExecutionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -79,6 +80,7 @@ public class Phase3StepExecutor {
     private final AnalyticsClient analyticsClient;
     private final DeterministicMockReportGenerator reportGenerator;
     private final ReportValidator reportValidator;
+    private final ReportRepairService reportRepairService;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
@@ -93,6 +95,7 @@ public class Phase3StepExecutor {
             AnalyticsClient analyticsClient,
             DeterministicMockReportGenerator reportGenerator,
             ReportValidator reportValidator,
+            ReportRepairService reportRepairService,
             JdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper
     ) {
@@ -106,6 +109,7 @@ public class Phase3StepExecutor {
         this.analyticsClient = analyticsClient;
         this.reportGenerator = reportGenerator;
         this.reportValidator = reportValidator;
+        this.reportRepairService = reportRepairService;
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
     }
@@ -363,10 +367,35 @@ public class Phase3StepExecutor {
                 context
         );
         if (!validation.valid()) {
-            throw new StepExecutionException(
-                    "REPORT_VALIDATION_FAILED",
-                    "The report candidate failed Evidence and numeric validation",
-                    false
+            var repair = reportRepairService.repairOnce(
+                    candidate,
+                    validation.warnings(),
+                    artifactStore.evidence(context.researchId()),
+                    artifactStore.quantResults(context.researchId()),
+                    context
+            );
+            var repairedValidation = reportValidator.validate(
+                    repair.report(),
+                    artifactStore.quantResults(context.researchId()),
+                    artifactStore.evidence(context.researchId()),
+                    context
+            );
+            if (!repairedValidation.valid()) {
+                throw new StepExecutionException(
+                        "REPORT_VALIDATION_FAILED_AFTER_REPAIR",
+                        "The report candidate failed its single constrained repair",
+                        false
+                );
+            }
+            List<String> repairWarnings = new java.util.ArrayList<>();
+            repairWarnings.add("REPORT_REPAIRED_ONCE");
+            repair.prunedClaimIds().stream()
+                    .map(id -> "REPORT_UNSAFE_CLAIM_PRUNED:" + id)
+                    .forEach(repairWarnings::add);
+            return new StepExecutionResult(
+                    repairedValidation.report(),
+                    true,
+                    repairWarnings
             );
         }
         return new StepExecutionResult(

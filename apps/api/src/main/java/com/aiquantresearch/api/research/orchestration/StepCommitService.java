@@ -2,6 +2,7 @@ package com.aiquantresearch.api.research.orchestration;
 
 import com.aiquantresearch.api.research.application.CanonicalHashService;
 import com.aiquantresearch.api.research.domain.StepType;
+import com.aiquantresearch.api.research.filing.FilingRegistry;
 import com.aiquantresearch.api.research.worker.DurableQueueClient;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.aiquantresearch.api.research.worker.StepExecutionException;
@@ -23,6 +24,7 @@ public class StepCommitService {
 
     private final Phase3ArtifactStore artifactStore;
     private final EvidenceBuilder evidenceBuilder;
+    private final FilingRegistry filingRegistry;
     private final DurableQueueClient queueClient;
     private final ReportPublicationService publicationService;
     private final CanonicalHashService hashService;
@@ -32,6 +34,7 @@ public class StepCommitService {
     public StepCommitService(
             Phase3ArtifactStore artifactStore,
             EvidenceBuilder evidenceBuilder,
+            FilingRegistry filingRegistry,
             DurableQueueClient queueClient,
             ReportPublicationService publicationService,
             CanonicalHashService hashService,
@@ -40,6 +43,7 @@ public class StepCommitService {
     ) {
         this.artifactStore = artifactStore;
         this.evidenceBuilder = evidenceBuilder;
+        this.filingRegistry = filingRegistry;
         this.queueClient = queueClient;
         this.publicationService = publicationService;
         this.hashService = hashService;
@@ -106,17 +110,20 @@ public class StepCommitService {
                     false,
                     artifactIds
             );
-            case FETCH_FILINGS -> persistSingleSource(
-                    claim,
-                    result.payload(),
-                    "MOCK_FILINGS_V1",
-                    "mock_filings_v1",
-                    "FILING",
-                    result.payload().path("symbol").asText(),
-                    date(result.payload(), "asOfDate"),
-                    true,
-                    artifactIds
-            );
+            case FETCH_FILINGS -> {
+                StoredSource source = persistSingleSource(
+                        claim,
+                        result.payload(),
+                        "MOCK_FILINGS_V1",
+                        "mock_filings_v1",
+                        "FILING",
+                        result.payload().path("symbol").asText(),
+                        date(result.payload(), "asOfDate"),
+                        true,
+                        artifactIds
+                );
+                filingRegistry.register(source, result.payload());
+            }
             case FETCH_MACRO_DATA -> persistSingleSource(
                     claim,
                     result.payload(),
@@ -216,7 +223,7 @@ public class StepCommitService {
         );
     }
 
-    private void persistSingleSource(
+    private StoredSource persistSingleSource(
             QueueClaim claim,
             JsonNode payload,
             String provider,
@@ -238,6 +245,7 @@ public class StepCommitService {
                 primary
         );
         artifactIds.add(source.id().toString());
+        return source;
     }
 
     private static LocalDate date(JsonNode payload, String field) {

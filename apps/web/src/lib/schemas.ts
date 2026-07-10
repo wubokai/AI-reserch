@@ -240,6 +240,14 @@ export const numericReferenceSchema = z.object({
   tolerance: z.string().regex(/^[0-9]+(?:\.[0-9]+)?$/),
 });
 
+export const dateReferenceSchema = z.object({
+  token: z.iso.date(),
+  normalizedDate: z.iso.date(),
+  sourceKind: z.enum(["EVIDENCE", "CALCULATION"]),
+  sourceId: z.string().min(1),
+  jsonPointer: z.string().min(1),
+});
+
 export const claimSchema = z.object({
   id: z.string().regex(/^cl_[A-Za-z0-9_-]{1,64}$/),
   statement: z.string().min(1),
@@ -248,6 +256,7 @@ export const claimSchema = z.object({
   evidenceIds: z.array(z.string().regex(/^ev_[A-Za-z0-9_-]{1,64}$/)),
   calculationIds: z.array(z.string()).default([]),
   numericReferences: z.array(numericReferenceSchema).default([]),
+  dateReferences: z.array(dateReferenceSchema).default([]),
   confidence: z.number().min(0).max(1),
   limitations: z.array(z.string()).default([]),
 });
@@ -404,11 +413,35 @@ export const evidenceSchema = z.object({
   rawDataHash: z.string().regex(/^[a-f0-9]{64}$/),
   isDemoData: z.boolean(),
   relatedClaimIds: z.array(z.string()),
+  sourceSnapshotId: z.uuid().nullable().optional(),
+  sourceSchemaVersion: z.string().nullable().optional(),
+  normalizedDataHash: z.string().regex(/^[a-f0-9]{64}$/).nullable().optional(),
 });
 
 export const evidencePageSchema = z.object({
   items: z.array(evidenceSchema),
   page: pageMetadataSchema,
+  dataMode: dataModeSchema,
+});
+
+export const evidenceSearchResultSchema = z.object({
+  evidenceId: z.string().regex(/^ev_[A-Za-z0-9_-]{1,64}$/),
+  filingId: z.uuid(),
+  chunkId: z.uuid(),
+  externalDocumentId: z.string(),
+  formType: z.string(),
+  filingDate: z.iso.date(),
+  sectionName: z.string(),
+  chunkIndex: z.number().int().nonnegative(),
+  excerpt: z.string(),
+  citationLocator: z.string(),
+  rank: z.number().nonnegative(),
+  isDemoData: z.boolean(),
+});
+
+export const evidenceSearchResponseSchema = z.object({
+  query: z.string(),
+  items: z.array(evidenceSearchResultSchema),
   dataMode: dataModeSchema,
 });
 

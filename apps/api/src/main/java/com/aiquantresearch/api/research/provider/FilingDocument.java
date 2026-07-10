@@ -7,6 +7,7 @@ public record FilingDocument(
         String formType,
         LocalDate filingDate,
         String title,
-        String summary
+        String summary,
+        String contentHtml
 ) {
 }

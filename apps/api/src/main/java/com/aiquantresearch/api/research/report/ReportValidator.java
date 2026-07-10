@@ -26,6 +26,10 @@ public class ReportValidator {
     private static final Pattern CALCULATION_ID = Pattern.compile("^calc_[A-Za-z0-9_-]{1,64}$");
     private static final Pattern DECIMAL = Pattern.compile("^-?[0-9]+(?:\\.[0-9]+)?$");
     private static final Pattern NON_NEGATIVE_DECIMAL = Pattern.compile("^[0-9]+(?:\\.[0-9]+)?$");
+    private static final Pattern ISO_DATE = Pattern.compile("\\b\\d{4}-\\d{2}-\\d{2}\\b");
+    private static final Pattern STATEMENT_NUMBER = Pattern.compile(
+            "(?<![\\p{L}\\p{N}_])-?\\d+(?:\\.\\d+)?%?(?![\\p{L}\\p{N}_])"
+    );
 
     private static final Set<String> ROOT_FIELDS = Set.of(
             "schemaVersion", "title", "symbol", "securityType", "locale", "asOfDate",
@@ -34,11 +38,14 @@ public class ReportValidator {
     );
     private static final Set<String> CLAIM_FIELDS = Set.of(
             "id", "statement", "claimType", "materiality", "evidenceIds",
-            "calculationIds", "numericReferences", "confidence", "limitations"
+            "calculationIds", "numericReferences", "dateReferences", "confidence", "limitations"
     );
     private static final Set<String> REFERENCE_FIELDS = Set.of(
             "token", "normalizedValue", "unit", "sourceKind", "sourceId",
             "jsonPointer", "tolerance"
+    );
+    private static final Set<String> DATE_REFERENCE_FIELDS = Set.of(
+            "token", "normalizedDate", "sourceKind", "sourceId", "jsonPointer"
     );
     private static final Set<String> CLAIM_TYPES = Set.of(
             "FACT", "CALCULATION", "INFERENCE", "OPINION"
@@ -85,6 +92,8 @@ public class ReportValidator {
                         (left, right) -> left,
                         LinkedHashMap::new
                 ));
+        boolean unresolvedConflict = report.path("dataQuality").path("sourceConflicts").isArray()
+                && !report.path("dataQuality").path("sourceConflicts").isEmpty();
 
         exactFields(report, ROOT_FIELDS, "$", warnings);
         validateText(report, "schemaVersion", "$", 1, 100, warnings);
@@ -140,6 +149,7 @@ public class ReportValidator {
                         calculations,
                         evidenceById,
                         claimIds,
+                        unresolvedConflict,
                         30,
                         warnings
                 );
@@ -148,26 +158,27 @@ public class ReportValidator {
 
         materialClaims += validateClaimArray(
                 report.path("bullCase"), "$.bullCase", calculations, evidenceById,
-                claimIds, 8, warnings
+                claimIds, unresolvedConflict, 8, warnings
         );
         materialClaims += validateClaimArray(
                 report.path("bearCase"), "$.bearCase", calculations, evidenceById,
-                claimIds, 8, warnings
+                claimIds, unresolvedConflict, 8, warnings
         );
         materialClaims += validateClaimArray(
                 report.path("catalysts"), "$.catalysts", calculations, evidenceById,
-                claimIds, 12, warnings
+                claimIds, unresolvedConflict, 12, warnings
         );
         materialClaims += validateRisks(
-                report.path("risks"), calculations, evidenceById, claimIds, warnings
+                report.path("risks"), calculations, evidenceById, claimIds,
+                unresolvedConflict, warnings
         );
         materialClaims += validateScenario(
                 report.path("scenarioAnalysis"), calculations, calculationsByMetric,
-                evidenceById, claimIds, warnings
+                evidenceById, claimIds, unresolvedConflict, warnings
         );
         materialClaims += validateClaimArray(
                 report.path("conclusion"), "$.conclusion", calculations, evidenceById,
-                claimIds, 8, warnings
+                claimIds, unresolvedConflict, 8, warnings
         );
         if (!report.path("conclusion").isArray() || report.path("conclusion").isEmpty()) {
             warn(warnings, "CONCLUSION_REQUIRED", "$.conclusion");
@@ -175,7 +186,14 @@ public class ReportValidator {
         if (materialClaims == 0) {
             warn(warnings, "MATERIAL_CLAIM_REQUIRED", "$");
         }
-        validateDataQuality(report.path("dataQuality"), evidenceById, warnings);
+        validateDataQuality(
+                report.path("dataQuality"),
+                evidence,
+                evidenceById,
+                quantResults,
+                context,
+                warnings
+        );
 
         boolean valid = warnings.isEmpty();
         boolean declaredPartial = report.path("dataQuality").path("missingData").isArray()
@@ -197,6 +215,7 @@ public class ReportValidator {
             Map<String, StoredQuantResult> calculations,
             Map<String, StoredEvidence> evidence,
             Set<String> claimIds,
+            boolean unresolvedConflict,
             int maxItems,
             List<String> warnings
     ) {
@@ -212,7 +231,8 @@ public class ReportValidator {
             JsonNode claim = claims.get(index);
             String claimPath = path + "[" + index + "]";
             if (validateClaim(
-                    claim, claimPath, calculations, evidence, claimIds, warnings
+                    claim, claimPath, calculations, evidence, claimIds,
+                    unresolvedConflict, warnings
             )) {
                 materialClaims++;
             }
@@ -226,6 +246,7 @@ public class ReportValidator {
             Map<String, StoredQuantResult> calculations,
             Map<String, StoredEvidence> evidence,
             Set<String> claimIds,
+            boolean unresolvedConflict,
             List<String> warnings
     ) {
         if (!claim.isObject()) {
@@ -266,8 +287,19 @@ public class ReportValidator {
         if ("CALCULATION".equals(claimType) && claimCalculationIds.isEmpty()) {
             warn(warnings, "CALCULATION_CLAIM_WITHOUT_CALCULATION", path + ".calculationIds");
         }
+        List<StoredEvidence> supportingEvidence = claimEvidenceIds.stream()
+                .map(evidence::get)
+                .filter(Objects::nonNull)
+                .toList();
+        if ("FACT".equals(claimType)
+                && !supportingEvidence.isEmpty()
+                && supportingEvidence.stream().allMatch(item -> Set.of("INFERENCE", "OPINION")
+                        .contains(item.value().path("supportKind").asText()))) {
+            warn(warnings, "FACT_SUPPORTED_ONLY_BY_INFERENCE", path + ".evidenceIds");
+        }
 
         JsonNode references = claim.path("numericReferences");
+        Set<String> numericTokens = new HashSet<>();
         if (!references.isArray()) {
             warn(warnings, "NUMERIC_REFERENCE_ARRAY_REQUIRED", path + ".numericReferences");
         } else {
@@ -275,6 +307,7 @@ public class ReportValidator {
                 warn(warnings, "NUMERIC_REFERENCE_ARRAY_TOO_LARGE", path + ".numericReferences");
             }
             for (int index = 0; index < references.size(); index++) {
+                numericTokens.add(references.get(index).path("token").asText());
                 validateNumericReference(
                         references.get(index),
                         path + ".numericReferences[" + index + "]",
@@ -287,13 +320,44 @@ public class ReportValidator {
                 );
             }
         }
+        validateStatementNumericCoverage(
+                claim.path("statement").asText(),
+                numericTokens,
+                path + ".statement",
+                warnings
+        );
+        validateDateReferences(
+                claim.path("dateReferences"),
+                path + ".dateReferences",
+                claim.path("statement").asText(),
+                claimEvidenceIds,
+                claimCalculationIds,
+                calculations,
+                evidence,
+                warnings
+        );
         JsonNode confidence = claim.path("confidence");
         if (!confidence.isNumber()
                 || confidence.decimalValue().compareTo(BigDecimal.ZERO) < 0
                 || confidence.decimalValue().compareTo(BigDecimal.ONE) > 0) {
             warn(warnings, "CLAIM_CONFIDENCE_INVALID", path + ".confidence");
+        } else {
+            BigDecimal expected = EvidenceScoringPolicy.claimConfidence(
+                    claimType,
+                    supportingEvidence,
+                    unresolvedConflict
+            );
+            if (confidence.decimalValue().subtract(expected).abs()
+                    .compareTo(new BigDecimal("0.005")) > 0) {
+                warn(warnings, "CLAIM_CONFIDENCE_MISMATCH", path + ".confidence");
+            }
         }
         validateStringArray(claim.path("limitations"), path + ".limitations", 10, warnings);
+        if (("INFERENCE".equals(claimType) || "OPINION".equals(claimType))
+                && (!claim.path("limitations").isArray()
+                || claim.path("limitations").isEmpty())) {
+            warn(warnings, "INTERPRETIVE_CLAIM_LIMITATION_REQUIRED", path + ".limitations");
+        }
         return "MATERIAL".equals(materiality);
     }
 
@@ -396,11 +460,105 @@ public class ReportValidator {
         }
     }
 
+    private static void validateStatementNumericCoverage(
+            String statement,
+            Set<String> referencedTokens,
+            String path,
+            List<String> warnings
+    ) {
+        String withoutDates = ISO_DATE.matcher(statement).replaceAll("          ");
+        var matcher = STATEMENT_NUMBER.matcher(withoutDates);
+        while (matcher.find()) {
+            if (!referencedTokens.contains(matcher.group())) {
+                warn(warnings, "NUMERIC_TOKEN_UNREFERENCED", path);
+            }
+        }
+    }
+
+    private static void validateDateReferences(
+            JsonNode references,
+            String path,
+            String statement,
+            Set<String> claimEvidenceIds,
+            Set<String> claimCalculationIds,
+            Map<String, StoredQuantResult> calculations,
+            Map<String, StoredEvidence> evidence,
+            List<String> warnings
+    ) {
+        if (!references.isArray()) {
+            warn(warnings, "DATE_REFERENCE_ARRAY_REQUIRED", path);
+            return;
+        }
+        if (references.size() > 12) {
+            warn(warnings, "DATE_REFERENCE_ARRAY_TOO_LARGE", path);
+        }
+        Set<String> referencedTokens = new HashSet<>();
+        for (int index = 0; index < references.size(); index++) {
+            JsonNode reference = references.get(index);
+            String referencePath = path + "[" + index + "]";
+            if (!reference.isObject()) {
+                warn(warnings, "DATE_REFERENCE_NOT_OBJECT", referencePath);
+                continue;
+            }
+            exactFields(reference, DATE_REFERENCE_FIELDS, referencePath, warnings);
+            for (String field : DATE_REFERENCE_FIELDS) {
+                validateText(reference, field, referencePath, 1, 300, warnings);
+            }
+            String token = reference.path("token").asText();
+            String normalizedDate = reference.path("normalizedDate").asText();
+            if (!referencedTokens.add(token)) {
+                warn(warnings, "DATE_REFERENCE_DUPLICATE", referencePath + ".token");
+            }
+            if (!statement.contains(token)) {
+                warn(warnings, "DATE_TOKEN_NOT_IN_STATEMENT", referencePath + ".token");
+            }
+            if (safeDate(normalizedDate) == null || !token.equals(normalizedDate)) {
+                warn(warnings, "DATE_VALUE_INVALID", referencePath + ".normalizedDate");
+            }
+            String sourceId = reference.path("sourceId").asText();
+            JsonNode sourceValue;
+            if ("EVIDENCE".equals(reference.path("sourceKind").asText())) {
+                StoredEvidence item = evidence.get(sourceId);
+                if (item == null || !claimEvidenceIds.contains(sourceId)) {
+                    warn(warnings, "DATE_EVIDENCE_NOT_ALLOWED", referencePath + ".sourceId");
+                    continue;
+                }
+                sourceValue = item.value();
+            } else if ("CALCULATION".equals(reference.path("sourceKind").asText())) {
+                StoredQuantResult item = calculations.get(sourceId);
+                if (item == null || !claimCalculationIds.contains(sourceId)) {
+                    warn(warnings, "DATE_CALCULATION_NOT_ALLOWED", referencePath + ".sourceId");
+                    continue;
+                }
+                sourceValue = item.result();
+            } else {
+                warn(warnings, "DATE_SOURCE_KIND_INVALID", referencePath + ".sourceKind");
+                continue;
+            }
+            String pointer = reference.path("jsonPointer").asText();
+            if (!pointer.startsWith("/")) {
+                warn(warnings, "DATE_POINTER_INVALID", referencePath + ".jsonPointer");
+                continue;
+            }
+            JsonNode resolved = sourceValue.at(pointer);
+            if (!resolved.isTextual() || !normalizedDate.equals(resolved.asText())) {
+                warn(warnings, "DATE_VALUE_MISMATCH", referencePath + ".normalizedDate");
+            }
+        }
+        var dateMatcher = ISO_DATE.matcher(statement);
+        while (dateMatcher.find()) {
+            if (!referencedTokens.contains(dateMatcher.group())) {
+                warn(warnings, "DATE_TOKEN_UNREFERENCED", path);
+            }
+        }
+    }
+
     private static int validateRisks(
             JsonNode risks,
             Map<String, StoredQuantResult> calculations,
             Map<String, StoredEvidence> evidence,
             Set<String> claimIds,
+            boolean unresolvedConflict,
             List<String> warnings
     ) {
         if (!risks.isArray()) {
@@ -419,7 +577,7 @@ public class ReportValidator {
                 warn(warnings, "RISK_CATEGORY_INVALID", path + ".category");
             }
             if (validateClaim(risk.path("claim"), path + ".claim", calculations,
-                    evidence, claimIds, warnings)) {
+                    evidence, claimIds, unresolvedConflict, warnings)) {
                 material++;
             }
         }
@@ -432,6 +590,7 @@ public class ReportValidator {
             Map<String, StoredQuantResult> calculationsByMetric,
             Map<String, StoredEvidence> evidence,
             Set<String> claimIds,
+            boolean unresolvedConflict,
             List<String> warnings
     ) {
         String path = "$.scenarioAnalysis";
@@ -522,6 +681,7 @@ public class ReportValidator {
                 calculations,
                 evidence,
                 claimIds,
+                unresolvedConflict,
                 6,
                 warnings
         );
@@ -549,7 +709,10 @@ public class ReportValidator {
 
     private static void validateDataQuality(
             JsonNode dataQuality,
+            List<StoredEvidence> evidenceItems,
             Map<String, StoredEvidence> evidence,
+            List<StoredQuantResult> calculations,
+            ResearchExecutionContext context,
             List<String> warnings
     ) {
         String path = "$.dataQuality";
@@ -574,6 +737,23 @@ public class ReportValidator {
         );
         if (staleIds.size() != dataQuality.path("staleEvidenceIds").size()) {
             warn(warnings, "STALE_EVIDENCE_DUPLICATE", path + ".staleEvidenceIds");
+        }
+        List<String> sourceConflicts = new ArrayList<>();
+        dataQuality.path("sourceConflicts").forEach(item -> sourceConflicts.add(item.asText()));
+        var expected = EvidenceScoringPolicy.dataQuality(
+                context,
+                evidenceItems,
+                calculations,
+                sourceConflicts
+        );
+        if (score.isNumber() && score.decimalValue().compareTo(expected.score()) != 0) {
+            warn(warnings, "DATA_QUALITY_SCORE_MISMATCH", path + ".score");
+        }
+        if (!stringValues(dataQuality.path("missingData")).equals(expected.missingData())) {
+            warn(warnings, "DATA_QUALITY_MISSING_DATA_MISMATCH", path + ".missingData");
+        }
+        if (!staleIds.equals(Set.copyOf(expected.staleEvidenceIds()))) {
+            warn(warnings, "STALE_EVIDENCE_DISCLOSURE_MISMATCH", path + ".staleEvidenceIds");
         }
     }
 
@@ -717,6 +897,14 @@ public class ReportValidator {
                 warn(warnings, "STRING_ARRAY_ITEM_INVALID", path + "[" + index + "]");
             }
         }
+    }
+
+    private static List<String> stringValues(JsonNode values) {
+        List<String> result = new ArrayList<>();
+        if (values.isArray()) {
+            values.forEach(item -> result.add(item.asText()));
+        }
+        return List.copyOf(result);
     }
 
     private static boolean isDecimal(JsonNode value) {
