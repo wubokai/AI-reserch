@@ -104,12 +104,38 @@ wait_for_url "Web" "$WEB_HEALTH_URL"
 wait_for_url "API" "$API_HEALTH_URL"
 wait_for_url "Analytics" "$ANALYTICS_HEALTH_URL"
 
+web_request \
+  "Read aggregate system health" \
+  "/api/system-health" \
+  "$TMP_DIR/system-health.json" \
+  "$TMP_DIR/system-health.headers"
+
+python3 - "$TMP_DIR/system-health.json" <<'PY'
+import json
+import sys
+
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    payload = json.load(handle)
+
+assert payload.get("status") == "UP", payload
+services = payload.get("services")
+assert isinstance(services, dict), payload
+assert set(services) >= {"web", "api", "analytics"}, services
+for service_name in ("web", "api", "analytics"):
+    service = services[service_name]
+    assert isinstance(service, dict), service
+    assert service.get("status") == "UP", f"{service_name} is not UP: {service}"
+    if "dataMode" in service:
+        assert service["dataMode"] == "MOCK", f"{service_name} is not in MOCK mode: {service}"
+PY
+
 if [[ "$PHASE3_CLOSED_LOOP_SMOKE" != "true" ]]; then
-  printf 'All application health checks passed.\n'
+  printf 'All application and aggregate health checks passed.\n'
   exit 0
 fi
 
-printf 'Service health checks passed; starting Phase 3 closed-loop smoke test.\n'
+printf 'Service and aggregate health checks passed; starting Phase 3 closed-loop smoke test.\n'
 
 # A fixed request and idempotency key make repeated local runs safe. The second
 # request explicitly proves that the API replays the original command.

@@ -95,6 +95,7 @@ services:
     environment:
       NODE_ENV: production
       API_INTERNAL_BASE_URL: http://api:8080
+      ANALYTICS_INTERNAL_BASE_URL: http://analytics:8000
       API_DEMO_USERNAME: ${DEMO_PRINCIPAL_USERNAME:-demo}
       API_DEMO_PASSWORD: ${DEMO_PRINCIPAL_PASSWORD:-change_me_demo_only}
     depends_on:
