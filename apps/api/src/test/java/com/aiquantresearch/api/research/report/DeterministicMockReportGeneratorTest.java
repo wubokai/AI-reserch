@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.aiquantresearch.api.research.orchestration.ResearchExecutionContext;
+import com.aiquantresearch.api.research.orchestration.StoredQuantResult;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class DeterministicMockReportGeneratorTest {
@@ -88,6 +91,39 @@ class DeterministicMockReportGeneratorTest {
         assertThat(validation.valid()).as(validation.warnings().toString()).isTrue();
         assertThat(validation.partial()).isTrue();
         assertThat(validation.warnings()).isEmpty();
+    }
+
+    @Test
+    void disclosesOptionalUnavailableMetricsWithoutDeclaringTheReportPartial() {
+        List<StoredQuantResult> quantResults = new ArrayList<>(fixture.quantResults());
+        ObjectNode result = fixture.objectMapper().createObjectNode();
+        result.put("name", "forward_price_to_earnings");
+        result.put("status", "NOT_AVAILABLE");
+        result.putNull("value");
+        result.put("unit", "RATIO");
+        quantResults.add(new StoredQuantResult(
+                UUID.fromString("00000000-0000-4000-8000-000000000004"),
+                "calc_forward_price_to_earnings",
+                "forward_price_to_earnings",
+                null,
+                "RATIO",
+                "NOT_AVAILABLE",
+                result
+        ));
+
+        JsonNode report = generator.generate(
+                fixture.context(), fixture.sources(), quantResults, fixture.evidence(), 4
+        );
+
+        assertThat(report.path("dataQuality").path("missingData")).isEmpty();
+        assertThat(report.path("dataQuality").path("limitations"))
+                .extracting(JsonNode::asText)
+                .contains("Optional quant metric unavailable: forward_price_to_earnings");
+        ReportValidationResult validation = new ReportValidator().validate(
+                report, quantResults, fixture.evidence(), fixture.context()
+        );
+        assertThat(validation.valid()).as(validation.warnings().toString()).isTrue();
+        assertThat(validation.partial()).isFalse();
     }
 
     @Test
