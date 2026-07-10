@@ -195,6 +195,31 @@ def test_missing_forecast_and_source_unit_mismatch_are_explicit(client: TestClie
     assert _warning_codes(metrics["price_to_sales"]) == {"SOURCE_UNIT_MISMATCH"}
 
 
+def test_adjacent_ttm_periods_are_not_misreported_as_year_over_year(
+    client: TestClient,
+) -> None:
+    fundamentals: list[dict[str, object]] = [
+        {
+            "name": "revenue",
+            "value": value,
+            "unit": "USD",
+            "periodType": "TTM",
+            "periodEndDate": period_end,
+            "sourceSnapshotId": f"snap_{period_end}",
+        }
+        for period_end, value in (("2024-09-30", "900"), ("2024-12-31", "1000"))
+    ]
+    metrics = _metrics(
+        client.post(
+            "/analytics/v1/fundamentals",
+            json=make_payload([100, 101], fundamentals=fundamentals),
+        ).json(),
+    )
+
+    assert metrics["revenue_growth_yoy"]["status"] == "NOT_AVAILABLE"
+    assert _warning_codes(metrics["revenue_growth_yoy"]) == {"INSUFFICIENT_DATA"}
+
+
 def test_duplicate_fundamental_conflict_and_etf_capability_matrix(client: TestClient) -> None:
     fundamentals = make_complete_fundamentals()
     duplicate = deepcopy(fundamentals[-1])

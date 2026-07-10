@@ -89,6 +89,10 @@ def test_golden_scenario_values_follow_documented_ev_ebitda_formula(client: Test
         "scenario_bear_upside_downside": "3.00000000",
         "weighted_scenario_value": "119.0000",
     }
+    implied_values = [
+        float(metrics[f"scenario_{name}_implied_price"]) for name in ("bull", "base", "bear")
+    ]
+    assert min(implied_values) <= float(metrics["weighted_scenario_value"]) <= max(implied_values)
 
 
 def test_valuation_uses_explicit_scenario_currency_and_net_debt(client: TestClient) -> None:

@@ -154,6 +154,10 @@ def test_market_invariants_and_input_order_hold(client: TestClient) -> None:
 
 
 def test_invalid_market_boundaries_fail_with_stable_codes(client: TestClient) -> None:
+    empty = make_payload([100, 101])
+    empty["prices"] = []
+    assert client.post("/analytics/v1/returns", json=empty).status_code == 400
+
     single = make_payload([100, 101])
     single["prices"] = cast("list[object]", single["prices"])[:1]
     assert client.post("/analytics/v1/returns", json=single).status_code == 400

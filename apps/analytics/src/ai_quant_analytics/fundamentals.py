@@ -27,6 +27,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 _NAME_PATTERN = re.compile(r"[^a-z0-9]")
+_MINIMUM_GROWTH_POINTS = 2
+_MINIMUM_TTM_COMPARISON_DAYS = 300
+_MAXIMUM_TTM_COMPARISON_DAYS = 430
 _FUNDAMENTAL_ORDER = (
     "revenue_growth_yoy",
     "revenue_cagr",
@@ -977,16 +980,31 @@ def _growth_pair(
                 ),
                 key=lambda group: group.period_end,
             )
-            offset = 4 if period_type is PeriodType.QUARTER else 1
-            if len(series) > offset:
-                candidates.append(
-                    (
-                        _PERIOD_PRIORITY[period_type],
-                        series[-1].period_end,
-                        series[-1 - offset],
-                        series[-1],
-                    ),
-                )
+            if period_type is PeriodType.TTM and len(series) >= _MINIMUM_GROWTH_POINTS:
+                current = series[-1]
+                comparable = [
+                    group
+                    for group in series[:-1]
+                    if _MINIMUM_TTM_COMPARISON_DAYS
+                    <= (current.period_end - group.period_end).days
+                    <= _MAXIMUM_TTM_COMPARISON_DAYS
+                ]
+                if comparable:
+                    prior = max(comparable, key=lambda group: group.period_end)
+                    candidates.append(
+                        (_PERIOD_PRIORITY[period_type], current.period_end, prior, current),
+                    )
+            else:
+                offset = 4 if period_type is PeriodType.QUARTER else 1
+                if len(series) > offset:
+                    candidates.append(
+                        (
+                            _PERIOD_PRIORITY[period_type],
+                            series[-1].period_end,
+                            series[-1 - offset],
+                            series[-1],
+                        ),
+                    )
     if not candidates:
         return None
     selected = max(candidates, key=lambda item: (item[0], item[1]))
