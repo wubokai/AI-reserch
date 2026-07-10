@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -133,6 +134,11 @@ class OpenAiResearchLanguageModelTest {
         verify(fixture.failureAuditService()).record(
                 any(), any(), any(), any(), anyLong(), any(), any(), anyInt()
         );
+        var order = inOrder(fixture.failureAuditService(), fixture.budgetService());
+        order.verify(fixture.failureAuditService()).record(
+                any(), any(), any(), any(), anyLong(), any(), any(), anyInt()
+        );
+        order.verify(fixture.budgetService()).release(fixture.reservationId());
     }
 
     @Test

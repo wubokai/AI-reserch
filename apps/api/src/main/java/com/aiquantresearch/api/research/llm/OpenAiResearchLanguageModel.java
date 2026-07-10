@@ -176,7 +176,6 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                             false,
                             exception
                     );
-            budgetService.release(reservation.id());
             if (networkCallCount > 0) {
                 long latencyMs = Duration.ofNanos(System.nanoTime() - started).toMillis();
                 try {
@@ -194,6 +193,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                     normalized.addSuppressed(auditFailure);
                 }
             }
+            budgetService.release(reservation.id());
             throw normalized;
         }
     }
