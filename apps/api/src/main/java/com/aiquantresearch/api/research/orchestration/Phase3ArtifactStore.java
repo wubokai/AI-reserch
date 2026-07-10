@@ -1,5 +1,6 @@
 package com.aiquantresearch.api.research.orchestration;
 
+import com.aiquantresearch.api.research.llm.LlmCallAudit;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.LocalDate;
@@ -44,5 +45,5 @@ public interface Phase3ArtifactStore {
             List<EvidenceDraft> drafts
     );
 
-    UUID persistMockLlmCall(QueueClaim claim, JsonNode report, String reportHash);
+    UUID persistLlmCall(QueueClaim claim, LlmCallAudit audit);
 }

@@ -3,7 +3,11 @@
 These JSON Schemas are the canonical Structured Outputs contracts.
 
 - `research-plan.schema.json`: constrained research plan.
+- `filing-analysis.schema.json`: filing-section claims over registered Evidence.
+- `fundamental-narrative.schema.json`: evidence-backed fundamental narrative candidates.
+- `risk-analysis.schema.json`: inference/opinion risk candidates with explicit limitations.
 - `research-report.schema.json`: claim-centric final report.
+- `validation-result.schema.json`: bounded validation issues and repair instructions.
 
 `research_report_v1` exposes Bull/Base/Bear scenario inputs and deterministic
 outputs as decimal strings plus `weightedImpliedPrice`; every narrative scenario

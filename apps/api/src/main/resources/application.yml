@@ -62,6 +62,27 @@ app:
   analytics:
     base-url: ${ANALYTICS_INTERNAL_BASE_URL:http://localhost:8000}
     timeout: ${ANALYTICS_TIMEOUT:15s}
+  llm:
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+    timeout: ${OPENAI_TIMEOUT:45s}
+    api-key: ${OPENAI_API_KEY:}
+    report-model: ${OPENAI_REPORT_MODEL:}
+    validation-model: ${OPENAI_VALIDATION_MODEL:}
+    reasoning-effort: ${OPENAI_REASONING_EFFORT:low}
+    max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:12000}
+    max-tool-rounds: ${OPENAI_MAX_TOOL_ROUNDS:3}
+    reservation-ttl: ${OPENAI_BUDGET_RESERVATION_TTL:3m}
+    allow-safe-fallback: ${OPENAI_ALLOW_SAFE_FALLBACK:true}
+    safety-hmac-secret: ${OPENAI_SAFETY_HMAC_SECRET:}
+    prompt-version: ${OPENAI_REPORT_PROMPT_VERSION:report_prompt_v1}
+    schema-version: ${OPENAI_REPORT_SCHEMA_VERSION:research_report_v1}
+    max-cost-usd: ${RESEARCH_MAX_LLM_COST_USD:1.00}
+    max-calls: ${RESEARCH_MAX_LLM_CALLS:10}
+    pricing-version: ${OPENAI_PRICING_VERSION:}
+    pricing-effective-from: ${OPENAI_PRICING_EFFECTIVE_FROM:}
+    input-usd-per-million-tokens: ${OPENAI_INPUT_USD_PER_MILLION_TOKENS:}
+    cached-input-usd-per-million-tokens: ${OPENAI_CACHED_INPUT_USD_PER_MILLION_TOKENS:}
+    output-usd-per-million-tokens: ${OPENAI_OUTPUT_USD_PER_MILLION_TOKENS:}
   worker:
     enabled: ${RESEARCH_WORKER_ENABLED:true}
     worker-id: ${RESEARCH_WORKER_ID:api-worker-1}

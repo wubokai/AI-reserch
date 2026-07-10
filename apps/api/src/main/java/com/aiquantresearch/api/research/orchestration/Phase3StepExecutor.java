@@ -4,6 +4,9 @@ import com.aiquantresearch.api.research.analytics.AnalyticsClient;
 import com.aiquantresearch.api.research.analytics.AnalyticsRequestFactory;
 import com.aiquantresearch.api.research.analytics.AnalyticsServiceException;
 import com.aiquantresearch.api.research.domain.StepType;
+import com.aiquantresearch.api.research.llm.OpenAiResponseException;
+import com.aiquantresearch.api.research.llm.ResearchLanguageModelRequest;
+import com.aiquantresearch.api.research.llm.ResearchLanguageModelRouter;
 import com.aiquantresearch.api.research.provider.FilingProvider;
 import com.aiquantresearch.api.research.provider.FundamentalDataProvider;
 import com.aiquantresearch.api.research.provider.FundamentalDataSnapshot;
@@ -12,7 +15,6 @@ import com.aiquantresearch.api.research.provider.MarketDataProvider;
 import com.aiquantresearch.api.research.provider.MarketDataSnapshot;
 import com.aiquantresearch.api.research.provider.ProviderDataNotFoundException;
 import com.aiquantresearch.api.research.provider.mock.MockFixtureCatalog;
-import com.aiquantresearch.api.research.report.DeterministicMockReportGenerator;
 import com.aiquantresearch.api.research.report.ReportValidator;
 import com.aiquantresearch.api.research.report.ReportRepairService;
 import com.aiquantresearch.api.research.worker.QueueClaim;
@@ -78,7 +80,7 @@ public class Phase3StepExecutor {
     private final MockFixtureCatalog fixtureCatalog;
     private final AnalyticsRequestFactory analyticsRequestFactory;
     private final AnalyticsClient analyticsClient;
-    private final DeterministicMockReportGenerator reportGenerator;
+    private final ResearchLanguageModelRouter languageModel;
     private final ReportValidator reportValidator;
     private final ReportRepairService reportRepairService;
     private final JdbcTemplate jdbcTemplate;
@@ -93,7 +95,7 @@ public class Phase3StepExecutor {
             MockFixtureCatalog fixtureCatalog,
             AnalyticsRequestFactory analyticsRequestFactory,
             AnalyticsClient analyticsClient,
-            DeterministicMockReportGenerator reportGenerator,
+            ResearchLanguageModelRouter languageModel,
             ReportValidator reportValidator,
             ReportRepairService reportRepairService,
             JdbcTemplate jdbcTemplate,
@@ -107,7 +109,7 @@ public class Phase3StepExecutor {
         this.fixtureCatalog = fixtureCatalog;
         this.analyticsRequestFactory = analyticsRequestFactory;
         this.analyticsClient = analyticsClient;
-        this.reportGenerator = reportGenerator;
+        this.languageModel = languageModel;
         this.reportValidator = reportValidator;
         this.reportRepairService = reportRepairService;
         this.jdbcTemplate = jdbcTemplate;
@@ -133,7 +135,7 @@ public class Phase3StepExecutor {
                 case RUN_QUANT_ANALYSIS -> runQuantAnalysis(context);
                 case ANALYZE_FUNDAMENTALS -> analyzeFundamentals(context);
                 case BUILD_EVIDENCE -> buildEvidence(context);
-                case GENERATE_REPORT -> generateReport(context);
+                case GENERATE_REPORT -> generateReport(claim, context);
                 case VALIDATE_REPORT -> validateReport(context);
             };
         } catch (ProviderDataNotFoundException exception) {
@@ -324,7 +326,10 @@ public class Phase3StepExecutor {
         return StepExecutionResult.complete(output);
     }
 
-    private StepExecutionResult generateReport(ResearchExecutionContext context) {
+    private StepExecutionResult generateReport(
+            QueueClaim claim,
+            ResearchExecutionContext context
+    ) {
         List<StoredEvidence> evidence = artifactStore.evidence(context.researchId());
         if (evidence.isEmpty()) {
             throw new StepExecutionException(
@@ -334,14 +339,27 @@ public class Phase3StepExecutor {
             );
         }
         try {
-            JsonNode report = reportGenerator.generate(
+            var result = languageModel.generateReport(new ResearchLanguageModelRequest(
+                    claim.attemptId(),
                     context,
                     artifactStore.sources(context.researchId()),
                     artifactStore.quantResults(context.researchId()),
                     evidence,
                     artifactStore.nextReportVersion(context.researchId())
+            ));
+            return new StepExecutionResult(
+                    result.report(),
+                    result.partial(),
+                    result.warnings(),
+                    result.audit()
             );
-            return StepExecutionResult.complete(report);
+        } catch (OpenAiResponseException exception) {
+            throw new StepExecutionException(
+                    exception.code(),
+                    exception.getMessage(),
+                    exception.retryable(),
+                    exception
+            );
         } catch (IllegalArgumentException exception) {
             throw new StepExecutionException(
                     "REPORT_GENERATION_INPUT_INVALID",

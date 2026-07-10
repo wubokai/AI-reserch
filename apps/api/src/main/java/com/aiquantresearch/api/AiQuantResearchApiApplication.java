@@ -2,6 +2,7 @@ package com.aiquantresearch.api;
 
 import com.aiquantresearch.api.shared.config.ApplicationProperties;
 import com.aiquantresearch.api.research.analytics.AnalyticsProperties;
+import com.aiquantresearch.api.research.llm.LlmProperties;
 import com.aiquantresearch.api.research.worker.WorkerProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,6 +14,7 @@ import org.springframework.cache.annotation.EnableCaching;
 @EnableConfigurationProperties({
         ApplicationProperties.class,
         AnalyticsProperties.class,
+        LlmProperties.class,
         WorkerProperties.class
 })
 public class AiQuantResearchApiApplication {
