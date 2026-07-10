@@ -3,6 +3,7 @@ package com.aiquantresearch.api.research.orchestration;
 import com.aiquantresearch.api.research.application.CanonicalHashService;
 import com.aiquantresearch.api.research.domain.StepType;
 import com.aiquantresearch.api.research.filing.FilingRegistry;
+import com.aiquantresearch.api.research.llm.LlmBudgetService;
 import com.aiquantresearch.api.research.worker.DurableQueueClient;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.aiquantresearch.api.research.worker.StepExecutionException;
@@ -25,6 +26,7 @@ public class StepCommitService {
     private final Phase3ArtifactStore artifactStore;
     private final EvidenceBuilder evidenceBuilder;
     private final FilingRegistry filingRegistry;
+    private final LlmBudgetService llmBudgetService;
     private final DurableQueueClient queueClient;
     private final ReportPublicationService publicationService;
     private final CanonicalHashService hashService;
@@ -35,6 +37,7 @@ public class StepCommitService {
             Phase3ArtifactStore artifactStore,
             EvidenceBuilder evidenceBuilder,
             FilingRegistry filingRegistry,
+            LlmBudgetService llmBudgetService,
             DurableQueueClient queueClient,
             ReportPublicationService publicationService,
             CanonicalHashService hashService,
@@ -44,6 +47,7 @@ public class StepCommitService {
         this.artifactStore = artifactStore;
         this.evidenceBuilder = evidenceBuilder;
         this.filingRegistry = filingRegistry;
+        this.llmBudgetService = llmBudgetService;
         this.queueClient = queueClient;
         this.publicationService = publicationService;
         this.hashService = hashService;
@@ -146,10 +150,18 @@ public class StepCommitService {
                         .forEach(value -> artifactIds.add(value.id().toString()));
             }
             case GENERATE_REPORT -> {
-                UUID callId = artifactStore.persistMockLlmCall(
-                        claim,
-                        result.payload(),
-                        outputHash
+                if (result.llmCallAudit() == null) {
+                    throw new StepExecutionException(
+                            "LLM_CALL_AUDIT_MISSING",
+                            "A generated report is missing its LLM call audit",
+                            false
+                    );
+                }
+                UUID callId = artifactStore.persistLlmCall(claim, result.llmCallAudit());
+                llmBudgetService.settle(
+                        result.llmCallAudit().budgetReservationId(),
+                        result.llmCallAudit().estimatedCostUsd(),
+                        result.llmCallAudit().networkCallCount()
                 );
                 artifactIds.add(callId.toString());
                 manifest.put("llmCallId", callId.toString());

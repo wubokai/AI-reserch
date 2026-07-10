@@ -1,6 +1,7 @@
 package com.aiquantresearch.api.research.orchestration;
 
 import com.aiquantresearch.api.research.application.CanonicalHashService;
+import com.aiquantresearch.api.research.llm.LlmCallAudit;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.aiquantresearch.api.research.worker.StepExecutionException;
 import com.aiquantresearch.api.shared.domain.DataMode;
@@ -339,28 +340,48 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
     }
 
     @Override
-    public UUID persistMockLlmCall(QueueClaim claim, JsonNode report, String reportHash) {
+    public UUID persistLlmCall(QueueClaim claim, LlmCallAudit audit) {
         UUID proposedId = UUID.randomUUID();
         jdbcTemplate.update("""
                 insert into llm_calls (
                     id, research_job_id, step_attempt_id, provider, model_name,
                     prompt_version, schema_version, request_hash, response_hash,
                     input_tokens, output_tokens, cached_tokens, estimated_cost_usd,
-                    latency_ms, status, error_code, is_mock
-                ) values (?, ?, ?, 'MOCK', 'deterministic-report-v1',
-                          'mock_report_prompt_v1', 'research_report_v1', ?, ?,
-                          0, 0, 0, 0, 0, 'SUCCEEDED', null, true)
+                    latency_ms, status, error_code, is_mock,
+                    provider_request_id, pricing_version, network_call_count
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (step_attempt_id, request_hash) where step_attempt_id is not null
                 do nothing
-                """, proposedId, claim.researchJobId(), claim.attemptId(), reportHash, reportHash);
+                """,
+                proposedId,
+                claim.researchJobId(),
+                claim.attemptId(),
+                audit.provider(),
+                audit.modelName(),
+                audit.promptVersion(),
+                audit.schemaVersion(),
+                audit.requestHash(),
+                audit.responseHash(),
+                audit.usage().inputTokens(),
+                audit.usage().outputTokens(),
+                audit.usage().cachedInputTokens(),
+                audit.estimatedCostUsd(),
+                audit.latencyMs(),
+                audit.status(),
+                audit.errorCode(),
+                audit.mock(),
+                audit.providerRequestId(),
+                audit.pricingVersion(),
+                audit.networkCallCount()
+        );
         UUID id = jdbcTemplate.queryForObject("""
                 select id from llm_calls
                  where step_attempt_id = ? and request_hash = ?
-                """, UUID.class, claim.attemptId(), reportHash);
+                """, UUID.class, claim.attemptId(), audit.requestHash());
         if (id == null) {
             throw new StepExecutionException(
                     "LLM_CALL_AUDIT_FAILED",
-                    "The deterministic report generation audit could not be registered",
+                    "The report generation audit could not be registered",
                     true
             );
         }

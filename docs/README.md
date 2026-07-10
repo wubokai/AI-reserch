@@ -23,6 +23,7 @@
 | `phase3-test-matrix.md` | Gate G3 Mock 纵向闭环的本地与远程通过证据 |
 | `phase4-test-matrix.md` | Gate G4 完整量化、黄金数据和数值边界的通过证据 |
 | `phase5-test-matrix.md` | Gate G5 Evidence 安全、Filing 检索和快照复现的通过证据 |
+| `phase6-test-matrix.md` | Gate G6 Responses API、结构化输出、预算与失败降级的验证证据 |
 | `adr/` | 关键、可追溯的架构决策 |
 
 ## 决策优先级

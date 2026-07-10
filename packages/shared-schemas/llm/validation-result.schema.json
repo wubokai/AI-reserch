@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local.ai-quant-research-assistant.dev/llm/validation-result-v1.json",
+  "title": "Report Validation Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "validation_result_v1"
+    },
+    "valid": {
+      "type": "boolean"
+    },
+    "safeToPublish": {
+      "type": "boolean"
+    },
+    "issues": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["ERROR", "WARNING"]
+          },
+          "claimId": {
+            "type": ["string", "null"],
+            "maxLength": 72
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": ["code", "severity", "claimId", "message"]
+      }
+    },
+    "repairInstructions": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  },
+  "required": ["schemaVersion", "valid", "safeToPublish", "issues", "repairInstructions"]
+}

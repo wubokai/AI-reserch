@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local.ai-quant-research-assistant.dev/llm/filing-analysis-v1.json",
+  "title": "Filing Analysis v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "filing_analysis_v1"
+    },
+    "filingId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "sectionsReviewed": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      }
+    },
+    "claims": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "statement": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200
+          },
+          "claimType": {
+            "type": "string",
+            "enum": ["FACT", "INFERENCE"]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^ev_[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        },
+        "required": ["statement", "claimType", "evidenceIds", "limitations"]
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  },
+  "required": ["schemaVersion", "filingId", "sectionsReviewed", "claims", "limitations"]
+}

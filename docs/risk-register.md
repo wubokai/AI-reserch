@@ -2,7 +2,7 @@
 
 文档版本：0.4
 
-状态：Gate G5 已通过；Phase 6+ 前向风险持续跟踪
+状态：Gate G6 已通过；Phase 7+ 前向风险持续跟踪
 
 日期：2026-07-10
 
@@ -28,11 +28,11 @@
 | ID | 风险 | 可能性 | 影响 | 触发信号 | 预防与缓解 | 责任阶段 | 状态 |
 |---|---|---:|---:|---|---|---|---|
 | R-001 | 项目范围同时覆盖 MVP、完整 v1 和生产级能力，导致长期没有可运行闭环 | 高 | 高 | 大量模块只有占位代码；连续阶段无法演示创建到报告 | Mock First；Phase 3 必须形成纵向闭环；Should/Could 不得阻塞 Must | Phase 0-3 | 已缓解 |
-| R-002 | LLM 伪造价格、财务数字、日期或增长率 | 高 | 严重 | 报告出现 Evidence 中不存在的数值；自由文本包含未结构化数字 | Claim/Evidence 模型；数值引用；确定性验证器；不合格 Claim 隔离；LLM 不计算指标 | Phase 3-6 | Phase 3 已缓解；Phase 6 开放 |
+| R-002 | LLM 伪造价格、财务数字、日期或增长率 | 高 | 严重 | 报告出现 Evidence 中不存在的数值；自由文本包含未结构化数字 | Claim/Evidence 模型；严格输出；数值引用；确定性验证器；不合格 Claim 隔离；LLM 不计算指标 | Phase 3-6 | Phase 6 已缓解；模型/Schema 变更时重评 |
 | R-003 | 报告纯文本字段绕过四类 Claim 和 Evidence 要求 | 高 | 严重 | executive summary 或 conclusion 无 evidenceIds | 所有可验证叙事改为 Claim；模板只渲染已验证 Claim | Phase 0、5 | 已缓解 |
 | R-004 | 指标口径含糊造成结果看似正确但实际错误 | 高 | 严重 | Java/Python/文档得到不同 CAGR、VaR、Alpha；测试只检查不报错 | 固化 calculation_version、公式、符号、年化、对齐和舍入；黄金数据测试 | Phase 0、4 | 已缓解 |
 | R-005 | 使用内存线程或 Spring @Async 导致任务在重启时丢失 | 高 | 高 | 重启后 RUNNING 任务永久卡住；无 Worker 所有权 | PostgreSQL 持久队列、lease、heartbeat、超时回收和锁 | Phase 2 | 已缓解 |
-| R-006 | 步骤重试产生重复数据、报告版本或 LLM 费用 | 高 | 高 | attempt 增加时重复行；相同调用多次计费 | 步骤幂等键、输入哈希、唯一约束、调用去重键和事务边界 | Phase 2、6 | Phase 3 已缓解；Phase 6 开放 |
+| R-006 | 步骤重试产生重复数据、报告版本或 LLM 费用 | 高 | 高 | attempt 增加时重复行；相同调用多次计费 | 步骤幂等键、输入哈希、唯一约束、调用哈希、预算预留和事务边界 | Phase 2、6 | Phase 6 已缓解 |
 | R-007 | 行情或基本面 Provider 许可不允许持久化、缓存、展示或导出 | 中 | 严重 | 服务条款限制再分发；供应商要求删除历史数据 | Phase 7 前不选定；完成书面许可矩阵；不满足存储/导出权即停止接入 | Phase 7 | 延后决策 |
 | R-008 | Provider 限流、超时或响应 Schema 变化破坏研究流程 | 高 | 高 | 429/5xx 增多；字段缺失；解析失败 | Adapter 隔离、Contract Test、版本化解析、超时、分类重试、熔断、Rate Limiter、Mock 降级 | Phase 7 | 开放 |
 | R-009 | Java、Python、TypeScript 契约漂移 | 高 | 高 | 相同字段命名/枚举不同；前端收到无法解析响应 | OpenAPI/JSON Schema 唯一真源；生成或校验 DTO；CI 契约测试 | Phase 0-3 | 已缓解 |
@@ -46,7 +46,7 @@
 | R-017 | Forward P/E、同行估值、催化剂缺少数据源却被强制输出 | 高 | 高 | 报告使用未注册预测或虚构日期 | 默认 NOT_AVAILABLE；不作为 MVP/v1 硬数据项；仅在许可数据源可用时启用 | Phase 0、7 | 缓解中 |
 | R-018 | Bull/Bear 各三条的数量要求驱动模型编造 | 高 | 严重 | Evidence 不足仍固定生成三条 | 数据真实性优先；允许少于三条；记录 INSUFFICIENT_EVIDENCE | Phase 0、5-6 | 已缓解 |
 | R-019 | Mock 数据看起来像真实当前行情，误导用户 | 中 | 严重 | 页面或 PDF 缺 Demo 标记；asOfDate 使用当天 | 每条 Mock 快照 isDemoData=true；页面、报告、导出永久水印；E2E 检查 | Phase 3 | 已缓解 |
-| R-020 | LLM 成本并发超预算 | 中 | 高 | 多个步骤同时调用；最终费用超过任务预算 | 调用前保守估算；事务式预算预留；完成后结算；超预算停止非关键调用 | Phase 6 | 开放 |
+| R-020 | LLM 成本并发超预算 | 中 | 高 | 多个步骤同时调用；工具循环被少算；最终费用超过任务预算 | 按多轮最坏上界估算；锁 Research 的事务式成本/调用数预留；按实际 usage/HTTP 次数结算；版本化价格 | Phase 6 | Phase 6 已缓解；生产价格需持续更新 |
 | R-021 | 验证器只能检查 ID，无法检查自由文本数字和语义支持关系 | 高 | 严重 | Evidence ID 存在但 Claim 数字或方向错误 | 结构化 numericReferences；确定性数值/日期验证；语义验证仅作补充；不合格 Claim 删除 | Phase 5 | 已缓解 |
 | R-022 | SEC HTML 清洗和章节切分失败，检索遗漏重要内容 | 中 | 高 | Risk Factors/MD&A 无块；导航和表格文本丢失 | 保留原文哈希；多策略标题识别；解析覆盖率指标；代表性 Filing fixture | Phase 5、7 | Phase 5 解析/检索基础已缓解；真实 Filing 评测开放 |
 | R-023 | PDF 在 Docker 中中文缺字、分页破碎或图表缺失 | 高 | 中 | 本地正常、容器 PDF 空白或乱码 | 固定 OpenHTMLtoPDF；内置 Noto Sans CJK；渲染快照测试；PDF 失败不阻断 HTML | Phase 3、9 | Phase 3 已缓解；Phase 9 监控 |
@@ -56,7 +56,7 @@
 | R-027 | Testcontainers、Playwright、Compose smoke 在 CI 中不稳定 | 中 | 高 | 偶发超时；共享端口；依赖真实时间 | 固定镜像和种子；动态端口；健康等待；分层 CI；保留失败日志和产物 | Phase 1-9 | 开放 |
 | R-028 | scikit-learn、scipy 等未使用依赖增加镜像和供应链面 | 中 | 中 | 大镜像、安装慢、CVE 告警 | 只安装实际使用依赖；锁版本；定期扫描；不因原始建议而强制空依赖 | Phase 1、9 | 开放 |
 | R-029 | Data Quality 或 Confidence 由 LLM 随意给分，产生虚假精确感 | 高 | 高 | 相同 Evidence 多次运行得分变化 | 使用 confidence_v1 与 data_quality_v1 确定性公式；记录各分项 | Phase 3、5 | 已缓解 |
-| R-030 | 部分完成报告仍包含验证失败的事实 | 中 | 严重 | PARTIALLY_COMPLETED 页面显示 unsupported Claim | 不安全 Claim 必须隔离；可安全删减才发布 partial，否则 FAILED | Phase 5-6 | Phase 5 确定性修复已缓解；Phase 6 模型修复开放 |
+| R-030 | 部分完成报告仍包含验证失败的事实 | 中 | 严重 | PARTIALLY_COMPLETED 页面显示 unsupported Claim | 不安全 Claim 必须隔离；模型结果沿用完整 Validator 与最多一次确定性修复；可安全删减才发布 partial，否则 FAILED | Phase 5-6 | Phase 6 已缓解 |
 | R-031 | 实时“当前”概念与美股交易日、时区、延迟数据不一致 | 中 | 高 | 周末被标 stale；盘中使用未完成日线 | 交易日历和 Provider 数据延迟元数据；报告显示 asOfDate/generatedAt；UTC 存储 | Phase 4、7 | 开放 |
 | R-032 | 导出 HTML 存在 XSS，PDF 渲染器访问外部资源导致 SSRF | 中 | 严重 | HTML 包含 script；渲染器请求任意 URL | 严格转义和 CSP；禁用远程资源；图表/字体本地内嵌；URL 白名单 | Phase 3、9 | Phase 3 已缓解；Phase 9 开放 |
 
@@ -103,6 +103,20 @@
 | R-015 | adjustedClose 收益真源、ATR 同比缩放 OHLC、共同日期 inner join、错位 warning 和乱序稳定性已验证 | Phase 7 真实 Provider 仍需公司行动/分红/交易日历 contract test |
 | R-016 | 财务期间、单位、TTM/年度/季度选择、CapEx 符号、EPS 跨零、税率/权益/EBITDA 边界和人工多期黄金样例已验证 | Phase 7 真实 Provider/XBRL concept 映射仍需人工黄金公司样本 |
 | R-017 | 无可追踪预测时 Forward P/E 明确 `FORECAST_DATA_UNAVAILABLE`；可选缺失保留 limitation 但不误判整个报告 partial | Phase 7 只有经许可且带 lineage 的预期数据才能启用 |
+
+### 2.4 Gate G6 风险处置（2026-07-10）
+
+[GitHub Actions run 29118462224](https://github.com/wubokai/AI-reserch/actions/runs/29118462224)
+的 Web/Playwright、Analytics、167 个 Surefire、44 个 Failsafe/Testcontainers、secret scan
+和五服务 Compose 全部通过。详细证据见 [`phase6-test-matrix.md`](./phase6-test-matrix.md)。
+
+| 风险 | Phase 6 已实现的控制与验证证据 | 剩余风险/下一 Gate |
+|---|---|---|
+| R-002 | Final Report 使用严格 Schema；Evidence/Calculation ID 受当前 Research allowlist 约束；模型输出继续经过数字、日期、类型和发布 Validator | 生产模型或 Schema 版本变化时重跑质量/对抗集 |
+| R-006 | 请求哈希、attempt 唯一键、预算 reservation 唯一键、成功/失败追加审计和报告原子提交已覆盖重放 | Provider 是否实际计费仍以其账单为外部事实，需生产对账 |
+| R-010 | 外部文本标记为不可信数据；系统指令分离；只允许三个 research-scoped 只读工具；禁并行工具调用且限制轮次/输出 | Phase 7 真实 SEC 文本接入后扩大对抗 fixture |
+| R-020 | Research 行锁下同时预留最坏成本与最多 HTTP 次数；多轮上下文/工具输出计入上界；实际 usage/调用数结算；失败先审计再释放预留 | 生产价格版本需在生效日更新；模型计价变化时失败关闭 |
+| R-030 | 真实模型失败只进入显式安全回退；回退与模型候选都复用完整 Validator 和最多一次确定性修复，不安全内容不发布 | 若未来启用模型修复，必须新版本并重新开 Gate |
 
 ## 3. MVP 接受的受控限制
 
