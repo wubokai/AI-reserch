@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local.ai-quant-research-assistant.dev/analytics/full-analysis-response-v1.json",
+  "title": "Analytics Full Analysis Response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "decimalOrNull": {
+      "type": ["string", "null"],
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$"
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "metricName": {
+          "type": ["string", "null"],
+          "maxLength": 100
+        }
+      },
+      "required": ["code", "message", "metricName"]
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "value": {
+          "$ref": "#/$defs/decimalOrNull"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "AVAILABLE",
+            "NOT_AVAILABLE",
+            "NOT_APPLICABLE",
+            "INVALID_INPUT"
+          ]
+        },
+        "sampleSize": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "periodStart": {
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "periodEnd": {
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "calculationVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "inputSnapshotIds": {
+          "type": "array",
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/warning"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "status",
+        "sampleSize",
+        "periodStart",
+        "periodEnd",
+        "calculationVersion",
+        "inputSnapshotIds",
+        "warnings"
+      ]
+    }
+  },
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "analytics_full_response_v1"
+    },
+    "inputHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z0-9.\\-]{1,12}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["COMPLETED", "COMPLETED_WITH_WARNINGS", "FAILED"]
+    },
+    "periodStart": {
+      "type": "string",
+      "format": "date"
+    },
+    "periodEnd": {
+      "type": "string",
+      "format": "date"
+    },
+    "sampleSize": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "benchmarkSampleSize": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "metrics": {
+      "type": "array",
+      "maxItems": 300,
+      "items": {
+        "$ref": "#/$defs/metric"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/warning"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "inputHash",
+    "symbol",
+    "status",
+    "periodStart",
+    "periodEnd",
+    "sampleSize",
+    "benchmarkSampleSize",
+    "metrics",
+    "warnings"
+  ]
+}

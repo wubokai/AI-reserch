@@ -1,0 +1,29 @@
+spring:
+  cache:
+    type: simple
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+app:
+  service-name: ai-quant-research-api
+  version: test
+  data-mode: MOCK
+  security:
+    demo-principal:
+      enabled: false
+      username: ""
+      password: ""
+
+management:
+  health:
+    db:
+      enabled: false
+    redis:
+      enabled: false
+
+logging:
+  level:
+    root: WARN

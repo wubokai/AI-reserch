@@ -1,0 +1,30 @@
+#!/bin/sh
+# Minimal text-only Maven Wrapper bootstrap. Invoke with `sh mvnw` if checkout
+# permissions do not preserve the executable bit.
+set -eu
+
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+wrapper_jar="$project_dir/.mvn/wrapper/maven-wrapper.jar"
+wrapper_url="https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.3.4/maven-wrapper-3.3.4.jar"
+
+if [ ! -f "$wrapper_jar" ]; then
+  if command -v curl >/dev/null 2>&1; then
+    curl --fail --silent --show-error --location "$wrapper_url" --output "$wrapper_jar"
+  elif command -v wget >/dev/null 2>&1; then
+    wget --quiet "$wrapper_url" --output-document="$wrapper_jar"
+  else
+    echo "Maven Wrapper requires curl or wget to download its bootstrap jar." >&2
+    exit 1
+  fi
+fi
+
+if [ -n "${JAVA_HOME:-}" ]; then
+  java_cmd="$JAVA_HOME/bin/java"
+else
+  java_cmd="java"
+fi
+
+exec "$java_cmd" \
+  "-Dmaven.multiModuleProjectDirectory=$project_dir" \
+  -classpath "$wrapper_jar" \
+  org.apache.maven.wrapper.MavenWrapperMain "$@"

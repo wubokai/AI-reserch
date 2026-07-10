@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local.ai-quant-research-assistant.dev/llm/research-plan-v1.json",
+  "title": "Research Plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "research_plan_v1"
+    },
+    "researchQuestion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "locale": {
+      "type": "string",
+      "enum": ["zh-CN", "en-US"]
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "pattern": "^[A-Z0-9.\\-]{1,12}$"
+        },
+        "companyName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "securityType": {
+          "type": "string",
+          "enum": ["COMMON_STOCK", "ETF"]
+        }
+      },
+      "required": ["symbol", "companyName", "securityType"]
+    },
+    "requiredData": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataType": {
+            "type": "string",
+            "enum": [
+              "MARKET_DATA",
+              "BENCHMARK_DATA",
+              "FUNDAMENTALS",
+              "FILINGS",
+              "MACRO_DATA",
+              "QUANT_RESULTS"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["REQUIRED", "OPTIONAL"]
+          }
+        },
+        "required": ["dataType", "reason", "priority"]
+      }
+    },
+    "subQuestions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "researchQuestion",
+    "locale",
+    "security",
+    "requiredData",
+    "subQuestions",
+    "limitations"
+  ]
+}

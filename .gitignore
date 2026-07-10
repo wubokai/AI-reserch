@@ -1,0 +1,53 @@
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Logs, state, reports, and generated research artifacts
+*.log
+logs/
+data/
+artifacts/
+reports/
+tmp/
+.cache/
+
+# Java
+**/target/
+.mvn/timing.properties
+
+# Python
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/htmlcov/
+**/.venv/
+**/dist/
+**/*.egg-info/
+
+# Node / Next.js / Playwright
+**/node_modules/
+**/.next/
+**/out/
+**/coverage/
+**/playwright-report/
+**/test-results/
+**/*.tsbuildinfo
+pnpm-debug.log*
+
+# Local tooling
+.tools/

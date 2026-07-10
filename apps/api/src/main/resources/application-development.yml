@@ -1,0 +1,12 @@
+app:
+  data-mode: ${DATA_MODE:MOCK}
+  security:
+    demo-principal:
+      enabled: ${DEMO_PRINCIPAL_ENABLED:false}
+      username: ${DEMO_PRINCIPAL_USERNAME:}
+      password: ${DEMO_PRINCIPAL_PASSWORD:}
+
+management:
+  endpoint:
+    health:
+      show-details: when_authorized

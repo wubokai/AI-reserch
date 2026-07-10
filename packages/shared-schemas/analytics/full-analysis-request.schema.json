@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local.ai-quant-research-assistant.dev/analytics/full-analysis-request-v1.json",
+  "title": "Analytics Full Analysis Request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$"
+    },
+    "snapshotId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "priceBar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "open": {
+          "$ref": "#/$defs/decimal"
+        },
+        "high": {
+          "$ref": "#/$defs/decimal"
+        },
+        "low": {
+          "$ref": "#/$defs/decimal"
+        },
+        "close": {
+          "$ref": "#/$defs/decimal"
+        },
+        "adjustedClose": {
+          "$ref": "#/$defs/decimal"
+        },
+        "volume": {
+          "$ref": "#/$defs/decimal"
+        },
+        "sourceSnapshotId": {
+          "$ref": "#/$defs/snapshotId"
+        }
+      },
+      "required": [
+        "date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "adjustedClose",
+        "volume",
+        "sourceSnapshotId"
+      ]
+    },
+    "fundamentalValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "value": {
+          "$ref": "#/$defs/decimal"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "periodType": {
+          "type": "string",
+          "enum": ["QUARTER", "ANNUAL", "TTM", "POINT_IN_TIME"]
+        },
+        "periodEndDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "sourceSnapshotId": {
+          "$ref": "#/$defs/snapshotId"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "periodType",
+        "periodEndDate",
+        "sourceSnapshotId"
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["BULL", "BASE", "BEAR"]
+        },
+        "revenueGrowth": {
+          "$ref": "#/$defs/decimal"
+        },
+        "targetEbitdaMargin": {
+          "$ref": "#/$defs/decimal"
+        },
+        "evToEbitdaMultiple": {
+          "$ref": "#/$defs/decimal"
+        },
+        "probability": {
+          "$ref": "#/$defs/decimal"
+        }
+      },
+      "required": [
+        "name",
+        "revenueGrowth",
+        "targetEbitdaMargin",
+        "evToEbitdaMultiple",
+        "probability"
+      ]
+    },
+    "scenarioInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "baseRevenue": {
+          "$ref": "#/$defs/decimal"
+        },
+        "currentPrice": {
+          "$ref": "#/$defs/decimal"
+        },
+        "netDebt": {
+          "$ref": "#/$defs/decimal"
+        },
+        "dilutedShares": {
+          "$ref": "#/$defs/decimal"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "sourceSnapshotIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/snapshotId"
+          }
+        },
+        "scenarios": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/scenario"
+          }
+        }
+      },
+      "required": [
+        "baseRevenue",
+        "currentPrice",
+        "netDebt",
+        "dilutedShares",
+        "currency",
+        "sourceSnapshotIds",
+        "scenarios"
+      ]
+    }
+  },
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "analytics_full_request_v1"
+    },
+    "inputHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z0-9.\\-]{1,12}$"
+    },
+    "securityType": {
+      "type": "string",
+      "enum": ["COMMON_STOCK", "ETF"]
+    },
+    "periodStart": {
+      "type": "string",
+      "format": "date"
+    },
+    "periodEnd": {
+      "type": "string",
+      "format": "date"
+    },
+    "prices": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 5000,
+      "items": {
+        "$ref": "#/$defs/priceBar"
+      }
+    },
+    "benchmarkSymbol": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z0-9.\\-]{1,12}$"
+    },
+    "benchmarkPrices": {
+      "type": "array",
+      "maxItems": 5000,
+      "items": {
+        "$ref": "#/$defs/priceBar"
+      }
+    },
+    "riskFreeRateAnnual": {
+      "$ref": "#/$defs/decimal"
+    },
+    "minimumAcceptedReturnAnnual": {
+      "$ref": "#/$defs/decimal"
+    },
+    "fundamentals": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "$ref": "#/$defs/fundamentalValue"
+      }
+    },
+    "scenarioInput": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/scenarioInput"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "inputHash",
+    "symbol",
+    "securityType",
+    "periodStart",
+    "periodEnd",
+    "prices",
+    "benchmarkSymbol",
+    "benchmarkPrices",
+    "riskFreeRateAnnual",
+    "minimumAcceptedReturnAnnual",
+    "fundamentals",
+    "scenarioInput"
+  ]
+}

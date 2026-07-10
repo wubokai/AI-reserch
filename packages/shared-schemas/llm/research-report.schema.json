@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local.ai-quant-research-assistant.dev/llm/research-report-v1.json",
+  "title": "Claim-Centric Research Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "numericReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "normalizedValue": {
+          "type": "string",
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "sourceKind": {
+          "type": "string",
+          "enum": ["EVIDENCE", "CALCULATION"]
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "jsonPointer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "tolerance": {
+          "type": "string",
+          "pattern": "^[0-9]+(?:\\.[0-9]+)?$"
+        }
+      },
+      "required": [
+        "token",
+        "normalizedValue",
+        "unit",
+        "sourceKind",
+        "sourceId",
+        "jsonPointer",
+        "tolerance"
+      ]
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^cl_[A-Za-z0-9_-]{1,64}$"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1200
+        },
+        "claimType": {
+          "type": "string",
+          "enum": ["FACT", "CALCULATION", "INFERENCE", "OPINION"]
+        },
+        "materiality": {
+          "type": "string",
+          "enum": ["MATERIAL", "SUPPORTING"]
+        },
+        "evidenceIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^ev_[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "calculationIds": {
+          "type": "array",
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^calc_[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "numericReferences": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/numericReference"
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "required": [
+        "id",
+        "statement",
+        "claimType",
+        "materiality",
+        "evidenceIds",
+        "calculationIds",
+        "numericReferences",
+        "confidence",
+        "limitations"
+      ]
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+        },
+        "heading": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "claims": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "$ref": "#/$defs/claim"
+          }
+        },
+        "transitionText": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "required": ["id", "heading", "claims", "transitionText"]
+    }
+  },
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "research_report_v1"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z0-9.\\-]{1,12}$"
+    },
+    "securityType": {
+      "type": "string",
+      "enum": ["COMMON_STOCK", "ETF"]
+    },
+    "locale": {
+      "type": "string",
+      "enum": ["zh-CN", "en-US"]
+    },
+    "asOfDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "dataMode": {
+      "type": "string",
+      "enum": ["MOCK", "REAL", "MIXED_TEST"]
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/section"
+      }
+    },
+    "bullCase": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    },
+    "bearCase": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    },
+    "catalysts": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    },
+    "risks": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "BUSINESS",
+              "FINANCIAL",
+              "VALUATION",
+              "MARKET",
+              "REGULATORY",
+              "EXECUTION",
+              "DATA_QUALITY"
+            ]
+          },
+          "claim": {
+            "$ref": "#/$defs/claim"
+          }
+        },
+        "required": ["category", "claim"]
+      }
+    },
+    "scenarioAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "calculationId": {
+          "type": "string",
+          "pattern": "^calc_[A-Za-z0-9_-]{1,64}$"
+        },
+        "summaryClaims": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/claim"
+          }
+        }
+      },
+      "required": ["calculationId", "summaryClaims"]
+    },
+    "dataQuality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "missingData": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        "staleEvidenceIds": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^ev_[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "sourceConflicts": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "required": [
+        "score",
+        "missingData",
+        "staleEvidenceIds",
+        "sourceConflicts",
+        "limitations"
+      ]
+    },
+    "conclusion": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    },
+    "disclaimer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "title",
+    "symbol",
+    "securityType",
+    "locale",
+    "asOfDate",
+    "dataMode",
+    "sections",
+    "bullCase",
+    "bearCase",
+    "catalysts",
+    "risks",
+    "scenarioAnalysis",
+    "dataQuality",
+    "conclusion",
+    "disclaimer"
+  ]
+}

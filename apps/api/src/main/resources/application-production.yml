@@ -1,0 +1,12 @@
+app:
+  data-mode: ${DATA_MODE:REAL}
+  security:
+    demo-principal:
+      enabled: false
+      username: ""
+      password: ""
+
+management:
+  endpoint:
+    health:
+      show-details: never

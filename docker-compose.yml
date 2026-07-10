@@ -1,0 +1,116 @@
+name: ai-quant-research-assistant
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-quant_research}
+      POSTGRES_USER: ${POSTGRES_USER:-quant_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [quant_internal]
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [quant_internal]
+
+  analytics:
+    build:
+      context: ./apps/analytics
+    environment:
+      ANALYTICS_ENVIRONMENT: ${APP_ENV:-development}
+      ANALYTICS_LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ANALYTICS_SERVICE_NAME: analytics
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/analytics/v1/health', timeout=2)"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [quant_internal]
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-development}
+      DATA_MODE: ${DATA_MODE:-MOCK}
+      APP_VERSION: ${SERVICE_VERSION:-0.1.0}
+      DEMO_PRINCIPAL_ENABLED: ${DEMO_PRINCIPAL_ENABLED:-true}
+      DEMO_PRINCIPAL_USERNAME: ${DEMO_PRINCIPAL_USERNAME:-demo}
+      DEMO_PRINCIPAL_PASSWORD: ${DEMO_PRINCIPAL_PASSWORD:-change_me_demo_only}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-quant_research}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-quant_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT:-6379}
+      LOGGING_LEVEL_ROOT: ${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    networks: [quant_internal]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NODE_ENV: production
+      API_INTERNAL_BASE_URL: http://api:8080
+      ANALYTICS_INTERNAL_BASE_URL: http://analytics:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+    networks: [quant_internal]
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  quant_internal:
+    driver: bridge

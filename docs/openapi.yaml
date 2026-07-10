@@ -1,0 +1,1636 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: AI Quant Research Assistant API
+  version: 1.0.0
+  summary: Asynchronous, evidence-backed US equity research API
+  description: |
+    Public contract for the Java orchestration service. All financial facts must be
+    traceable to registered evidence. Research created with mock providers is
+    marked as MOCK; the UI and exports render DEMO DATA - NOT REAL MARKET DATA.
+    MIXED_TEST is test-only and cannot be published through ordinary user flows.
+  contact:
+    name: AI Quant Research Assistant maintainers
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Research
+    description: Asynchronous research lifecycle
+  - name: Reports
+    description: Immutable report versions and exports
+  - name: Evidence
+    description: Evidence registry for a research job
+  - name: Securities
+    description: Supported security discovery
+  - name: Providers
+    description: Sanitized data-provider status
+  - name: Health
+    description: Service health
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/research:
+    post:
+      tags: [Research]
+      operationId: createResearch
+      summary: Create and enqueue a research job
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateResearchRequest'
+            examples:
+              muResearch:
+                value:
+                  query: 分析 MU 未来 12 个月的主要增长动力和风险
+                  symbol: MU
+                  locale: zh-CN
+                  benchmark: QQQ
+                  period: 5y
+                  reportDepth: STANDARD
+                  includeTechnicalAnalysis: true
+                  includeFundamentalAnalysis: true
+                  includeMacroAnalysis: true
+      responses:
+        '202':
+          description: Research job accepted and queued
+          headers:
+            Location:
+              description: Canonical URL of the created research job
+              schema:
+                type: string
+            Retry-After:
+              description: Suggested status polling delay in seconds
+              schema:
+                type: integer
+                minimum: 1
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Idempotency-Replayed:
+              $ref: '#/components/headers/IdempotencyReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags: [Research]
+      operationId: listResearch
+      summary: List visible research jobs
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: symbol
+          in: query
+          description: Exact, case-insensitive ticker symbol
+          schema:
+            type: string
+            pattern: '^[A-Za-z][A-Za-z0-9.-]{0,9}$'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ResearchStatus'
+        - name: from
+          in: query
+          description: Include jobs created on or after this UTC instant
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: Include jobs created before this UTC instant
+          schema:
+            type: string
+            format: date-time
+        - name: q
+          in: query
+          description: Search title, query, symbol, or company name
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - createdAt,desc
+              - createdAt,asc
+              - updatedAt,desc
+              - updatedAt,asc
+            default: createdAt,desc
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Paginated research jobs; soft-deleted jobs are excluded
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/research/{researchId}:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - $ref: '#/components/parameters/XRequestId'
+    get:
+      tags: [Research]
+      operationId: getResearch
+      summary: Get research details and the latest report, if available
+      responses:
+        '200':
+          description: Research details
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Research]
+      operationId: deleteResearch
+      summary: Soft-delete a research job
+      description: |
+        Hides the research job from normal reads. Audit records, source snapshots,
+        evidence and report versions are retained according to the retention policy.
+        Repeated deletion is successful and returns 204.
+      responses:
+        '204':
+          description: Research job is now soft-deleted
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/research/{researchId}/status:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - $ref: '#/components/parameters/XRequestId'
+    get:
+      tags: [Research]
+      operationId: getResearchStatus
+      summary: Get research progress and step attempts
+      responses:
+        '200':
+          description: Current status snapshot
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/research/{researchId}/retry:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/XRequestId'
+    post:
+      tags: [Research]
+      operationId: retryResearch
+      summary: Resume a failed or partially completed research job
+      description: Successful steps with unchanged input hashes are reused.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryResearchRequest'
+      responses:
+        '202':
+          description: Retry accepted
+          headers:
+            Location:
+              description: Status URL for this research job
+              schema:
+                type: string
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Idempotency-Replayed:
+              $ref: '#/components/headers/IdempotencyReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/v1/research/{researchId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/XRequestId'
+    post:
+      tags: [Research]
+      operationId: cancelResearch
+      summary: Request cooperative cancellation
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelResearchRequest'
+      responses:
+        '202':
+          description: Cancellation request accepted
+          headers:
+            Location:
+              description: Status URL for this research job
+              schema:
+                type: string
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Idempotency-Replayed:
+              $ref: '#/components/headers/IdempotencyReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/research/{researchId}/evidence:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      - $ref: '#/components/parameters/XRequestId'
+    get:
+      tags: [Evidence]
+      operationId: listResearchEvidence
+      summary: List evidence registered for a research job
+      parameters:
+        - name: claimType
+          in: query
+          schema:
+            $ref: '#/components/schemas/ClaimType'
+        - name: sourceType
+          in: query
+          schema:
+            $ref: '#/components/schemas/SourceType'
+        - name: freshnessStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/FreshnessStatus'
+        - name: isDemoData
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated evidence registry
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidencePage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/research/{researchId}/reports:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      - $ref: '#/components/parameters/XRequestId'
+    get:
+      tags: [Reports]
+      operationId: listReportVersions
+      summary: List immutable report versions newest first
+      responses:
+        '200':
+          description: Paginated report version summaries
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportVersionPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/research/{researchId}/reports/{version}:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - name: version
+        in: path
+        required: true
+        description: One-based report version
+        schema:
+          type: integer
+          minimum: 1
+      - $ref: '#/components/parameters/XRequestId'
+    get:
+      tags: [Reports]
+      operationId: getReportVersion
+      summary: Get an immutable report version
+      responses:
+        '200':
+          description: Full report version
+          headers:
+            ETag:
+              description: Content hash for the immutable report version
+              schema:
+                type: string
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportVersion'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/research/{researchId}/export:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - name: format
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/ExportFormat'
+        description: Defaults to pdf
+      - name: reportVersion
+        in: query
+        required: false
+        description: Defaults to the latest report version
+        schema:
+          type: integer
+          minimum: 1
+      - $ref: '#/components/parameters/XRequestId'
+    get:
+      tags: [Reports]
+      operationId: exportResearchReport
+      summary: Export the latest or a selected report version
+      responses:
+        '200':
+          description: Exported report bytes
+          headers:
+            Content-Disposition:
+              description: Safe attachment filename
+              schema:
+                type: string
+            ETag:
+              description: Export content hash
+              schema:
+                type: string
+            X-Report-Version:
+              description: Exported report version
+              schema:
+                type: integer
+            X-Data-Mode:
+              description: REAL, MOCK, or non-publishable MIXED_TEST data mode
+              schema:
+                $ref: '#/components/schemas/DataMode'
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            text/markdown:
+              schema:
+                type: string
+            text/html:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/securities/search:
+    get:
+      tags: [Securities]
+      operationId: searchSecurities
+      summary: Search supported US common stocks and ETFs
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Ticker or company-name prefix
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: securityType
+          in: query
+          schema:
+            $ref: '#/components/schemas/SecurityType'
+        - name: exchange
+          in: query
+          schema:
+            type: string
+            maxLength: 20
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Ranked security matches
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecuritySearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/providers/status:
+    get:
+      tags: [Providers]
+      operationId: getProviderStatus
+      summary: Get sanitized provider capabilities and health
+      description: Credentials and credential fragments are never returned.
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Provider status snapshot
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: Get API and critical dependency health
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+      responses:
+        '200':
+          description: Service is available; optional providers may be degraded
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: A critical dependency is unavailable
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ResearchId:
+      name: researchId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Unique key scoped to authenticated user, method, and path. Reusing a key
+        with a different request body returns IDEMPOTENCY_KEY_REUSED.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[\x21-\x7E]+$'
+    XRequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Zero-based page number
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  headers:
+    XRequestId:
+      description: Request correlation identifier
+      schema:
+        type: string
+    IdempotencyReplayed:
+      description: True when the response was replayed from an earlier request
+      schema:
+        type: boolean
+
+  responses:
+    BadRequest:
+      description: Request syntax or parameter validation failed
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Authentication is missing or invalid
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Caller cannot access this resource
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Resource does not exist, is inaccessible, or is soft-deleted
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Current state conflicts with the requested operation
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UnprocessableEntity:
+      description: Request is syntactically valid but semantically invalid
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    TooManyRequests:
+      description: Local or upstream rate limit exceeded
+      headers:
+        Retry-After:
+          description: Seconds until retry is advised
+          schema:
+            type: integer
+            minimum: 1
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServiceUnavailable:
+      description: A required service is temporarily unavailable
+      headers:
+        Retry-After:
+          description: Seconds until retry is advised, when known
+          schema:
+            type: integer
+            minimum: 1
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    ResearchStatus:
+      type: string
+      enum:
+        - CREATED
+        - QUEUED
+        - RESOLVING_SECURITY
+        - FETCHING_MARKET_DATA
+        - FETCHING_FUNDAMENTALS
+        - FETCHING_FILINGS
+        - FETCHING_MACRO_DATA
+        - VALIDATING_DATA
+        - RUNNING_QUANT_ANALYSIS
+        - ANALYZING_FUNDAMENTALS
+        - BUILDING_EVIDENCE
+        - GENERATING_REPORT
+        - VALIDATING_REPORT
+        - COMPLETED
+        - PARTIALLY_COMPLETED
+        - FAILED
+        - CANCELLED
+
+    StepType:
+      type: string
+      enum:
+        - RESOLVE_SECURITY
+        - FETCH_MARKET_DATA
+        - FETCH_FUNDAMENTALS
+        - FETCH_FILINGS
+        - FETCH_MACRO_DATA
+        - VALIDATE_DATA
+        - RUN_QUANT_ANALYSIS
+        - ANALYZE_FUNDAMENTALS
+        - BUILD_EVIDENCE
+        - GENERATE_REPORT
+        - VALIDATE_REPORT
+
+    StepStatus:
+      type: string
+      enum: [PENDING, RUNNING, SUCCEEDED, FAILED, SKIPPED, CANCELLED]
+
+    ReportDepth:
+      type: string
+      enum: [QUICK, STANDARD, DEEP]
+      default: STANDARD
+
+    ResearchPeriod:
+      type: string
+      enum: [1y, 3y, 5y, 10y, max]
+      default: 5y
+
+    Locale:
+      type: string
+      enum: [zh-CN, en-US]
+
+    DataMode:
+      type: string
+      description: |
+        REAL uses only real providers. MOCK uses only deterministic mock data and
+        must display DEMO DATA - NOT REAL MARKET DATA in the UI and every export.
+        MIXED_TEST may mix real and mock inputs only in automated tests or fault
+        drills and must never be published through ordinary user flows.
+      enum: [REAL, MOCK, MIXED_TEST]
+
+    ClaimType:
+      type: string
+      enum: [FACT, CALCULATION, INFERENCE, OPINION]
+
+    EvidenceType:
+      type: string
+      enum:
+        - MARKET_PRICE
+        - FINANCIAL_METRIC
+        - SEC_FILING
+        - MACRO_OBSERVATION
+        - QUANT_RESULT
+        - COMPANY_PROFILE
+        - NEWS_ARTICLE
+        - OTHER
+
+    SourceType:
+      type: string
+      enum:
+        - EXCHANGE
+        - MARKET_DATA_PROVIDER
+        - COMPANY_FILING
+        - SEC_FILING
+        - GOVERNMENT_DATA
+        - COMPANY_WEBSITE
+        - NEWS
+        - INTERNAL_CALCULATION
+        - MOCK
+        - OTHER
+
+    FreshnessStatus:
+      type: string
+      enum: [FRESH, STALE, VERY_STALE, UNKNOWN]
+
+    SecurityType:
+      type: string
+      enum: [COMMON_STOCK, ETF]
+
+    ExportFormat:
+      type: string
+      enum: [pdf, markdown, html]
+      default: pdf
+
+    ValidationStatus:
+      type: string
+      enum: [PENDING, PASSED, PASSED_WITH_WARNINGS, FAILED]
+
+    CreateResearchRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - query
+      anyOf:
+        - required: [symbol]
+        - required: [companyName]
+      properties:
+        query:
+          type: string
+          minLength: 10
+          maxLength: 4000
+        symbol:
+          type: string
+          pattern: '^[A-Za-z][A-Za-z0-9.-]{0,9}$'
+        companyName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        locale:
+          allOf:
+            - $ref: '#/components/schemas/Locale'
+          description: Inferred from the query language when omitted.
+        benchmark:
+          type: string
+          pattern: '^[A-Za-z][A-Za-z0-9.-]{0,9}$'
+          default: SPY
+        period:
+          $ref: '#/components/schemas/ResearchPeriod'
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        reportDepth:
+          $ref: '#/components/schemas/ReportDepth'
+        includeTechnicalAnalysis:
+          type: boolean
+          default: true
+        includeFundamentalAnalysis:
+          type: boolean
+          default: true
+        includeMacroAnalysis:
+          type: boolean
+          default: true
+      description: |
+        Either period or startDate/endDate may be used. If both are supplied,
+        explicit dates take precedence after validation.
+
+    RetryResearchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        fromStep:
+          $ref: '#/components/schemas/StepType'
+        reason:
+          type: string
+          maxLength: 500
+
+    CancelResearchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+
+    ResearchLinks:
+      type: object
+      additionalProperties: false
+      required: [self, status]
+      properties:
+        self:
+          type: string
+        status:
+          type: string
+        evidence:
+          type: string
+        reports:
+          type: string
+        export:
+          type: string
+
+    ResearchAccepted:
+      type: object
+      additionalProperties: false
+      required: [researchId, status, dataMode, createdAt, links]
+      properties:
+        researchId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ResearchStatus'
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+        createdAt:
+          type: string
+          format: date-time
+        links:
+          $ref: '#/components/schemas/ResearchLinks'
+
+    ResearchItem:
+      type: object
+      required:
+        - researchId
+        - query
+        - symbol
+        - companyName
+        - status
+        - progress
+        - reportDepth
+        - dataMode
+        - createdAt
+        - updatedAt
+      properties:
+        researchId:
+          type: string
+          format: uuid
+        title:
+          type: [string, 'null']
+        query:
+          type: string
+        symbol:
+          type: string
+        companyName:
+          type: string
+        benchmark:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/ResearchStatus'
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        reportDepth:
+          $ref: '#/components/schemas/ReportDepth'
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+        latestReportVersion:
+          type: [integer, 'null']
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: [string, 'null']
+          format: date-time
+
+    ResearchDetail:
+      allOf:
+        - $ref: '#/components/schemas/ResearchItem'
+        - type: object
+          required:
+            - request
+            - currentStep
+            - cancellationRequested
+            - warnings
+            - links
+          properties:
+            request:
+              $ref: '#/components/schemas/CreateResearchRequest'
+            currentStep:
+              type: [string, 'null']
+            startedAt:
+              type: [string, 'null']
+              format: date-time
+            cancellationRequested:
+              type: boolean
+            lastError:
+              oneOf:
+                - $ref: '#/components/schemas/ErrorSummary'
+                - type: 'null'
+            latestReport:
+              oneOf:
+                - $ref: '#/components/schemas/ReportVersion'
+                - type: 'null'
+            warnings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Warning'
+            links:
+              $ref: '#/components/schemas/ResearchLinks'
+      unevaluatedProperties: false
+
+    ResearchStep:
+      type: object
+      additionalProperties: false
+      required:
+        - step
+        - status
+        - attemptCount
+        - retryable
+      properties:
+        step:
+          $ref: '#/components/schemas/StepType'
+        status:
+          $ref: '#/components/schemas/StepStatus'
+        attemptCount:
+          type: integer
+          minimum: 0
+        startedAt:
+          type: [string, 'null']
+          format: date-time
+        completedAt:
+          type: [string, 'null']
+          format: date-time
+        durationMs:
+          type: [integer, 'null']
+          minimum: 0
+        retryable:
+          type: boolean
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/ErrorSummary'
+            - type: 'null'
+
+    ResearchStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - researchId
+        - status
+        - progress
+        - completedSteps
+        - totalSteps
+        - cancellationRequested
+        - dataMode
+        - steps
+        - updatedAt
+      properties:
+        researchId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ResearchStatus'
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        currentStep:
+          type: [string, 'null']
+        completedSteps:
+          type: integer
+          minimum: 0
+        totalSteps:
+          type: integer
+          minimum: 1
+        cancellationRequested:
+          type: boolean
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/ErrorSummary'
+            - type: 'null'
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResearchStep'
+        updatedAt:
+          type: string
+          format: date-time
+
+    PageMetadata:
+      type: object
+      additionalProperties: false
+      required: [number, size, totalElements, totalPages, first, last]
+      properties:
+        number:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalElements:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+        first:
+          type: boolean
+        last:
+          type: boolean
+
+    ResearchPage:
+      type: object
+      additionalProperties: false
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResearchItem'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    Claim:
+      type: object
+      additionalProperties: false
+      required:
+        - claimId
+        - text
+        - claimType
+        - confidence
+        - material
+        - evidenceIds
+      properties:
+        claimId:
+          type: string
+          pattern: '^cl_[A-Za-z0-9_-]{1,64}$'
+        text:
+          type: string
+          minLength: 1
+        claimType:
+          $ref: '#/components/schemas/ClaimType'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Support level for this Claim based on its linked Evidence and Calculations.
+        material:
+          type: boolean
+        evidenceIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^ev_[A-Za-z0-9]+$'
+        validationStatus:
+          $ref: '#/components/schemas/ValidationStatus'
+        validationNotes:
+          type: array
+          items:
+            type: string
+
+    Evidence:
+      type: object
+      additionalProperties: false
+      required:
+        - evidenceId
+        - evidenceType
+        - title
+        - summary
+        - sourceName
+        - sourceType
+        - retrievedAt
+        - isPrimarySource
+        - freshnessStatus
+        - qualityScore
+        - rawDataHash
+        - isDemoData
+        - relatedClaimIds
+      properties:
+        evidenceId:
+          type: string
+          pattern: '^ev_[A-Za-z0-9]+$'
+        evidenceType:
+          $ref: '#/components/schemas/EvidenceType'
+        title:
+          type: string
+        summary:
+          type: string
+        value:
+          description: Typed JSON value copied from or derived from the source
+        unit:
+          type: [string, 'null']
+        sourceName:
+          type: string
+        sourceUrl:
+          type: [string, 'null']
+          format: uri
+        sourceType:
+          $ref: '#/components/schemas/SourceType'
+        publishedAt:
+          type: [string, 'null']
+          format: date-time
+        retrievedAt:
+          type: string
+          format: date-time
+        effectiveDate:
+          type: [string, 'null']
+          format: date
+        isPrimarySource:
+          type: boolean
+        freshnessStatus:
+          $ref: '#/components/schemas/FreshnessStatus'
+        qualityScore:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Source/record quality only; this is not Claim support confidence.
+        rawDataHash:
+          type: string
+          description: Lowercase SHA-256 hex digest of canonical source content
+          pattern: '^[a-f0-9]{64}$'
+        isDemoData:
+          type: boolean
+        relatedClaimIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^cl_[A-Za-z0-9_-]{1,64}$'
+
+    EvidencePage:
+      type: object
+      additionalProperties: false
+      required: [items, page, dataMode]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+
+    DataQuality:
+      type: object
+      additionalProperties: false
+      required: [score, missingData, staleData, conflictingData, limitations]
+      properties:
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        missingData:
+          type: array
+          items:
+            type: string
+        staleData:
+          type: array
+          items:
+            type: string
+        conflictingData:
+          type: array
+          items:
+            type: string
+        limitations:
+          type: array
+          items:
+            type: string
+
+    ReportVersionSummary:
+      type: object
+      required:
+        - researchId
+        - version
+        - title
+        - symbol
+        - asOfDate
+        - validationStatus
+        - dataMode
+        - createdAt
+      properties:
+        researchId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        symbol:
+          type: string
+        asOfDate:
+          type: string
+          format: date
+        validationStatus:
+          $ref: '#/components/schemas/ValidationStatus'
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+        contentHash:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        createdAt:
+          type: string
+          format: date-time
+
+    ReportVersion:
+      allOf:
+        - $ref: '#/components/schemas/ReportVersionSummary'
+        - type: object
+          required:
+            - reportSchemaVersion
+            - generatedAt
+            - executiveSummary
+            - claims
+            - sections
+            - evidenceIds
+            - dataQuality
+            - warnings
+            - disclaimer
+          properties:
+            reportSchemaVersion:
+              type: string
+              const: research_report_schema_v1
+            generatedAt:
+              type: string
+              format: date-time
+            executiveSummary:
+              type: string
+            claims:
+              type: array
+              items:
+                $ref: '#/components/schemas/Claim'
+            sections:
+              type: object
+              description: Versioned structured report sections; never unvalidated free-form JSON.
+              additionalProperties: true
+            evidenceIds:
+              type: array
+              uniqueItems: true
+              items:
+                type: string
+                pattern: '^ev_[A-Za-z0-9]+$'
+            dataQuality:
+              $ref: '#/components/schemas/DataQuality'
+            warnings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Warning'
+            disclaimer:
+              type: string
+      unevaluatedProperties: false
+
+    ReportVersionPage:
+      type: object
+      additionalProperties: false
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportVersionSummary'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    Security:
+      type: object
+      additionalProperties: false
+      required:
+        - securityId
+        - symbol
+        - companyName
+        - exchange
+        - securityType
+        - currency
+        - active
+        - dataMode
+      properties:
+        securityId:
+          type: string
+          format: uuid
+        symbol:
+          type: string
+        companyName:
+          type: string
+        exchange:
+          type: string
+        securityType:
+          $ref: '#/components/schemas/SecurityType'
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        sector:
+          type: [string, 'null']
+        industry:
+          type: [string, 'null']
+        cik:
+          type: [string, 'null']
+          pattern: '^\d{10}$'
+        active:
+          type: boolean
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+
+    SecuritySearchResponse:
+      type: object
+      additionalProperties: false
+      required: [items, dataMode]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Security'
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+
+    ProviderMode:
+      type: string
+      enum: [REAL, MOCK, DISABLED]
+
+    HealthStatus:
+      type: string
+      enum: [UP, DEGRADED, DOWN, UNKNOWN]
+
+    ProviderCapability:
+      type: string
+      enum: [MARKET_DATA, FUNDAMENTALS, FILINGS, MACRO, NEWS, LLM, ANALYTICS, PDF]
+
+    RateLimitStatus:
+      type: object
+      additionalProperties: false
+      required: [limited]
+      properties:
+        limited:
+          type: boolean
+        remaining:
+          type: [integer, 'null']
+          minimum: 0
+        resetsAt:
+          type: [string, 'null']
+          format: date-time
+
+    ProviderStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - capabilities
+        - mode
+        - status
+        - configured
+        - rateLimit
+      properties:
+        name:
+          type: string
+        capabilities:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/ProviderCapability'
+        mode:
+          $ref: '#/components/schemas/ProviderMode'
+        status:
+          $ref: '#/components/schemas/HealthStatus'
+        configured:
+          type: boolean
+          description: Indicates usable configuration without exposing credentials.
+        lastCheckedAt:
+          type: [string, 'null']
+          format: date-time
+        lastSuccessAt:
+          type: [string, 'null']
+          format: date-time
+        latencyMs:
+          type: [integer, 'null']
+          minimum: 0
+        rateLimit:
+          $ref: '#/components/schemas/RateLimitStatus'
+        message:
+          type: [string, 'null']
+
+    ProviderStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [status, dataMode, providers, checkedAt]
+      properties:
+        status:
+          $ref: '#/components/schemas/HealthStatus'
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+        providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderStatus'
+        checkedAt:
+          type: string
+          format: date-time
+
+    HealthComponent:
+      type: object
+      additionalProperties: false
+      required: [status, critical]
+      properties:
+        status:
+          $ref: '#/components/schemas/HealthStatus'
+        critical:
+          type: boolean
+        latencyMs:
+          type: [integer, 'null']
+          minimum: 0
+        message:
+          type: [string, 'null']
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, version, dataMode, timestamp, components]
+      properties:
+        status:
+          $ref: '#/components/schemas/HealthStatus'
+        version:
+          type: string
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+        timestamp:
+          type: string
+          format: date-time
+        components:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/HealthComponent'
+
+    Warning:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        evidenceIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^ev_[A-Za-z0-9]+$'
+
+    ErrorSummary:
+      type: object
+      additionalProperties: false
+      required: [code, message, retryable]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        retryable:
+          type: boolean
+        failedStep:
+          oneOf:
+            - $ref: '#/components/schemas/StepType'
+            - type: 'null'
+
+    ApiError:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - timestamp
+        - status
+        - code
+        - message
+        - requestId
+        - retryable
+        - details
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        code:
+          type: string
+          pattern: '^[A-Z][A-Z0-9_]+$'
+        message:
+          type: string
+        requestId:
+          type: string
+        researchId:
+          type: [string, 'null']
+          format: uuid
+        retryable:
+          type: boolean
+        details:
+          type: object
+          additionalProperties: true
