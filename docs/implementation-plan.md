@@ -463,9 +463,10 @@ Market 和 Fundamental Provider 尚未选择。选择前必须完成：
 
 ## 16. 当前下一步
 
-Phase 0 文档与契约已完成并通过 G0 结构校验。下一步进入 Phase 1：
+Phase 0–5 与 Gate G0–G5 已完成。下一步进入 Phase 6：
 
-1. 创建 Next.js、Java 21/Spring Boot 3 和 Python 3.12/FastAPI 三个可启动应用；
-2. 添加 PostgreSQL、Redis、Docker Compose、健康检查和基础 CI；
-3. 建立统一 lint、type-check、unit-test 和 smoke 命令；
-4. 在进入 Phase 2 前完成 Gate G1，且不提前加入虚假的研究业务实现。
+1. 定义 `ResearchLanguageModel` 端口，保留确定性 Mock 实现；
+2. 接入 OpenAI Responses API Adapter、Strict Structured Outputs 与 `store=false`；
+3. 把 Evidence Pack、只读工具 allowlist、Prompt/Schema 版本和调用预算纳入审计；
+4. 扩展真实模型拒绝、截断、超时、单次修复和 Mock/Real 隔离测试；
+5. 在进入 Phase 7 前完成 Gate G6，且不把模型输出当作金融数字来源。

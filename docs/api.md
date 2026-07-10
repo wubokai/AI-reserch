@@ -216,7 +216,19 @@ Retry-After: 2
 
 Evidence 和报告版本列表也支持 `page`、`size`。默认不返回软删除记录。
 
-Evidence、报告和历史查询始终以认证用户为边界：跨用户 UUID 不会泄露资源是否存在。Evidence 返回稳定 `evidenceId`、来源/计算哈希、Demo 标志和反向 `relatedClaimIds`；报告列表只暴露已发布的不可变版本，指定版本读取返回以内容哈希为 `ETag` 的完整 JSON。
+Evidence、报告和历史查询始终以认证用户为边界：跨用户 UUID 不会泄露资源是否存在。Evidence 返回稳定 `evidenceId`、来源/计算哈希、Source Snapshot ID/Schema、Demo 标志和反向 `relatedClaimIds`；报告列表只暴露已发布的不可变版本，指定版本读取返回以内容哈希为 `ETag` 的完整 JSON。
+
+Filing Chunk 全文检索使用：
+
+```http
+GET /api/v1/research/{researchId}/evidence/search?q=supply+risk&limit=10
+```
+
+- `q` 长度 1–200，`limit` 范围 1–25；
+- 服务端只检索该用户、该 Research 已关联 Source Snapshot 下的不可变 Chunk；
+- PostgreSQL 使用参数化 `websearch_to_tsquery` 和 GIN `tsvector` 索引，不接受 SQL、URL、文件路径或用户 ID；
+- 每个结果返回 Filing、章节、Chunk、字符区间和 `citationLocator`，内容始终按不可信外部数据处理；
+- UI 不执行或直接注入 `ts_headline` 标记，只把安全文本展示给用户。
 
 ## 8. 状态、重试、取消和删除
 
