@@ -4,6 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 
 import { systemHealthResponseSchema } from "@/lib/schemas";
 
+type ServiceStatus =
+  | "UP"
+  | "DEGRADED"
+  | "DOWN";
+
+function statusGlyph(status: ServiceStatus) {
+  return status === "UP" ? "↑" : status === "DEGRADED" ? "~" : "↓";
+}
+
 async function fetchHealth() {
   const response = await fetch("/api/system-health", { cache: "no-store" });
 
@@ -27,9 +36,9 @@ export function SystemHealth() {
     : health.isError || !services
       ? "健康检查不可用"
       : [
-          `Web ${services.web.status === "UP" ? "↑" : "↓"}`,
-          `API ${services.api.status === "UP" ? "↑" : "↓"}`,
-          `Analytics ${services.analytics.status === "UP" ? "↑" : "↓"}`,
+          `Web ${statusGlyph(services.web.status)}`,
+          `API ${statusGlyph(services.api.status)}`,
+          `Analytics ${statusGlyph(services.analytics.status)}`,
         ].join(" · ");
   const degraded = health.isError || health.data?.status === "DEGRADED";
 

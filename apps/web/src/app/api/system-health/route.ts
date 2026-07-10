@@ -4,10 +4,26 @@ import type { SystemHealthResponse } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
 
+const apiHealthStatusSchema = z.enum([
+  "UP",
+  "DEGRADED",
+  "DOWN",
+  "UNKNOWN",
+]);
+
+const apiHealthComponentSchema = z.object({
+  status: apiHealthStatusSchema,
+  critical: z.boolean(),
+  latencyMs: z.number().int().nonnegative().nullable().optional(),
+  message: z.string().nullable().optional(),
+});
+
 const apiHealthSchema = z.object({
-  status: z.literal("UP"),
+  status: apiHealthStatusSchema,
   version: z.string().min(1),
   dataMode: z.enum(["REAL", "MOCK", "MIXED_TEST"]),
+  timestamp: z.iso.datetime(),
+  components: z.record(z.string(), apiHealthComponentSchema),
 });
 
 const analyticsHealthSchema = z.object({
@@ -28,20 +44,29 @@ async function probe(
       signal: AbortSignal.timeout(2_000),
     });
 
-    if (!response.ok) {
-      throw new Error("non-success response");
-    }
-
     if (service === "api") {
       const payload = apiHealthSchema.parse(await response.json());
+      if (!response.ok && payload.status !== "DOWN") {
+        throw new Error("non-success response");
+      }
+      const status =
+        payload.status === "UNKNOWN" ? "DOWN" : payload.status;
       return {
-        status: "UP",
+        status,
         service,
         version: payload.version,
         dataMode: payload.dataMode,
+        ...(status === "DEGRADED"
+          ? { message: "非关键依赖降级" }
+          : status === "DOWN"
+            ? { message: "关键依赖不可用" }
+            : {}),
       };
     }
 
+    if (!response.ok) {
+      throw new Error("non-success response");
+    }
     const payload = analyticsHealthSchema.parse(await response.json());
     return { status: "UP", service, version: payload.version };
   } catch {
