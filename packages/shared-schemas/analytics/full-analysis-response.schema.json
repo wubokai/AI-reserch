@@ -130,6 +130,68 @@
           }
         }
       ]
+    },
+    "trendSignals": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "closeAboveSma20": {"type": "integer", "enum": [-1, 1]},
+        "sma20AboveSma50": {"type": "integer", "enum": [-1, 1]},
+        "sma50AboveSma200": {"type": "integer", "enum": [-1, 1]},
+        "sma50Slope20": {"type": "integer", "enum": [-1, 0, 1]},
+        "closeDistanceSma200": {"type": "integer", "enum": [-1, 0, 1]}
+      },
+      "required": [
+        "closeAboveSma20",
+        "sma20AboveSma50",
+        "sma50AboveSma200",
+        "sma50Slope20",
+        "closeDistanceSma200"
+      ]
+    },
+    "trendResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "type": "string",
+          "enum": [
+            "STRONG_UPTREND",
+            "UPTREND",
+            "RANGE",
+            "DOWNTREND",
+            "STRONG_DOWNTREND"
+          ]
+        },
+        "score": {"type": "integer", "minimum": -5, "maximum": 5},
+        "signals": {"$ref": "#/$defs/trendSignals"},
+        "sampleSize": {"type": "integer", "minimum": 200},
+        "periodStart": {"type": "string", "format": "date"},
+        "periodEnd": {"type": "string", "format": "date"},
+        "calculationVersion": {"type": "string", "const": "quant_v1"},
+        "inputSnapshotIds": {
+          "type": "array",
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 100}
+        },
+        "warnings": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {"$ref": "#/$defs/warning"}
+        }
+      },
+      "required": [
+        "classification",
+        "score",
+        "signals",
+        "sampleSize",
+        "periodStart",
+        "periodEnd",
+        "calculationVersion",
+        "inputSnapshotIds",
+        "warnings"
+      ]
     }
   },
   "properties": {
@@ -177,6 +239,12 @@
         "$ref": "#/$defs/metric"
       }
     },
+    "trend": {
+      "anyOf": [
+        {"$ref": "#/$defs/trendResult"},
+        {"type": "null"}
+      ]
+    },
     "warnings": {
       "type": "array",
       "maxItems": 100,
@@ -196,6 +264,7 @@
     "sampleSize",
     "benchmarkSampleSize",
     "metrics",
+    "trend",
     "warnings"
   ]
 }

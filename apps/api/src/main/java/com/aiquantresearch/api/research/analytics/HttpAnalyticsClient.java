@@ -56,6 +56,7 @@ public class HttpAnalyticsClient implements AnalyticsClient {
                         false
                 );
             }
+            validatePhase4Shape(response);
             return response;
         } catch (WebClientResponseException exception) {
             boolean retryable = exception.getStatusCode().is5xxServerError()
@@ -76,6 +77,38 @@ public class HttpAnalyticsClient implements AnalyticsClient {
                     "Analytics request exceeded the configured timeout",
                     true,
                     exception
+            );
+        }
+    }
+
+    private static void validatePhase4Shape(JsonNode response) {
+        if (!response.path("metrics").isArray() || !response.has("trend")) {
+            throw new AnalyticsServiceException(
+                    "Analytics response is missing Phase 4 metrics or trend fields",
+                    false
+            );
+        }
+        for (JsonNode metric : response.path("metrics")) {
+            if (!metric.path("name").isTextual()
+                    || !metric.path("status").isTextual()
+                    || !metric.path("sampleSize").canConvertToInt()
+                    || !"quant_v1".equals(metric.path("calculationVersion").asText())
+                    || !metric.path("warnings").isArray()) {
+                throw new AnalyticsServiceException(
+                        "Analytics response contains an invalid versioned metric",
+                        false
+                );
+            }
+        }
+        JsonNode trend = response.path("trend");
+        if (!trend.isNull()
+                && (!trend.path("classification").isTextual()
+                || !trend.path("score").canConvertToInt()
+                || !trend.path("signals").isObject()
+                || !"quant_v1".equals(trend.path("calculationVersion").asText()))) {
+            throw new AnalyticsServiceException(
+                    "Analytics response contains an invalid trend contract",
+                    false
             );
         }
     }

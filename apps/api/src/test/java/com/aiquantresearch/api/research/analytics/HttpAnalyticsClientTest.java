@@ -54,6 +54,41 @@ class HttpAnalyticsClientTest {
     }
 
     @Test
+    void acceptsVersionedPhase4MetricsAndExplainableTrend() throws Exception {
+        start(exchange -> respond(exchange, 200, """
+                {"schemaVersion":"analytics_full_response_v1",\
+                 "calculationVersion":"quant_v1",\
+                 "inputHash":"%s",\
+                 "metrics":[{"name":"total_return","value":"0.1",\
+                   "status":"AVAILABLE","sampleSize":100,\
+                   "calculationVersion":"quant_v1","warnings":[]}],\
+                 "trend":{"classification":"UPTREND","score":3,"signals":{},\
+                   "calculationVersion":"quant_v1"}}
+                """.formatted(INPUT_HASH)));
+
+        assertThat(client(Duration.ofSeconds(1)).runFullAnalysis(request())
+                .path("trend").path("classification").asText()).isEqualTo("UPTREND");
+    }
+
+    @Test
+    void rejectsMetricVersionDriftWithoutRetrying() throws Exception {
+        start(exchange -> respond(exchange, 200, """
+                {"schemaVersion":"analytics_full_response_v1",\
+                 "calculationVersion":"quant_v1",\
+                 "inputHash":"%s",\
+                 "metrics":[{"name":"total_return","status":"AVAILABLE",\
+                   "sampleSize":100,"calculationVersion":"quant_v2","warnings":[]}],\
+                 "trend":null}
+                """.formatted(INPUT_HASH)));
+
+        assertThatThrownBy(() -> client(Duration.ofSeconds(1)).runFullAnalysis(request()))
+                .isInstanceOfSatisfying(AnalyticsServiceException.class, exception -> {
+                    assertThat(exception.isRetryable()).isFalse();
+                    assertThat(exception).hasMessageContaining("versioned metric");
+                });
+    }
+
+    @Test
     void classifiesResponseTimeoutAsRetryable() throws Exception {
         start(exchange -> {
             try {

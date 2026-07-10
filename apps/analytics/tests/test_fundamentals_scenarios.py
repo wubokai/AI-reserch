@@ -17,7 +17,15 @@ def test_golden_fundamental_margins_use_one_common_period(client: TestClient) ->
     )
     metrics = {metric["name"]: metric["value"] for metric in response.json()["metrics"]}
 
-    assert metrics == {
+    assert {
+        name: metrics[name]
+        for name in (
+            "gross_margin",
+            "operating_margin",
+            "net_margin",
+            "free_cash_flow_margin",
+        )
+    } == {
         "gross_margin": "0.40000000",
         "operating_margin": "0.20000000",
         "net_margin": "0.10000000",
