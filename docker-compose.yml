@@ -59,6 +59,10 @@ services:
       DEMO_PRINCIPAL_ENABLED: ${DEMO_PRINCIPAL_ENABLED:-true}
       DEMO_PRINCIPAL_USERNAME: ${DEMO_PRINCIPAL_USERNAME:-demo}
       DEMO_PRINCIPAL_PASSWORD: ${DEMO_PRINCIPAL_PASSWORD:-change_me_demo_only}
+      ANALYTICS_INTERNAL_BASE_URL: http://analytics:8000
+      RESEARCH_WORKER_ENABLED: ${RESEARCH_WORKER_ENABLED:-true}
+      RESEARCH_WORKER_ID: ${RESEARCH_WORKER_ID:-api-worker-1}
+      RESEARCH_WORKER_CONCURRENCY: ${RESEARCH_WORKER_CONCURRENCY:-2}
       SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-quant_research}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-quant_user}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
@@ -91,7 +95,8 @@ services:
     environment:
       NODE_ENV: production
       API_INTERNAL_BASE_URL: http://api:8080
-      ANALYTICS_INTERNAL_BASE_URL: http://analytics:8000
+      API_DEMO_USERNAME: ${DEMO_PRINCIPAL_USERNAME:-demo}
+      API_DEMO_PASSWORD: ${DEMO_PRINCIPAL_PASSWORD:-change_me_demo_only}
     depends_on:
       api:
         condition: service_healthy

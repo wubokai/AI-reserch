@@ -32,8 +32,8 @@ class DurableQueueIT extends PostgresRedisIntegrationTestSupport {
     private static final String INPUT_HASH = "a".repeat(64);
     private static final String OUTPUT_HASH = "b".repeat(64);
     // Phase 3 artifact tests intentionally leave append-only jobs behind in the shared
-    // Testcontainers database. Keep this test fixture above those rows so claim_step's
-    // documented priority ordering deterministically selects the job created by this test.
+    // Testcontainers database. Keep this fixture first in claim_step's documented order;
+    // concurrent consumers may legitimately claim other runnable jobs after this one.
     private static final int TEST_PRIORITY = Integer.MAX_VALUE - 1;
 
     @Autowired
@@ -105,9 +105,17 @@ class DurableQueueIT extends PostgresRedisIntegrationTestSupport {
                 }
             }
 
-            assertThat(successfulClaims).hasSize(1);
-            assertThat(successfulClaims.getFirst().researchJobId()).isEqualTo(jobId);
-            assertThat(successfulClaims.getFirst().researchStepId()).isEqualTo(stepId);
+            assertThat(successfulClaims)
+                    .extracting(Claim::researchStepId)
+                    .doesNotHaveDuplicates();
+            List<Claim> fixtureClaims = successfulClaims.stream()
+                    .filter(claim -> claim.researchJobId().equals(jobId))
+                    .toList();
+            assertThat(fixtureClaims).singleElement()
+                    .satisfies(claim -> {
+                        assertThat(claim.researchJobId()).isEqualTo(jobId);
+                        assertThat(claim.researchStepId()).isEqualTo(stepId);
+                    });
         }
 
         assertThat(count("select count(*) from step_attempts where research_step_id = ?", stepId))

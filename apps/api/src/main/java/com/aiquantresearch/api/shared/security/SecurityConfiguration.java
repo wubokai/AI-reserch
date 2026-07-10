@@ -117,7 +117,7 @@ public class SecurityConfiguration {
         }
         throw new IllegalStateException(
                 "Production startup is fail-closed until formal Bearer authentication "
-                        + "is implemented after Phase 2"
+                        + "is implemented"
         );
     }
 
