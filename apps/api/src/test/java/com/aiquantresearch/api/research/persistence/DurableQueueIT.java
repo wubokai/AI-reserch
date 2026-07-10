@@ -31,7 +31,10 @@ class DurableQueueIT extends PostgresRedisIntegrationTestSupport {
 
     private static final String INPUT_HASH = "a".repeat(64);
     private static final String OUTPUT_HASH = "b".repeat(64);
-    private static final int TEST_PRIORITY = 2_000_000;
+    // Phase 3 artifact tests intentionally leave append-only jobs behind in the shared
+    // Testcontainers database. Keep this test fixture above those rows so claim_step's
+    // documented priority ordering deterministically selects the job created by this test.
+    private static final int TEST_PRIORITY = Integer.MAX_VALUE - 1;
 
     @Autowired
     private JdbcTemplate jdbc;

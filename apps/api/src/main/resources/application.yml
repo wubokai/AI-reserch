@@ -59,6 +59,19 @@ app:
   service-name: ${spring.application.name}
   version: ${APP_VERSION:0.1.0-SNAPSHOT}
   data-mode: ${DATA_MODE:MOCK}
+  analytics:
+    base-url: ${ANALYTICS_INTERNAL_BASE_URL:http://localhost:8000}
+    timeout: ${ANALYTICS_TIMEOUT:15s}
+  worker:
+    enabled: ${RESEARCH_WORKER_ENABLED:true}
+    worker-id: ${RESEARCH_WORKER_ID:api-worker-1}
+    concurrency: ${RESEARCH_WORKER_CONCURRENCY:2}
+    poll-delay: ${RESEARCH_WORKER_POLL_DELAY:250ms}
+    heartbeat-delay: ${RESEARCH_WORKER_HEARTBEAT_DELAY:10s}
+    reaper-delay: ${RESEARCH_WORKER_REAPER_DELAY:15s}
+    lease-duration: ${RESEARCH_WORKER_LEASE_DURATION:60s}
+    retry-base-delay-seconds: ${RESEARCH_WORKER_RETRY_BASE_DELAY_SECONDS:1}
+    retry-max-delay-seconds: ${RESEARCH_WORKER_RETRY_MAX_DELAY_SECONDS:30}
   security:
     demo-principal:
       enabled: false

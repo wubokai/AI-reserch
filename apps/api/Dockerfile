@@ -10,6 +10,8 @@ RUN mvn --batch-mode --no-transfer-progress -DskipTests package \
 
 FROM eclipse-temurin:21-jre-alpine
 
+RUN apk add --no-cache font-noto-cjk
+
 RUN addgroup -S spring && adduser -S spring -G spring
 WORKDIR /app
 COPY --from=build --chown=spring:spring /workspace/app.jar /app/app.jar

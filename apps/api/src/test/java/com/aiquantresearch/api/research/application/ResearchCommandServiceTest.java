@@ -13,6 +13,7 @@ import com.aiquantresearch.api.research.domain.ReportDepth;
 import com.aiquantresearch.api.research.domain.ResearchLocale;
 import com.aiquantresearch.api.research.domain.ResearchPeriod;
 import com.aiquantresearch.api.research.domain.ResearchStatus;
+import com.aiquantresearch.api.research.domain.StepStatus;
 import com.aiquantresearch.api.research.domain.StepType;
 import com.aiquantresearch.api.research.persistence.ResearchJobEntity;
 import com.aiquantresearch.api.research.persistence.ResearchJobRepository;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -151,6 +153,124 @@ class ResearchCommandServiceTest {
                 .isEqualTo(hashService.hashCanonicalJsonText(applicationJson));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"SPY", "QQQ", "AAPL"})
+    void creationRejectsTargetsOutsideThePhase3MockCoverage(String symbol) {
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(UUID.randomUUID()));
+        CreateResearchCommand unsupported = new CreateResearchCommand(
+                "Analyze the supported Phase 3 scenario boundary",
+                symbol,
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.FIVE_YEARS,
+                null,
+                null,
+                ReportDepth.STANDARD,
+                true,
+                true,
+                true
+        );
+
+        assertThatThrownBy(() -> service.create(
+                UUID.randomUUID(),
+                "demo-user",
+                "demo-user@local.invalid",
+                "idem-unsupported-target",
+                unsupported
+        )).isInstanceOf(InvalidResearchRequestException.class)
+                .hasMessageContaining("MU, NVDA, or RKLB");
+
+        verify(researchJobRepository, never()).save(any(ResearchJobEntity.class));
+        verify(researchStepRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void creationRejectsDisablingTheFixedTechnicalAnalysisContract() {
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(UUID.randomUUID()));
+        CreateResearchCommand withoutTechnicalAnalysis = new CreateResearchCommand(
+                "Analyze MU without technical calculations",
+                "MU",
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.FIVE_YEARS,
+                null,
+                null,
+                ReportDepth.STANDARD,
+                false,
+                true,
+                true
+        );
+
+        assertThatThrownBy(() -> service.create(
+                UUID.randomUUID(),
+                "demo-user",
+                "demo-user@local.invalid",
+                "idem-no-technicals",
+                withoutTechnicalAnalysis
+        )).isInstanceOf(InvalidResearchRequestException.class)
+                .hasMessageContaining("requires technical analysis");
+
+        verify(researchJobRepository, never()).save(any(ResearchJobEntity.class));
+        verify(researchStepRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void creationPersistsDisabledAnalysisModulesAsPlanSkips() {
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(UUID.randomUUID()));
+        CreateResearchCommand withOptionalModulesDisabled = new CreateResearchCommand(
+                "Analyze MU while optional analysis modules are disabled",
+                "MU",
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.FIVE_YEARS,
+                null,
+                null,
+                ReportDepth.STANDARD,
+                true,
+                false,
+                false
+        );
+
+        service.create(
+                UUID.randomUUID(),
+                "demo-user",
+                "demo-user@local.invalid",
+                "idem-no-fundamentals",
+                withOptionalModulesDisabled
+        );
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<ResearchStepEntity>> stepsCaptor =
+                ArgumentCaptor.forClass(Iterable.class);
+        verify(researchStepRepository).saveAll(stepsCaptor.capture());
+        List<ResearchStepEntity> steps = new java.util.ArrayList<>();
+        stepsCaptor.getValue().forEach(steps::add);
+
+        assertThat(steps)
+                .filteredOn(step -> step.getStatus() == StepStatus.SKIPPED)
+                .extracting(ResearchStepEntity::getStepType)
+                .containsExactly(
+                        StepType.FETCH_MACRO_DATA,
+                        StepType.ANALYZE_FUNDAMENTALS
+                );
+        assertThat(steps)
+                .filteredOn(step -> step.getStepType() == StepType.FETCH_FUNDAMENTALS)
+                .singleElement()
+                .extracting(ResearchStepEntity::getStatus)
+                .isEqualTo(StepStatus.PENDING);
+        assertThat(steps)
+                .filteredOn(step -> step.getStatus() == StepStatus.SKIPPED)
+                .allMatch(step -> "ANALYSIS_MODULE_NOT_REQUESTED".equals(
+                        step.getSkipReason()
+                ));
+    }
+
     @Test
     void idempotencyReplayDoesNotPersistOrAppendAgain() throws Exception {
         UUID ownerId = UUID.randomUUID();
@@ -224,17 +344,142 @@ class ResearchCommandServiceTest {
         assertThat(successful.getMaxAttempts()).isEqualTo(originalMaxAttempts);
         assertThat(fixture.research().getCurrentStep()).isEqualTo(StepType.FETCH_MARKET_DATA);
         assertThat(fixture.steps().get(1).getAvailableAt()).isEqualTo(NOW);
-        String requestHash = new CanonicalHashService(objectMapper)
-                .hashText(fixture.research().getRequestJson());
-        String expectedDownstreamHash = service.stepInputHash(
-                requestHash,
-                StepType.FETCH_MARKET_DATA,
+        String expectedDownstreamHash = service.successorInputHash(
+                originalOutputHash,
                 ResearchCommandService.implementationVersion(StepType.FETCH_MARKET_DATA),
-                ResearchCommandService.successfulOutputFingerprint(originalOutputHash)
+                fixture.steps().get(1).getPayloadVersion()
         );
         assertThat(fixture.steps().get(1).getInputHash())
                 .isNotEqualTo(originalDownstreamInputHash)
                 .isEqualTo(expectedDownstreamHash);
+    }
+
+    @Test
+    void retryUsesReadyHashForFirstRunnableAndDeferredHashesForUnknownDownstream() {
+        RetryFixture fixture = createRetryFixture();
+        ResearchStepEntity resolved = fixture.steps().getFirst();
+        String resolvedOutputHash = "b".repeat(64);
+        resolved.beginAttempt(NOW, fixture.ownerId());
+        resolved.succeed(resolvedOutputHash, NOW, fixture.ownerId());
+
+        ResearchStepEntity generatedMarket = fixture.steps().get(1);
+        String readyMarketHash = service.successorInputHash(
+                resolvedOutputHash,
+                ResearchCommandService.implementationVersion(StepType.FETCH_MARKET_DATA),
+                generatedMarket.getPayloadVersion()
+        );
+        ResearchStepEntity failedMarket = ResearchStepEntity.create(
+                generatedMarket.getId(),
+                fixture.research().getId(),
+                generatedMarket.getStepType(),
+                readyMarketHash,
+                generatedMarket.getPayloadVersion(),
+                generatedMarket.getPayloadJson(),
+                generatedMarket.getImplementationVersion(),
+                generatedMarket.getPriority(),
+                generatedMarket.getMaxAttempts(),
+                NOW,
+                NOW,
+                fixture.ownerId()
+        );
+        failedMarket.beginAttempt(NOW, fixture.ownerId());
+        failedMarket.fail(NOW, fixture.ownerId());
+        fixture.steps().set(1, failedMarket);
+
+        ResearchStepEntity attemptedDownstream = fixture.steps().get(2);
+        attemptedDownstream.unlock(NOW, fixture.ownerId());
+        attemptedDownstream.beginAttempt(NOW, fixture.ownerId());
+        attemptedDownstream.fail(NOW, fixture.ownerId());
+        String oldDownstreamHash = attemptedDownstream.getInputHash();
+        int oldDownstreamAttempts = attemptedDownstream.getAttemptCount();
+
+        fixture.research().transitionTo(
+                ResearchStatus.FAILED,
+                0,
+                null,
+                NOW,
+                fixture.ownerId()
+        );
+        when(researchJobRepository.findOwnedForUpdate(
+                fixture.research().getId(),
+                fixture.ownerId()
+        )).thenReturn(Optional.of(fixture.research()));
+        when(researchStepRepository.findAllByResearchJobIdForUpdate(
+                fixture.research().getId()
+        )).thenReturn(fixture.steps());
+
+        service.retry(
+                fixture.ownerId(),
+                fixture.research().getId(),
+                "idem-retry-deferred-chain",
+                RetryResearchCommand.fromFirstFailedStep()
+        );
+
+        assertThat(failedMarket.getInputHash()).isEqualTo(readyMarketHash);
+        assertThat(failedMarket.getAvailableAt()).isEqualTo(NOW);
+        assertThat(failedMarket.getAttemptCount()).isEqualTo(1);
+        assertThat(attemptedDownstream.getStatus()).isEqualTo(StepStatus.PENDING);
+        assertThat(attemptedDownstream.getInputHash()).isNotEqualTo(oldDownstreamHash);
+        assertThat(attemptedDownstream.getAvailableAt()).isNull();
+        assertThat(attemptedDownstream.getAttemptCount()).isEqualTo(oldDownstreamAttempts);
+    }
+
+    @Test
+    void retryRetainsAnalysisModulesSkippedByTheOriginalPlan() {
+        RetryFixture fixture = createRetryFixture(command(false, false));
+        ResearchStepEntity failedRoot = fixture.steps().getFirst();
+        failedRoot.beginAttempt(NOW, fixture.ownerId());
+        failedRoot.fail(NOW, fixture.ownerId());
+        List<ResearchStepEntity> planSkips = fixture.steps().stream()
+                .filter(step -> step.getStatus() == StepStatus.SKIPPED)
+                .toList();
+        Map<UUID, String> originalSkipInputs = planSkips.stream().collect(
+                java.util.stream.Collectors.toMap(
+                        ResearchStepEntity::getId,
+                        ResearchStepEntity::getInputHash
+                )
+        );
+        Map<UUID, Integer> originalSkipBudgets = planSkips.stream().collect(
+                java.util.stream.Collectors.toMap(
+                        ResearchStepEntity::getId,
+                        ResearchStepEntity::getMaxAttempts
+                )
+        );
+        fixture.research().transitionTo(
+                ResearchStatus.FAILED,
+                0,
+                null,
+                NOW,
+                fixture.ownerId()
+        );
+        when(researchJobRepository.findOwnedForUpdate(
+                fixture.research().getId(),
+                fixture.ownerId()
+        )).thenReturn(Optional.of(fixture.research()));
+        when(researchStepRepository.findAllByResearchJobIdForUpdate(
+                fixture.research().getId()
+        )).thenReturn(fixture.steps());
+
+        service.retry(
+                fixture.ownerId(),
+                fixture.research().getId(),
+                "idem-retry-with-plan-skips",
+                RetryResearchCommand.fromFirstFailedStep()
+        );
+
+        assertThat(planSkips)
+                .extracting(ResearchStepEntity::getStepType)
+                .containsExactly(
+                        StepType.FETCH_MACRO_DATA,
+                        StepType.ANALYZE_FUNDAMENTALS
+                );
+        assertThat(planSkips).allSatisfy(step -> {
+            assertThat(step.getStatus()).isEqualTo(StepStatus.SKIPPED);
+            assertThat(step.getSkipReason()).isEqualTo("ANALYSIS_MODULE_NOT_REQUESTED");
+            assertThat(step.getInputHash()).isEqualTo(originalSkipInputs.get(step.getId()));
+            assertThat(step.getMaxAttempts()).isEqualTo(originalSkipBudgets.get(step.getId()));
+            assertThat(step.getAvailableAt()).isNull();
+        });
     }
 
     @Test
@@ -409,6 +654,10 @@ class ResearchCommandServiceTest {
     }
 
     private RetryFixture createRetryFixture() {
+        return createRetryFixture(command());
+    }
+
+    private RetryFixture createRetryFixture(CreateResearchCommand createCommand) {
         UUID ownerId = UUID.randomUUID();
         when(idempotencyBoundary.reserve(any(), eq(NOW))).thenReturn(
                 IdempotencyReservation.acquired(UUID.randomUUID()),
@@ -419,7 +668,7 @@ class ResearchCommandServiceTest {
                 "demo-user",
                 "demo-user@local.invalid",
                 "idem-create-fixture",
-                command()
+                createCommand
         );
         ArgumentCaptor<ResearchJobEntity> researchCaptor = ArgumentCaptor.forClass(
                 ResearchJobEntity.class
@@ -437,6 +686,13 @@ class ResearchCommandServiceTest {
     }
 
     private static CreateResearchCommand command() {
+        return command(true, true);
+    }
+
+    private static CreateResearchCommand command(
+            boolean includeFundamentalAnalysis,
+            boolean includeMacroAnalysis
+    ) {
         return new CreateResearchCommand(
                 "分析 MU 未来十二个月的增长动力和主要风险",
                 "MU",
@@ -448,8 +704,8 @@ class ResearchCommandServiceTest {
                 null,
                 ReportDepth.STANDARD,
                 true,
-                true,
-                true
+                includeFundamentalAnalysis,
+                includeMacroAnalysis
         );
     }
 

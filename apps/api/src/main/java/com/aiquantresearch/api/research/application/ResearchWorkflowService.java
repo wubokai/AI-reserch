@@ -66,12 +66,30 @@ public class ResearchWorkflowService {
                     "A cancellation-requested research job cannot enter a new stage"
             );
         }
+        List<StepType> skippedProjectionStages = validateSkippedProjection(
+                research,
+                currentStep
+        );
+        var now = clock.instant();
         try {
+            // The database keeps the rank+1 guard as a defense-in-depth invariant.
+            // Persist intermediate SKIPPED stages inside this transaction; no observer
+            // can see them, and the public event records only the claimed runnable stage.
+            for (StepType skippedStage : skippedProjectionStages) {
+                research.transitionTo(
+                        skippedStage.publicStatus(),
+                        skippedStage.progress(),
+                        skippedStage,
+                        now,
+                        research.getOwnerId()
+                );
+                researchJobRepository.saveAndFlush(research);
+            }
             research.transitionTo(
                     currentStep.publicStatus(),
                     Math.max(research.getProgress(), currentStep.progress()),
                     currentStep,
-                    clock.instant(),
+                    now,
                     research.getOwnerId()
             );
         } catch (InvalidDomainStateException exception) {
@@ -86,6 +104,70 @@ public class ResearchWorkflowService {
                 List.of()
         );
         return queryService.status(research.getOwnerId(), researchId);
+    }
+
+    /**
+     * Returns the persisted plan stages that may be crossed by this projection.
+     * Ordinary adjacent and QUEUED-checkpoint projections remain governed by the
+     * entity/database transition guards. A wider jump is legal only when the old
+     * runnable step succeeded, every intervening durable step is SKIPPED, and the
+     * target step is the currently claimed RUNNING step.
+     */
+    private List<StepType> validateSkippedProjection(
+            ResearchJobEntity research,
+            StepType targetStep
+    ) {
+        StepType projectedStep = research.getCurrentStep();
+        if (research.getStatus() == ResearchStatus.QUEUED
+                || projectedStep == null
+                || targetStep.sequence() <= projectedStep.sequence() + 1) {
+            return List.of();
+        }
+
+        List<ResearchStepEntity> persistedPlan = researchStepRepository
+                .findAllByResearchJobIdForUpdate(research.getId());
+        ResearchStepEntity previousRunnable = findPlanStep(persistedPlan, projectedStep);
+        ResearchStepEntity target = findPlanStep(persistedPlan, targetStep);
+        if (previousRunnable.getStatus() != StepStatus.SUCCEEDED
+                || target.getStatus() != StepStatus.RUNNING) {
+            throw illegalSkippedProjection(projectedStep, targetStep);
+        }
+
+        var skippedStages = new java.util.ArrayList<StepType>();
+        for (int sequence = projectedStep.sequence() + 1;
+             sequence < targetStep.sequence();
+             sequence++) {
+            StepType skippedType = StepType.atSequence(sequence);
+            ResearchStepEntity skippedStep = findPlanStep(persistedPlan, skippedType);
+            if (skippedStep.getStatus() != StepStatus.SKIPPED) {
+                throw illegalSkippedProjection(projectedStep, targetStep);
+            }
+            skippedStages.add(skippedType);
+        }
+        return List.copyOf(skippedStages);
+    }
+
+    private static ResearchStepEntity findPlanStep(
+            List<ResearchStepEntity> persistedPlan,
+            StepType stepType
+    ) {
+        return persistedPlan.stream()
+                .filter(step -> step.getStepType() == stepType)
+                .findFirst()
+                .orElseThrow(() -> new InvalidStateTransitionException(
+                        "Persisted research plan is missing step " + stepType
+                ));
+    }
+
+    private static InvalidStateTransitionException illegalSkippedProjection(
+            StepType projectedStep,
+            StepType targetStep
+    ) {
+        return new InvalidStateTransitionException(
+                "Illegal durable stage projection from " + projectedStep
+                        + " to " + targetStep
+                        + ": only persisted SKIPPED stages may be crossed and the target must be RUNNING"
+        );
     }
 
     @Transactional
@@ -103,7 +185,7 @@ public class ResearchWorkflowService {
                 && (fullDeliveryPolicyPassed || minimumSafePolicyPassed)) {
             throw new InvalidStateTransitionException(
                     "Successful finalization requires an atomically published and "
-                            + "validated report; that boundary is deferred until Phase 3"
+                            + "validated report through the report publication boundary"
             );
         }
         var steps = researchStepRepository.findAllByResearchJobIdForUpdate(researchId);

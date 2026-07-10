@@ -1,5 +1,8 @@
 app:
   data-mode: ${DATA_MODE:REAL}
+  # Phase 3 ships only deterministic Mock providers. REAL execution remains fail-closed.
+  worker:
+    enabled: false
   security:
     demo-principal:
       enabled: false

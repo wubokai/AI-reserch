@@ -30,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ResearchQueryServiceTest {
@@ -127,5 +128,47 @@ class ResearchQueryServiceTest {
                 .singleElement()
                 .asString()
                 .contains("MIXED_TEST", "PUBLISHING AND EXPORT ARE PROHIBITED");
+    }
+
+    @Test
+    void itemProjectionIncludesThePublishedReportVersion() throws Exception {
+        UUID ownerId = UUID.randomUUID();
+        UUID researchId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-07-10T12:00:00Z");
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+        CreateResearchCommand command = new CreateResearchCommand(
+                "Analyze the published Mock report version",
+                "MU",
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.FIVE_YEARS,
+                null,
+                null,
+                ReportDepth.STANDARD,
+                true,
+                true,
+                true
+        );
+        ResearchJobEntity research = ResearchJobEntity.create(
+                researchId,
+                ownerId,
+                "MU",
+                command.query(),
+                command.locale(),
+                objectMapper.writeValueAsString(command),
+                DataMode.MOCK,
+                now
+        );
+        ReflectionTestUtils.setField(research, "latestReportVersion", 3);
+        var service = new ResearchQueryService(
+                researchJobRepository,
+                researchStepRepository,
+                stepAttemptRepository,
+                objectMapper,
+                Clock.fixed(now, ZoneOffset.UTC)
+        );
+
+        assertThat(service.toItem(research).latestReportVersion()).isEqualTo(3);
     }
 }

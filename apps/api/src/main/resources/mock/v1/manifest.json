@@ -1,0 +1,140 @@
+{
+  "fixtureVersion": "mock_fixture_v1",
+  "asOfDate": "2023-12-29",
+  "periodStart": "2019-01-02",
+  "watermark": "DEMO DATA — NOT REAL MARKET DATA",
+  "securities": [
+    {
+      "symbol": "MU",
+      "companyName": "Micron Demo Semiconductor",
+      "exchange": "NASDAQ",
+      "securityType": "COMMON_STOCK",
+      "currency": "USD",
+      "basePriceCents": 3350,
+      "dailyTrendCents": 4,
+      "cycleAmplitudeCents": 520,
+      "volumeBase": 14500000,
+      "fundamentals": {
+        "revenue": "24500000000",
+        "ebitda": "4900000000",
+        "operatingIncome": "3200000000",
+        "netIncome": "2700000000",
+        "netDebt": "2100000000",
+        "dilutedShares": "1110000000",
+        "grossMargin": "0.276",
+        "freeCashFlow": "1850000000"
+      },
+      "scenarios": [
+        {"name": "BULL", "revenueGrowth": "0.18", "targetEbitdaMargin": "0.27", "evToEbitdaMultiple": "12.0", "probability": "0.25"},
+        {"name": "BASE", "revenueGrowth": "0.10", "targetEbitdaMargin": "0.22", "evToEbitdaMultiple": "9.0", "probability": "0.50"},
+        {"name": "BEAR", "revenueGrowth": "-0.06", "targetEbitdaMargin": "0.13", "evToEbitdaMultiple": "6.0", "probability": "0.25"}
+      ],
+      "filings": [
+        {"documentId": "mock-mu-10k-2023", "formType": "10-K", "filingDate": "2023-10-06", "title": "Synthetic annual filing", "summary": "Synthetic memory-cycle disclosure describing pricing, inventory and capital-spending risks."},
+        {"documentId": "mock-mu-10q-2023q4", "formType": "10-Q", "filingDate": "2023-12-21", "title": "Synthetic quarterly filing", "summary": "Synthetic quarterly update describing demand recovery and execution uncertainty."}
+      ]
+    },
+    {
+      "symbol": "NVDA",
+      "companyName": "NVIDIA Demo Compute",
+      "exchange": "NASDAQ",
+      "securityType": "COMMON_STOCK",
+      "currency": "USD",
+      "basePriceCents": 4200,
+      "dailyTrendCents": 13,
+      "cycleAmplitudeCents": 1250,
+      "volumeBase": 32500000,
+      "fundamentals": {
+        "revenue": "60900000000",
+        "ebitda": "34500000000",
+        "operatingIncome": "33000000000",
+        "netIncome": "29800000000",
+        "netDebt": "-9200000000",
+        "dilutedShares": "2470000000",
+        "grossMargin": "0.727",
+        "freeCashFlow": "27100000000"
+      },
+      "scenarios": [
+        {"name": "BULL", "revenueGrowth": "0.32", "targetEbitdaMargin": "0.61", "evToEbitdaMultiple": "24.0", "probability": "0.25"},
+        {"name": "BASE", "revenueGrowth": "0.20", "targetEbitdaMargin": "0.55", "evToEbitdaMultiple": "18.0", "probability": "0.50"},
+        {"name": "BEAR", "revenueGrowth": "0.05", "targetEbitdaMargin": "0.43", "evToEbitdaMultiple": "12.0", "probability": "0.25"}
+      ],
+      "filings": [
+        {"documentId": "mock-nvda-10k-2023", "formType": "10-K", "filingDate": "2023-03-17", "title": "Synthetic annual filing", "summary": "Synthetic compute-platform filing describing concentration, supply and competition risks."},
+        {"documentId": "mock-nvda-10q-2023q4", "formType": "10-Q", "filingDate": "2023-11-22", "title": "Synthetic quarterly filing", "summary": "Synthetic quarterly update describing accelerated-computing demand and export constraints."}
+      ]
+    },
+    {
+      "symbol": "RKLB",
+      "companyName": "Rocket Lab Demo Space",
+      "exchange": "NASDAQ",
+      "securityType": "COMMON_STOCK",
+      "currency": "USD",
+      "basePriceCents": 980,
+      "dailyTrendCents": 0,
+      "cycleAmplitudeCents": 310,
+      "volumeBase": 4200000,
+      "fundamentals": {
+        "revenue": "245000000",
+        "ebitda": "-122000000",
+        "operatingIncome": "-142000000",
+        "netIncome": "-182000000",
+        "netDebt": "-115000000",
+        "dilutedShares": "493000000",
+        "grossMargin": "0.241",
+        "freeCashFlow": "-178000000"
+      },
+      "scenarios": [
+        {"name": "BULL", "revenueGrowth": "0.38", "targetEbitdaMargin": "0.16", "evToEbitdaMultiple": "18.0", "probability": "0.20"},
+        {"name": "BASE", "revenueGrowth": "0.22", "targetEbitdaMargin": "0.08", "evToEbitdaMultiple": "12.0", "probability": "0.50"},
+        {"name": "BEAR", "revenueGrowth": "0.02", "targetEbitdaMargin": "-0.12", "evToEbitdaMultiple": "7.0", "probability": "0.30"}
+      ],
+      "filings": [
+        {"documentId": "mock-rklb-10k-2023", "formType": "10-K", "filingDate": "2023-03-07", "title": "Synthetic annual filing", "summary": "Synthetic space-systems filing describing launch cadence, funding and program execution risks."},
+        {"documentId": "mock-rklb-10q-2023q4", "formType": "10-Q", "filingDate": "2023-11-09", "title": "Synthetic quarterly filing", "summary": "Synthetic quarterly update describing backlog, launch timing and continued cash consumption."}
+      ]
+    },
+    {
+      "symbol": "SPY",
+      "companyName": "SPY Demo Benchmark",
+      "exchange": "NYSEARCA",
+      "securityType": "ETF",
+      "currency": "USD",
+      "basePriceCents": 24700,
+      "dailyTrendCents": 17,
+      "cycleAmplitudeCents": 1550,
+      "volumeBase": 71000000,
+      "fundamentals": {},
+      "scenarios": [],
+      "filings": []
+    },
+    {
+      "symbol": "QQQ",
+      "companyName": "QQQ Demo Benchmark",
+      "exchange": "NASDAQ",
+      "securityType": "ETF",
+      "currency": "USD",
+      "basePriceCents": 15400,
+      "dailyTrendCents": 22,
+      "cycleAmplitudeCents": 1850,
+      "volumeBase": 51000000,
+      "fundamentals": {},
+      "scenarios": [],
+      "filings": []
+    }
+  ],
+  "macroSeries": [
+    {"seriesId": "MOCK_FED_FUNDS", "name": "Synthetic policy rate", "unit": "PERCENT", "observations": [
+      {"date": "2019-01-02", "value": "2.40"},
+      {"date": "2020-03-16", "value": "0.15"},
+      {"date": "2022-12-30", "value": "4.33"},
+      {"date": "2023-12-29", "value": "5.33"}
+    ]},
+    {"seriesId": "MOCK_CPI_YOY", "name": "Synthetic CPI year-over-year", "unit": "PERCENT", "observations": [
+      {"date": "2019-01-02", "value": "1.60"},
+      {"date": "2020-12-31", "value": "1.40"},
+      {"date": "2022-06-30", "value": "9.00"},
+      {"date": "2023-12-29", "value": "3.40"}
+    ]}
+  ]
+}

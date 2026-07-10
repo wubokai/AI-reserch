@@ -178,7 +178,7 @@ public class ResearchQueryService {
                 research.getProgress(),
                 request.reportDepth(),
                 research.getDataMode(),
-                null,
+                research.getLatestReportVersion(),
                 research.getCreatedAt(),
                 research.getUpdatedAt(),
                 research.getCompletedAt()

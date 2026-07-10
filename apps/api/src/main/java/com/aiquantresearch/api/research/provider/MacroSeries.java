@@ -1,0 +1,14 @@
+package com.aiquantresearch.api.research.provider;
+
+import java.util.List;
+
+public record MacroSeries(
+        String seriesId,
+        String name,
+        String unit,
+        List<MacroObservation> observations
+) {
+    public MacroSeries {
+        observations = List.copyOf(observations);
+    }
+}

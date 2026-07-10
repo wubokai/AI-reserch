@@ -133,6 +133,85 @@ class Phase3ArtifactsIT extends PostgresRedisIntegrationTestSupport {
     }
 
     @Test
+    void manualRetrySuccessorWithAttemptHistoryIsRefreshedAndUnlocked() {
+        UUID jobId = createJob("MOCK", "QUEUED", 0, "RESOLVE_SECURITY");
+        createPendingStep(jobId, "RESOLVE_SECURITY", 1, "resolve-v1", 1, true);
+        UUID retriedSuccessorId = createRetriedPendingStep(
+                jobId,
+                "FETCH_MARKET_DATA",
+                2,
+                "market-v3",
+                7,
+                2,
+                6
+        );
+        Claim claim = claimCurrentStep();
+
+        AdvanceResult advanced = advance(claim, OUTPUT_HASH);
+        String expectedInputHash = sha256(OUTPUT_HASH + ":market-v3:7");
+
+        assertThat(advanced.resultCode()).isEqualTo("SUCCEEDED_AND_ADVANCED");
+        assertThat(advanced.nextResearchStepId()).isEqualTo(retriedSuccessorId);
+        assertThat(advanced.nextInputHash()).isEqualTo(expectedInputHash);
+        assertThat(jdbc.queryForMap("""
+                select status, input_hash, attempt_count, max_attempts,
+                       available_at is not null as is_available
+                  from research_steps
+                 where id = ?
+                """, retriedSuccessorId))
+                .containsEntry("status", "PENDING")
+                .containsEntry("input_hash", expectedInputHash)
+                .containsEntry("attempt_count", 2)
+                .containsEntry("max_attempts", 6)
+                .containsEntry("is_available", true);
+
+        assertThat(advance(claim, OUTPUT_HASH).resultCode()).isEqualTo("ALREADY_ADVANCED");
+        assertThat(jdbc.queryForObject("""
+                select count(*) from outbox_events
+                 where aggregate_id = ? and event_type = 'STEP_READY'
+                """, Integer.class, retriedSuccessorId)).isEqualTo(1);
+    }
+
+    @Test
+    void retryInputRefreshGuardRejectsAnyHashNotDerivedFromSucceededPredecessor() {
+        UUID jobId = createJob("MOCK", "QUEUED", 0, "RESOLVE_SECURITY");
+        createSucceededStep(
+                jobId,
+                "RESOLVE_SECURITY",
+                1,
+                "resolve-v1",
+                1,
+                OUTPUT_HASH
+        );
+        UUID retriedSuccessorId = createRetriedPendingStep(
+                jobId,
+                "FETCH_MARKET_DATA",
+                2,
+                "market-v3",
+                7,
+                2,
+                6
+        );
+
+        assertThatThrownBy(() -> jdbc.update("""
+                update research_steps
+                   set input_hash = ?,
+                       available_at = statement_timestamp(),
+                       row_version = row_version + 1
+                 where id = ?
+                """, OTHER_OUTPUT_HASH, retriedSuccessorId))
+                .hasMessageContaining("claimed step execution inputs are immutable");
+
+        assertThat(jdbc.queryForMap("""
+                select input_hash, available_at
+                  from research_steps
+                 where id = ?
+                """, retriedSuccessorId))
+                .containsEntry("input_hash", INITIAL_HASH)
+                .containsEntry("available_at", null);
+    }
+
+    @Test
     void advancementSkipsSkippedStepsAndLastStepDoesNotPublishResearch() {
         UUID jobId = createJob("MOCK", "QUEUED", 0, "RESOLVE_SECURITY");
         createPendingStep(jobId, "RESOLVE_SECURITY", 1, "resolve-v1", 1, true);
@@ -364,6 +443,53 @@ class Phase3ArtifactsIT extends PostgresRedisIntegrationTestSupport {
                           'skipped-v1', ?, null, 3, 'DISABLED_BY_PLAN', ?, ?)
                 """, stepId, jobId, stepType, sequence, INITIAL_HASH,
                 PRIORITY.incrementAndGet(), ownerId, ownerId);
+        return stepId;
+    }
+
+    private UUID createRetriedPendingStep(
+            UUID jobId,
+            String stepType,
+            int sequence,
+            String implementationVersion,
+            int payloadVersion,
+            int attemptCount,
+            int maxAttempts
+    ) {
+        UUID stepId = UUID.randomUUID();
+        jdbc.update("""
+                insert into research_steps (
+                    id, research_job_id, step_type, sequence_no, input_hash,
+                    payload_version, payload_json, implementation_version,
+                    priority, available_at, attempt_count, max_attempts,
+                    created_by, updated_by
+                ) values (?, ?, ?, ?, ?, ?, '{}'::jsonb, ?, ?, null, ?, ?, ?, ?)
+                """, stepId, jobId, stepType, sequence, INITIAL_HASH, payloadVersion,
+                implementationVersion, PRIORITY.incrementAndGet(), attemptCount,
+                maxAttempts, ownerId, ownerId);
+        return stepId;
+    }
+
+    private UUID createSucceededStep(
+            UUID jobId,
+            String stepType,
+            int sequence,
+            String implementationVersion,
+            int payloadVersion,
+            String outputHash
+    ) {
+        UUID stepId = UUID.randomUUID();
+        jdbc.update("""
+                insert into research_steps (
+                    id, research_job_id, step_type, sequence_no, status,
+                    input_hash, successful_output_hash, payload_version,
+                    payload_json, implementation_version, priority,
+                    available_at, attempt_count, max_attempts,
+                    created_by, updated_by
+                ) values (?, ?, ?, ?, 'SUCCEEDED', ?, ?, ?, '{}'::jsonb,
+                          ?, ?, null, 1, 3, ?, ?)
+                """, stepId, jobId, stepType, sequence, INITIAL_HASH, outputHash,
+                payloadVersion, implementationVersion, PRIORITY.incrementAndGet(),
+                ownerId, ownerId);
         return stepId;
     }
 

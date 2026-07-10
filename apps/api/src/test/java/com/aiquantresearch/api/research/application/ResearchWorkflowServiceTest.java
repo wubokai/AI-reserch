@@ -116,6 +116,52 @@ class ResearchWorkflowServiceTest {
     }
 
     @Test
+    void projectionCrossesOnlyPersistedSkippedStagesToTheClaimedTarget() {
+        movePublicProjectionToFilings();
+        ResearchStepEntity filings = succeededStep(StepType.FETCH_FILINGS);
+        ResearchStepEntity skippedMacro = step(StepType.FETCH_MACRO_DATA, null);
+        skippedMacro.skip(
+                "ANALYSIS_MODULE_NOT_REQUESTED",
+                CREATED_AT.plusSeconds(4),
+                ownerId
+        );
+        ResearchStepEntity claimedValidation = step(StepType.VALIDATE_DATA, CREATED_AT);
+        claimedValidation.beginAttempt(CREATED_AT.plusSeconds(5), ownerId);
+        when(researchStepRepository.findAllByResearchJobIdForUpdate(researchId))
+                .thenReturn(List.of(filings, skippedMacro, claimedValidation));
+
+        service.projectStage(researchId, StepType.VALIDATE_DATA);
+
+        assertThat(research.getStatus()).isEqualTo(ResearchStatus.VALIDATING_DATA);
+        assertThat(research.getCurrentStep()).isEqualTo(StepType.VALIDATE_DATA);
+        assertThat(research.getProgress()).isEqualTo(StepType.VALIDATE_DATA.progress());
+        verify(researchJobRepository).saveAndFlush(research);
+        verify(researchJobRepository).save(research);
+        verify(eventJournal).append(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void projectionRejectsJumpAcrossAnyNonSkippedPersistedStage() {
+        movePublicProjectionToFilings();
+        ResearchStepEntity filings = succeededStep(StepType.FETCH_FILINGS);
+        ResearchStepEntity pendingMacro = step(StepType.FETCH_MACRO_DATA, null);
+        ResearchStepEntity claimedValidation = step(StepType.VALIDATE_DATA, CREATED_AT);
+        claimedValidation.beginAttempt(CREATED_AT.plusSeconds(5), ownerId);
+        when(researchStepRepository.findAllByResearchJobIdForUpdate(researchId))
+                .thenReturn(List.of(filings, pendingMacro, claimedValidation));
+
+        assertThatThrownBy(() -> service.projectStage(researchId, StepType.VALIDATE_DATA))
+                .isInstanceOf(InvalidStateTransitionException.class)
+                .hasMessageContaining("only persisted SKIPPED stages may be crossed");
+
+        assertThat(research.getStatus()).isEqualTo(ResearchStatus.FETCHING_FILINGS);
+        assertThat(research.getCurrentStep()).isEqualTo(StepType.FETCH_FILINGS);
+        verify(researchJobRepository, never()).saveAndFlush(any());
+        verify(researchJobRepository, never()).save(any());
+        verify(eventJournal, never()).append(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
     void permanentlyBlockedDownstreamStepsAreSkippedBeforeFailedFinalization() {
         ResearchStepEntity failed = step(StepType.RESOLVE_SECURITY, CREATED_AT);
         failed.beginAttempt(CREATED_AT.plusSeconds(2), ownerId);
@@ -218,6 +264,44 @@ class ResearchWorkflowServiceTest {
                 3,
                 availableAt,
                 CREATED_AT,
+                ownerId
+        );
+    }
+
+    private ResearchStepEntity succeededStep(StepType type) {
+        ResearchStepEntity step = step(type, CREATED_AT);
+        step.beginAttempt(CREATED_AT.plusSeconds(2), ownerId);
+        step.succeed(OUTPUT_HASH, CREATED_AT.plusSeconds(3), ownerId);
+        return step;
+    }
+
+    private void movePublicProjectionToFilings() {
+        research.transitionTo(
+                ResearchStatus.RESOLVING_SECURITY,
+                StepType.RESOLVE_SECURITY.progress(),
+                StepType.RESOLVE_SECURITY,
+                CREATED_AT.plusSeconds(2),
+                ownerId
+        );
+        research.transitionTo(
+                ResearchStatus.FETCHING_MARKET_DATA,
+                StepType.FETCH_MARKET_DATA.progress(),
+                StepType.FETCH_MARKET_DATA,
+                CREATED_AT.plusSeconds(3),
+                ownerId
+        );
+        research.transitionTo(
+                ResearchStatus.FETCHING_FUNDAMENTALS,
+                StepType.FETCH_FUNDAMENTALS.progress(),
+                StepType.FETCH_FUNDAMENTALS,
+                CREATED_AT.plusSeconds(4),
+                ownerId
+        );
+        research.transitionTo(
+                ResearchStatus.FETCHING_FILINGS,
+                StepType.FETCH_FILINGS.progress(),
+                StepType.FETCH_FILINGS,
+                CREATED_AT.plusSeconds(5),
                 ownerId
         );
     }

@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Formula;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -70,6 +71,12 @@ public class ResearchJobEntity {
 
     @Column(name = "completed_at")
     private Instant completedAt;
+
+    @Column(name = "latest_report_version_id")
+    private UUID latestReportVersionId;
+
+    @Formula("(select rv.version from report_versions rv where rv.id = latest_report_version_id)")
+    private Integer latestReportVersion;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
@@ -348,6 +355,14 @@ public class ResearchJobEntity {
 
     public Instant getCompletedAt() {
         return completedAt;
+    }
+
+    public UUID getLatestReportVersionId() {
+        return latestReportVersionId;
+    }
+
+    public Integer getLatestReportVersion() {
+        return latestReportVersion;
     }
 
     public Instant getDeletedAt() {

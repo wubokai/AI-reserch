@@ -2,6 +2,8 @@ package com.aiquantresearch.api.research.application;
 
 import com.aiquantresearch.api.research.domain.InvalidDomainStateException;
 import com.aiquantresearch.api.research.domain.ResearchStatus;
+import com.aiquantresearch.api.research.domain.ReportDepth;
+import com.aiquantresearch.api.research.domain.ResearchPeriod;
 import com.aiquantresearch.api.research.domain.StepStatus;
 import com.aiquantresearch.api.research.domain.StepType;
 import com.aiquantresearch.api.research.persistence.ResearchJobEntity;
@@ -29,6 +31,11 @@ public class ResearchCommandService {
     private static final int DEFAULT_MAX_ATTEMPTS = 3;
     private static final int MANUAL_RETRY_BUDGET = 3;
     private static final String ROOT_UPSTREAM_FINGERPRINT = "ROOT:v1";
+    private static final String ANALYSIS_MODULE_NOT_REQUESTED =
+            "ANALYSIS_MODULE_NOT_REQUESTED";
+    private static final String DEFERRED_RETRY_INPUT_VERSION = "DEFERRED_RETRY_INPUT:v1";
+    private static final java.util.Set<String> PHASE3_MOCK_TARGETS =
+            java.util.Set.of("MU", "NVDA", "RKLB");
 
     private final ResearchJobRepository researchJobRepository;
     private final ResearchStepRepository researchStepRepository;
@@ -89,6 +96,7 @@ public class ResearchCommandService {
             return replay(reservation, ResearchAcceptedView.class);
         }
         securityPrecheckService.validate(command.symbol(), command.companyName());
+        validatePhase3MvpBoundary(command);
 
         UUID researchId = UUID.randomUUID();
         ResearchJobEntity research = ResearchJobEntity.create(
@@ -114,7 +122,7 @@ public class ResearchCommandService {
                     implementationVersion,
                     upstreamFingerprint
             );
-            steps.add(ResearchStepEntity.create(
+            ResearchStepEntity step = ResearchStepEntity.create(
                     UUID.randomUUID(),
                     researchId,
                     type,
@@ -127,7 +135,11 @@ public class ResearchCommandService {
                     type == StepType.RESOLVE_SECURITY ? now : null,
                     now,
                     ownerId
-            ));
+            );
+            if (shouldSkip(type, command)) {
+                step.skip(ANALYSIS_MODULE_NOT_REQUESTED, now, ownerId);
+            }
+            steps.add(step);
             upstreamFingerprint = plannedInputFingerprint(inputHash);
         }
         researchStepRepository.saveAll(steps);
@@ -228,6 +240,9 @@ public class ResearchCommandService {
         for (StepRetryPlan plan : retryPlan) {
             ResearchStepEntity step = plan.step();
             if (step.getSequenceNo() < requestedStart.sequence()) {
+                continue;
+            }
+            if (plan.retainedPlanSkip()) {
                 continue;
             }
             boolean willRun = step.prepareManualRetry(
@@ -429,17 +444,51 @@ public class ResearchCommandService {
             List<ResearchStepEntity> steps
     ) {
         String requestHash = hashService.hashCanonicalJsonText(research.getRequestJson());
-        String upstreamFingerprint = ROOT_UPSTREAM_FINGERPRINT;
         List<StepRetryPlan> result = new ArrayList<>(steps.size());
+        ResearchStepEntity previousRunnableStep = null;
+        String reusableUpstreamOutputHash = null;
+        boolean predecessorOutputKnown = true;
+
         for (ResearchStepEntity step : steps) {
             String nextImplementationVersion = implementationVersion(step.getStepType());
-            String nextInputHash = stepInputHash(
-                    requestHash,
-                    step.getStepType(),
-                    nextImplementationVersion,
-                    upstreamFingerprint
-            );
-            boolean reusableSuccess = step.getStatus() == StepStatus.SUCCEEDED
+
+            if (isRetainedPlanSkip(step)) {
+                result.add(new StepRetryPlan(
+                        step,
+                        step.getInputHash(),
+                        step.getImplementationVersion(),
+                        false,
+                        true
+                ));
+                continue;
+            }
+
+            String nextInputHash;
+            if (previousRunnableStep == null) {
+                nextInputHash = stepInputHash(
+                        requestHash,
+                        step.getStepType(),
+                        nextImplementationVersion,
+                        ROOT_UPSTREAM_FINGERPRINT
+                );
+            } else if (predecessorOutputKnown) {
+                nextInputHash = successorInputHash(
+                        reusableUpstreamOutputHash,
+                        nextImplementationVersion,
+                        step.getPayloadVersion()
+                );
+            } else {
+                nextInputHash = deferredRetryInputHash(
+                        research.getId(),
+                        previousRunnableStep.getId(),
+                        step.getStepType(),
+                        nextImplementationVersion,
+                        step.getPayloadVersion()
+                );
+            }
+
+            boolean reusableSuccess = predecessorOutputKnown
+                    && step.getStatus() == StepStatus.SUCCEEDED
                     && step.getSuccessfulOutputHash() != null
                     && step.getInputHash().equals(nextInputHash)
                     && step.getImplementationVersion().equals(nextImplementationVersion);
@@ -447,11 +496,14 @@ public class ResearchCommandService {
                     step,
                     nextInputHash,
                     nextImplementationVersion,
-                    reusableSuccess
+                    reusableSuccess,
+                    false
             ));
-            upstreamFingerprint = reusableSuccess
-                    ? successfulOutputFingerprint(step.getSuccessfulOutputHash())
-                    : plannedInputFingerprint(nextInputHash);
+            previousRunnableStep = step;
+            predecessorOutputKnown = reusableSuccess;
+            reusableUpstreamOutputHash = reusableSuccess
+                    ? step.getSuccessfulOutputHash()
+                    : null;
         }
         return List.copyOf(result);
     }
@@ -484,16 +536,89 @@ public class ResearchCommandService {
         );
     }
 
+    /** Mirrors queue_v1.derive_successor_input_hash in V6. */
+    String successorInputHash(
+            String upstreamOutputHash,
+            String implementationVersion,
+            int payloadVersion
+    ) {
+        return hashService.hashText(
+                Objects.requireNonNull(upstreamOutputHash, "upstreamOutputHash")
+                        + ":" + Objects.requireNonNull(
+                                implementationVersion,
+                                "implementationVersion"
+                        )
+                        + ":" + payloadVersion
+        );
+    }
+
+    private String deferredRetryInputHash(
+            UUID researchId,
+            UUID upstreamStepId,
+            StepType type,
+            String implementationVersion,
+            int payloadVersion
+    ) {
+        return hashService.hashText(
+                DEFERRED_RETRY_INPUT_VERSION
+                        + "|research=" + researchId
+                        + "|upstreamStep=" + upstreamStepId
+                        + "|step=" + type.name()
+                        + "|implementation=" + implementationVersion
+                        + "|payload=" + payloadVersion
+        );
+    }
+
     static String implementationVersion(StepType type) {
-        return "phase2-" + type.name().toLowerCase(java.util.Locale.ROOT) + "-v1";
+        return "phase3-mock-" + type.name().toLowerCase(java.util.Locale.ROOT) + "-v1";
+    }
+
+    private static void validatePhase3MvpBoundary(CreateResearchCommand command) {
+        if (!PHASE3_MOCK_TARGETS.contains(command.symbol())) {
+            throw new InvalidResearchRequestException(
+                    "Phase 3 Mock research supports only MU, NVDA, or RKLB as the target"
+            );
+        }
+        if (command.reportDepth() != ReportDepth.STANDARD) {
+            throw new InvalidResearchRequestException(
+                    "Phase 3 supports only reportDepth STANDARD"
+            );
+        }
+        if (command.period() != ResearchPeriod.FIVE_YEARS
+                || command.startDate() != null
+                || command.endDate() != null) {
+            throw new InvalidResearchRequestException(
+                    "Phase 3 supports only the fixed 5y research period"
+            );
+        }
+        if (!java.util.Set.of("SPY", "QQQ").contains(command.benchmark())) {
+            throw new InvalidResearchRequestException(
+                    "Phase 3 supports only SPY or QQQ as the benchmark"
+            );
+        }
+        if (!command.includeTechnicalAnalysis()) {
+            throw new InvalidResearchRequestException(
+                    "Phase 3 requires technical analysis because full-analysis is the fixed quant contract"
+            );
+        }
+    }
+
+    private static boolean shouldSkip(StepType type, CreateResearchCommand command) {
+        // Scenario calculations remain mandatory, so the normalized fundamentals
+        // source is always fetched. The flag controls only the optional narrative
+        // analysis stage.
+        return (!command.includeFundamentalAnalysis()
+                && type == StepType.ANALYZE_FUNDAMENTALS)
+                || (!command.includeMacroAnalysis() && type == StepType.FETCH_MACRO_DATA);
     }
 
     private static String plannedInputFingerprint(String inputHash) {
         return "PLANNED_INPUT:" + inputHash;
     }
 
-    static String successfulOutputFingerprint(String outputHash) {
-        return "SUCCESSFUL_OUTPUT:" + outputHash;
+    private static boolean isRetainedPlanSkip(ResearchStepEntity step) {
+        return step.getStatus() == StepStatus.SKIPPED
+                && ANALYSIS_MODULE_NOT_REQUESTED.equals(step.getSkipReason());
     }
 
     private static List<Map<String, Object>> changedStepPayload(
@@ -512,10 +637,11 @@ public class ResearchCommandService {
             ResearchStepEntity step,
             String nextInputHash,
             String nextImplementationVersion,
-            boolean reusableSuccess
+            boolean reusableSuccess,
+            boolean retainedPlanSkip
     ) {
         boolean requiresExecution() {
-            return !reusableSuccess;
+            return !reusableSuccess && !retainedPlanSkip;
         }
     }
 

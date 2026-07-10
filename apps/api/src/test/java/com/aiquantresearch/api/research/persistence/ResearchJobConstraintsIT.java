@@ -26,6 +26,8 @@ class ResearchJobConstraintsIT extends PostgresRedisIntegrationTestSupport {
             "ck_research_jobs_lifecycle_projection";
     private static final String CURRENT_STEP_CONSTRAINT =
             "ck_research_jobs_current_step";
+    private static final String SUCCESS_REPORT_CONSTRAINT =
+            "ck_research_jobs_success_report";
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -56,19 +58,29 @@ class ResearchJobConstraintsIT extends PostgresRedisIntegrationTestSupport {
     }
 
     @Test
-    void acceptsCreatedInitialQueueActiveProjectionManualRetryQueueAndSuccessTerminal() {
+    void acceptsCreatedInitialQueueActiveProjectionAndManualRetryQueue() {
         insertValid("CREATED", 0, null, false);
         insertValid("QUEUED", 0, "RESOLVE_SECURITY", false);
         insertValid("FETCHING_MARKET_DATA", 15, "FETCH_MARKET_DATA", false);
         insertValid("FETCHING_MARKET_DATA", 24, "FETCH_MARKET_DATA", false);
         insertValid("QUEUED", 74, "ANALYZE_FUNDAMENTALS", false);
-        insertValid("COMPLETED", 100, null, true);
 
         assertThat(jdbc.queryForObject(
                 "select count(*) from research_jobs where user_id = ?",
                 Integer.class,
                 ownerId
-        )).isEqualTo(6);
+        )).isEqualTo(5);
+    }
+
+    @Test
+    void rejectsDirectSuccessWithoutAnAtomicallyPublishedValidatedReport() {
+        assertConstraintRejected(
+                SUCCESS_REPORT_CONSTRAINT,
+                "COMPLETED",
+                100,
+                null,
+                true
+        );
     }
 
     @Test

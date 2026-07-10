@@ -11,6 +11,19 @@ app:
   service-name: ai-quant-research-api
   version: test
   data-mode: MOCK
+  analytics:
+    base-url: http://localhost:8000
+    timeout: 1s
+  worker:
+    enabled: false
+    worker-id: test-worker
+    concurrency: 1
+    poll-delay: 1s
+    heartbeat-delay: 1s
+    reaper-delay: 1s
+    lease-duration: 30s
+    retry-base-delay-seconds: 1
+    retry-max-delay-seconds: 2
   security:
     demo-principal:
       enabled: false

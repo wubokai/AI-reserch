@@ -381,8 +381,8 @@ class ResearchHttpLifecycleIT extends PostgresRedisIntegrationTestSupport {
                 "http-it-foreign-" + ownerId + "@local.invalid",
                 "http-it-foreign-create-" + ownerId,
                 new CreateResearchCommand(
-                        "Analyze a foreign owner's Microsoft research request",
-                        "MSFT",
+                        "Analyze a foreign owner's NVIDIA research request",
+                        "NVDA",
                         null,
                         ResearchLocale.EN_US,
                         "SPY",
