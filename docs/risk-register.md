@@ -1,10 +1,10 @@
 # AI Quant Research Assistant 风险登记册
 
-文档版本：0.1
+文档版本：0.2
 
-状态：Accepted Phase 0 基线
+状态：Phase 3 实现复核；Gate G3 远程终验待通过
 
-日期：2026-07-09
+日期：2026-07-10
 
 ## 1. 评估方法
 
@@ -27,15 +27,15 @@
 
 | ID | 风险 | 可能性 | 影响 | 触发信号 | 预防与缓解 | 责任阶段 | 状态 |
 |---|---|---:|---:|---|---|---|---|
-| R-001 | 项目范围同时覆盖 MVP、完整 v1 和生产级能力，导致长期没有可运行闭环 | 高 | 高 | 大量模块只有占位代码；连续阶段无法演示创建到报告 | Mock First；Phase 3 必须形成纵向闭环；Should/Could 不得阻塞 Must | Phase 0-3 | 缓解中 |
-| R-002 | LLM 伪造价格、财务数字、日期或增长率 | 高 | 严重 | 报告出现 Evidence 中不存在的数值；自由文本包含未结构化数字 | Claim/Evidence 模型；数值引用；确定性验证器；不合格 Claim 隔离；LLM 不计算指标 | Phase 3-6 | 缓解中 |
-| R-003 | 报告纯文本字段绕过四类 Claim 和 Evidence 要求 | 高 | 严重 | executive summary 或 conclusion 无 evidenceIds | 所有可验证叙事改为 Claim；模板只渲染已验证 Claim | Phase 0、5 | 缓解中 |
+| R-001 | 项目范围同时覆盖 MVP、完整 v1 和生产级能力，导致长期没有可运行闭环 | 高 | 高 | 大量模块只有占位代码；连续阶段无法演示创建到报告 | Mock First；Phase 3 必须形成纵向闭环；Should/Could 不得阻塞 Must | Phase 0-3 | 待 G3 终验 |
+| R-002 | LLM 伪造价格、财务数字、日期或增长率 | 高 | 严重 | 报告出现 Evidence 中不存在的数值；自由文本包含未结构化数字 | Claim/Evidence 模型；数值引用；确定性验证器；不合格 Claim 隔离；LLM 不计算指标 | Phase 3-6 | Phase 3 已缓解；Phase 6 开放 |
+| R-003 | 报告纯文本字段绕过四类 Claim 和 Evidence 要求 | 高 | 严重 | executive summary 或 conclusion 无 evidenceIds | 所有可验证叙事改为 Claim；模板只渲染已验证 Claim | Phase 0、5 | Phase 3 已缓解；Phase 5 开放 |
 | R-004 | 指标口径含糊造成结果看似正确但实际错误 | 高 | 严重 | Java/Python/文档得到不同 CAGR、VaR、Alpha；测试只检查不报错 | 固化 calculation_version、公式、符号、年化、对齐和舍入；黄金数据测试 | Phase 0、4 | 缓解中 |
 | R-005 | 使用内存线程或 Spring @Async 导致任务在重启时丢失 | 高 | 高 | 重启后 RUNNING 任务永久卡住；无 Worker 所有权 | PostgreSQL 持久队列、lease、heartbeat、超时回收和锁 | Phase 2 | 已缓解 |
-| R-006 | 步骤重试产生重复数据、报告版本或 LLM 费用 | 高 | 高 | attempt 增加时重复行；相同调用多次计费 | 步骤幂等键、输入哈希、唯一约束、调用去重键和事务边界 | Phase 2、6 | 缓解中 |
+| R-006 | 步骤重试产生重复数据、报告版本或 LLM 费用 | 高 | 高 | attempt 增加时重复行；相同调用多次计费 | 步骤幂等键、输入哈希、唯一约束、调用去重键和事务边界 | Phase 2、6 | Phase 3 已缓解；Phase 6 开放 |
 | R-007 | 行情或基本面 Provider 许可不允许持久化、缓存、展示或导出 | 中 | 严重 | 服务条款限制再分发；供应商要求删除历史数据 | Phase 7 前不选定；完成书面许可矩阵；不满足存储/导出权即停止接入 | Phase 7 | 延后决策 |
 | R-008 | Provider 限流、超时或响应 Schema 变化破坏研究流程 | 高 | 高 | 429/5xx 增多；字段缺失；解析失败 | Adapter 隔离、Contract Test、版本化解析、超时、分类重试、熔断、Rate Limiter、Mock 降级 | Phase 7 | 开放 |
-| R-009 | Java、Python、TypeScript 契约漂移 | 高 | 高 | 相同字段命名/枚举不同；前端收到无法解析响应 | OpenAPI/JSON Schema 唯一真源；生成或校验 DTO；CI 契约测试 | Phase 0-3 | 缓解中 |
+| R-009 | Java、Python、TypeScript 契约漂移 | 高 | 高 | 相同字段命名/枚举不同；前端收到无法解析响应 | OpenAPI/JSON Schema 唯一真源；生成或校验 DTO；CI 契约测试 | Phase 0-3 | 待 G3 终验 |
 | R-010 | SEC 或网页内容包含 Prompt Injection 并诱导模型改变规则或调用工具 | 中 | 严重 | Filing 文本出现指令；模型尝试引用未授权来源 | 外部文本不可信标记、指令/数据隔离、工具白名单、Schema、Evidence 验证、禁止执行抓取内容命令 | Phase 5-7 | 开放 |
 | R-011 | API Key、密码或 Token 进入代码、Git、日志或错误响应 | 中 | 严重 | secret scan 命中；日志出现 Authorization | 环境变量、.env.example、日志脱敏、错误过滤、CI secret scan、测试伪密钥 | Phase 1、9 | 开放 |
 | R-012 | 证券资源缺少所有权检查，用户可通过 UUID 读取或删除他人报告 | 中 | 严重 | 按 ID Repository 查询不含 user_id | Service 层统一 currentUser；Repository 查询包含 owner；IDOR 集成测试 | Phase 2、9 | 缓解中 |
@@ -45,20 +45,20 @@
 | R-016 | 财务指标概念映射错误，尤其 SEC XBRL 标签和正负号 | 高 | 严重 | 同一公司年份指标跳变；现金流符号相反 | 标准指标字典、映射版本、来源 concept 记录、跨期校验、人工黄金样例 | Phase 4、7 | 开放 |
 | R-017 | Forward P/E、同行估值、催化剂缺少数据源却被强制输出 | 高 | 高 | 报告使用未注册预测或虚构日期 | 默认 NOT_AVAILABLE；不作为 MVP/v1 硬数据项；仅在许可数据源可用时启用 | Phase 0、7 | 缓解中 |
 | R-018 | Bull/Bear 各三条的数量要求驱动模型编造 | 高 | 严重 | Evidence 不足仍固定生成三条 | 数据真实性优先；允许少于三条；记录 INSUFFICIENT_EVIDENCE | Phase 0、5-6 | 已缓解 |
-| R-019 | Mock 数据看起来像真实当前行情，误导用户 | 中 | 严重 | 页面或 PDF 缺 Demo 标记；asOfDate 使用当天 | 每条 Mock 快照 isDemoData=true；页面、报告、导出永久水印；E2E 检查 | Phase 3 | 开放 |
+| R-019 | Mock 数据看起来像真实当前行情，误导用户 | 中 | 严重 | 页面或 PDF 缺 Demo 标记；asOfDate 使用当天 | 每条 Mock 快照 isDemoData=true；页面、报告、导出永久水印；E2E 检查 | Phase 3 | 待 G3 终验 |
 | R-020 | LLM 成本并发超预算 | 中 | 高 | 多个步骤同时调用；最终费用超过任务预算 | 调用前保守估算；事务式预算预留；完成后结算；超预算停止非关键调用 | Phase 6 | 开放 |
 | R-021 | 验证器只能检查 ID，无法检查自由文本数字和语义支持关系 | 高 | 严重 | Evidence ID 存在但 Claim 数字或方向错误 | 结构化 numericReferences；确定性数值/日期验证；语义验证仅作补充；不合格 Claim 删除 | Phase 5 | 开放 |
 | R-022 | SEC HTML 清洗和章节切分失败，检索遗漏重要内容 | 中 | 高 | Risk Factors/MD&A 无块；导航和表格文本丢失 | 保留原文哈希；多策略标题识别；解析覆盖率指标；代表性 Filing fixture | Phase 5、7 | 开放 |
-| R-023 | PDF 在 Docker 中中文缺字、分页破碎或图表缺失 | 高 | 中 | 本地正常、容器 PDF 空白或乱码 | 固定 OpenHTMLtoPDF；内置 Noto Sans CJK；渲染快照测试；PDF 失败不阻断 HTML | Phase 3、9 | 开放 |
+| R-023 | PDF 在 Docker 中中文缺字、分页破碎或图表缺失 | 高 | 中 | 本地正常、容器 PDF 空白或乱码 | 固定 OpenHTMLtoPDF；内置 Noto Sans CJK；渲染快照测试；PDF 失败不阻断 HTML | Phase 3、9 | 待 G3 容器终验 |
 | R-024 | 缓存键不完整导致不同 Provider、时间范围或 Schema 互相污染 | 中 | 高 | 报告读到另一 Provider 数据；升级后旧缓存异常 | Key 包含 provider、symbol、type、range、interval、schemaVersion；Cache Key 单测 | Phase 3、7 | 开放 |
-| R-025 | 缓存和数据库数据无法复现旧报告 | 中 | 高 | 历史报告重新打开后数字变化 | 报告绑定 Source Snapshot、Evidence 和 calculationVersion；不动态重算旧版本 | Phase 3、5 | 开放 |
+| R-025 | 缓存和数据库数据无法复现旧报告 | 中 | 高 | 历史报告重新打开后数字变化 | 报告绑定 Source Snapshot、Evidence 和 calculationVersion；不动态重算旧版本 | Phase 3、5 | Phase 3 已缓解；Phase 5 开放 |
 | R-026 | 删除研究记录破坏审计链或留下孤儿数据 | 中 | 中 | Evidence/Report 外键丢失；删除后费用记录不可追踪 | 默认软删除；定义保留期；外键和级联策略测试 | Phase 2、9 | 缓解中 |
 | R-027 | Testcontainers、Playwright、Compose smoke 在 CI 中不稳定 | 中 | 高 | 偶发超时；共享端口；依赖真实时间 | 固定镜像和种子；动态端口；健康等待；分层 CI；保留失败日志和产物 | Phase 1-9 | 开放 |
 | R-028 | scikit-learn、scipy 等未使用依赖增加镜像和供应链面 | 中 | 中 | 大镜像、安装慢、CVE 告警 | 只安装实际使用依赖；锁版本；定期扫描；不因原始建议而强制空依赖 | Phase 1、9 | 开放 |
-| R-029 | Data Quality 或 Confidence 由 LLM 随意给分，产生虚假精确感 | 高 | 高 | 相同 Evidence 多次运行得分变化 | 使用 confidence_v1 与 data_quality_v1 确定性公式；记录各分项 | Phase 3、5 | 缓解中 |
+| R-029 | Data Quality 或 Confidence 由 LLM 随意给分，产生虚假精确感 | 高 | 高 | 相同 Evidence 多次运行得分变化 | 使用 confidence_v1 与 data_quality_v1 确定性公式；记录各分项 | Phase 3、5 | Phase 3 已缓解；Phase 5 开放 |
 | R-030 | 部分完成报告仍包含验证失败的事实 | 中 | 严重 | PARTIALLY_COMPLETED 页面显示 unsupported Claim | 不安全 Claim 必须隔离；可安全删减才发布 partial，否则 FAILED | Phase 5-6 | 开放 |
 | R-031 | 实时“当前”概念与美股交易日、时区、延迟数据不一致 | 中 | 高 | 周末被标 stale；盘中使用未完成日线 | 交易日历和 Provider 数据延迟元数据；报告显示 asOfDate/generatedAt；UTC 存储 | Phase 4、7 | 开放 |
-| R-032 | 导出 HTML 存在 XSS，PDF 渲染器访问外部资源导致 SSRF | 中 | 严重 | HTML 包含 script；渲染器请求任意 URL | 严格转义和 CSP；禁用远程资源；图表/字体本地内嵌；URL 白名单 | Phase 3、9 | 开放 |
+| R-032 | 导出 HTML 存在 XSS，PDF 渲染器访问外部资源导致 SSRF | 中 | 严重 | HTML 包含 script；渲染器请求任意 URL | 严格转义和 CSP；禁用远程资源；图表/字体本地内嵌；URL 白名单 | Phase 3、9 | 待 G3 终验 |
 
 ### 2.1 Gate G2 风险处置（2026-07-10）
 
@@ -71,6 +71,23 @@
 | R-012 | 所有 Research 读写均为 owner-scoped，真实 Basic Auth HTTP IDOR 用例通过 | Phase 9 新增 Report/Evidence/Export 资源时必须复用所有权边界，因此保持“缓解中” |
 | R-026 | Research 默认软删除、并发行锁、审计/outbox 保留及外键顺序清理已验证 | Phase 9 仍需定义 Report/Evidence/费用记录保留期，因此保持“缓解中” |
 
+### 2.2 Gate G3 实现风险处置（2026-07-10）
+
+以下证据来自本地自动化和真实 Java→Python→PostgreSQL/Web BFF 链路。Gate G3 仍等待 GitHub Actions Linux runner 上的 Testcontainers 和 Compose 终验；远程全绿前，下表不构成“Gate 已通过”声明。详细场景见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)。
+
+| 风险 | Phase 3 已实现的控制与本地证据 | 剩余风险/下一 Gate |
+|---|---|---|
+| R-001 | MU/NVDA/RKLB 已能从创建运行到已验证报告、Evidence、情景、导出和历史重开；Playwright 闭环通过 | 待 G3 远程 Compose 复现后关闭 Phase 0–3 范围风险 |
+| R-002 | Phase 3 不调用真实 LLM；所有数字来自确定性 Provider/Analytics，Claim 的 Evidence/数值/单位/日期由发布前验证器检查 | Phase 6 接入真实 LLM 时重新开放模型伪造风险 |
+| R-003 | 报告主要叙事、Bull/Bear、催化剂、风险、情景总结和结论都以结构化 Claim 渲染；material Claim 无 Evidence 时失败关闭 | Phase 5 仍需扩展更完整的语义支持和受约束修复 |
+| R-006 | 实际故障演练中，Analytics 恢复后从 `RUN_QUANT_ANALYSIS` 续跑，早期成功步骤未重复执行；报告/manifest 只发布一次 | Phase 6 仍需 LLM 调用去重和费用预留/结算 |
+| R-009 | Java Analytics 客户端、Python Pydantic Schema、Web Zod/BFF 和 Artifact API 都有契约测试；真实链路和 BFF 导出字节/响应头一致 | 待 G3 远程三语言与 Compose 组合验证 |
+| R-019 | 所有 Mock 快照/Evidence 带 Demo 标志；页面、JSON 报告和 Markdown/HTML/PDF 均显示 `DEMO DATA - NOT REAL MARKET DATA`；E2E 和实际 PDF 已检查 | 待 G3 容器和端到端终验 |
+| R-023 | PDF 使用内置 Noto Sans SC；中文 PDF 文本抽取和逐页视觉 QA 通过，无裁切/重叠 | 本机无 Docker，必须等待 G3 容器字体/渲染终验；Phase 9 仍需长文和图表回归 |
+| R-025 | 报告绑定不可变 Source Snapshot、Evidence、Quant Result、calculation version 和内容哈希；历史按版本读取，重复导出字节一致 | Phase 5 仍需对真实来源修订、长期保留和更多报告版本做回归 |
+| R-029 | Phase 3 使用版本化确定性 Data Quality/Confidence 逻辑，不允许 Mock 生成器自由评分；相同输入报告哈希稳定 | Phase 5 需完善各分项解释和与 Freshness/来源冲突的系统评测 |
+| R-032 | HTML 转义恶意 script/link fixture，输出无 `<script>`、外部 `href/src/url`；PDF 只使用本地字体/资源 | 待 G3 容器终验；Phase 9 在引入新图表/资源时重新评审 CSP/SSRF |
+
 ## 3. MVP 接受的受控限制
 
 以下不是遗漏，而是为了尽快形成安全纵向闭环而接受的限制：
@@ -78,9 +95,12 @@
 | 限制 | 控制措施 | 解除阶段 |
 |---|---|---|
 | 只使用 Mock 数据 | 全局 Demo 水印、固定数据、禁止描述为实时 | Phase 7 |
+| 只支持 MU/NVDA/RKLB 目标与 SPY/QQQ 基准 | 创建边界失败关闭；不把基准当目标，不对其他 symbol 伪造覆盖 | Phase 7 |
 | MIXED_TEST 只用于自动化集成测试 | 禁止用户任务选择该模式，禁止生成用户可见报告或导出 | 始终保持 |
 | 只有 STANDARD 深度 | UI 不提供无效选项；Schema 保留扩展能力 | 完整 v1 |
 | 只有 5y 日线 | period 明确校验；不假装支持任意范围 | 完整 v1 |
+| 技术分析必须启用 | UI 锁定必选；API 对 false 返回 `INVALID_REQUEST`，保持 Phase 3 full-analysis 契约唯一 | 完整 v1 |
+| 基本面/宏观开关是受控降级而非任意 DAG | 基本面 false 只跳过叙事，情景数据仍获取并发布带 warning 的安全 partial；宏观 false 只跳过宏观取数 | Phase 8 |
 | 无真实登录页 | dev-demo profile；仍检查资源所有权 | 后续 Should |
 | 无新闻 Provider | Catalyst 仅来自已注册 SEC/宏观 Evidence | Could |
 | 无向量数据库 | PostgreSQL 全文搜索接口先行 | Could |

@@ -27,8 +27,8 @@ flowchart LR
 
 ## 3. 身份与授权
 
-- Phase 2 的 `dev-demo` 边界提供 Basic 固定演示用户，仅允许 development/test 且必须显式配置强度足够的演示密码；本地 Compose 只把应用端口发布到 host loopback。
-- Bearer Token 是生产认证契约，但正式实现延后到后续阶段。Phase 2 production profile 无论是否误开 demo auth 都拒绝启动：不能用 Basic、空用户库或匿名模式假装生产鉴权已就绪。
+- Phase 3 继续使用 `dev-demo` Basic 固定演示用户，仅允许 development/test 且必须显式配置强度足够的演示密码；本地 Compose 只把应用端口发布到 host loopback。
+- Bearer Token 是生产认证契约，但正式实现延后到后续阶段。production profile 无论是否误开 demo auth 都拒绝启动：不能用 Basic、空用户库或匿名模式假装生产鉴权已就绪。
 - 从第一天开始，所有 research、report、evidence、export 查询都带 `owner_user_id` 条件；禁止“先按 ID 查再在 Controller 比较”的脆弱模式。
 - 正式认证在后续阶段采用短期会话/Token、密码哈希（Argon2id 或受支持的强算法）、CSRF/同源策略和角色最小权限。
 - `DELETE` 是软删除，只影响用户可见性；审计和来源链保留。

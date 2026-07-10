@@ -1,6 +1,6 @@
 # Research、Step 与 Attempt 状态机
 
-状态：Phase 2 实现基线
+状态：Phase 3 实现基线；Gate G3 远程终验待通过
 
 最后更新：2026-07-10
 
@@ -115,7 +115,7 @@ Java finalizer 锁定 `research_jobs` 后按以下顺序执行：
 
 最小安全策略至少要求：证券已解析、核心行情通过质量门槛、核心量化可复现、存在通过验证的报告，且所有保留 Claim 均有合法 Evidence。基本面/文件/宏观等可降级模块缺失，或修复后移除不合格 Claim，才允许 `PARTIALLY_COMPLETED`。
 
-Phase 2 尚无 `report_versions` 原子发布模型，因此 Java finalizer 对任何仅由两个 policy boolean 声称的成功结果都失败关闭，不能写 `COMPLETED` 或 `PARTIALLY_COMPLETED`。本阶段只允许 `FAILED` 与已经收敛的 `CANCELLED` 终结；上表中的成功分支在 Phase 3 必须以“验证通过的不可变报告在同一事务发布”为额外前置条件后才启用。
+Phase 2 对缺少 `report_versions` 原子发布证明的伪成功终态保持失败关闭。Phase 3 已启用上表成功分支，但额外前置条件是：验证通过的不可变报告、Claim/Evidence Link 和运行级 manifest 必须在同一事务发布；任一条件不满足仍不得写 `COMPLETED` 或 `PARTIALLY_COMPLETED`。
 
 ## 5. Step 状态机
 

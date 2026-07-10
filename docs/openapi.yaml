@@ -6,13 +6,14 @@ info:
   summary: Asynchronous, evidence-backed US equity research API
   description: |
     Public contract for the Java orchestration service. All financial facts must be
-    traceable to registered evidence. Research created with mock providers is
-    marked as MOCK; the UI and exports render DEMO DATA - NOT REAL MARKET DATA.
-    MIXED_TEST is test-only and cannot be published through ordinary user flows.
-    During Phase 2 and the Phase 3 closed-loop MVP, Basic authentication is available only through an explicitly
-    enabled development/test demo principal. Bearer authentication is the production
-    contract but is not activated until the formal auth integration is delivered;
-    the Phase 2 production profile therefore fails closed at startup.
+    traceable to registered evidence. Phase 3 ordinary research is deterministic
+    MOCK DATA ONLY and supports target symbols MU, NVDA, and RKLB with SPY or QQQ as
+    the benchmark. Mock research is marked as MOCK; the UI and every export render
+    DEMO DATA - NOT REAL MARKET DATA. MIXED_TEST is test-only and cannot be published
+    or exported through ordinary user flows. Basic authentication is available only
+    through an explicitly enabled development/test demo principal. Bearer
+    authentication remains the production contract but is not activated until formal
+    auth integration is delivered; the production profile therefore fails closed.
   contact:
     name: AI Quant Research Assistant maintainers
 servers:
@@ -41,10 +42,11 @@ paths:
       operationId: createResearch
       summary: Create and enqueue a research job
       description: |
-        Locally known inactive/unsupported securities return INVALID_SYMBOL, and a
-        locally provable symbol/company-name contradiction returns SECURITY_MISMATCH.
-        Unknown but well-formed securities are queued for durable provider-backed
-        RESOLVE_SECURITY rather than resolved through a request-thread network call.
+        Phase 3 accepts only MU, NVDA, or RKLB as the target; SPY and QQQ are
+        benchmark-only. The fixed contract is STANDARD/5y with technical analysis
+        enabled. Requests outside that boundary return INVALID_REQUEST before a job
+        is created. A locally provable symbol/company-name contradiction returns
+        SECURITY_MISMATCH. The request thread does not perform network resolution.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/XRequestId'
@@ -252,7 +254,11 @@ paths:
       tags: [Research]
       operationId: retryResearch
       summary: Resume a failed or partially completed research job
-      description: Successful steps with unchanged input hashes are reused.
+      description: |
+        Only FAILED or PARTIALLY_COMPLETED research may be retried. Successful steps
+        with unchanged input/implementation hashes are reused, historical attempts
+        and immutable report versions are retained, and execution resumes from the
+        first eligible failed or incomplete step. fromStep cannot skip dependencies.
       requestBody:
         required: false
         content:
@@ -351,6 +357,9 @@ paths:
       tags: [Evidence]
       operationId: listResearchEvidence
       summary: List evidence registered for a research job
+      description: |
+        Owner-scoped evidence includes stable evidence IDs, canonical content hashes,
+        demo provenance, and related Claim IDs for reverse traceability.
       parameters:
         - name: claimType
           in: query
@@ -397,6 +406,7 @@ paths:
       tags: [Reports]
       operationId: listReportVersions
       summary: List immutable report versions newest first
+      description: Returns only owner-visible published report versions.
       responses:
         '200':
           description: Paginated report version summaries
@@ -431,6 +441,7 @@ paths:
       tags: [Reports]
       operationId: getReportVersion
       summary: Get an immutable report version
+      description: Returns an owner-visible published report with its content hash as ETag.
       responses:
         '200':
           description: Full report version
@@ -475,6 +486,13 @@ paths:
       tags: [Reports]
       operationId: exportResearchReport
       summary: Export the latest or a selected report version
+      description: |
+        Exports only an owner-visible published report. MIXED_TEST reports are blocked.
+        MOCK exports always contain DEMO DATA - NOT REAL MARKET DATA. HTML contains no
+        scripts or external resources; PDF rendering uses only local resources. Missing,
+        unpublished, inaccessible, or unknown report versions return owner-scoped
+        RESEARCH_NOT_FOUND. Renderer/cache verification failures return the retryable
+        EXPORT_RENDER_FAILED code.
       responses:
         '200':
           description: Exported report bytes
@@ -492,9 +510,14 @@ paths:
               schema:
                 type: integer
             X-Data-Mode:
-              description: REAL, MOCK, or non-publishable MIXED_TEST data mode
+              description: Data mode of the exported report; MIXED_TEST is never exportable
               schema:
                 $ref: '#/components/schemas/DataMode'
+            X-Content-SHA256:
+              description: Lowercase SHA-256 digest of the returned bytes
+              schema:
+                type: string
+                pattern: '^[a-f0-9]{64}$'
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
           content:
@@ -516,8 +539,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
@@ -632,7 +653,7 @@ components:
       bearerFormat: JWT
       description: |
         Production authentication contract. Its implementation is intentionally
-        deferred beyond Phase 2; Phase 2 production startup fails closed.
+        deferred beyond Phase 3; production startup fails closed until it is delivered.
     basicDemoAuth:
       type: http
       scheme: basic
@@ -825,13 +846,13 @@ components:
       type: string
       enum: [QUICK, STANDARD, DEEP]
       default: STANDARD
-      description: Phase 3 implements STANDARD; QUICK/DEEP return NOT_IMPLEMENTED_FOR_DEPTH.
+      description: Phase 3 accepts STANDARD only; QUICK/DEEP return INVALID_REQUEST.
 
     ResearchPeriod:
       type: string
       enum: [1y, 3y, 5y, 10y, max]
       default: 5y
-      description: Phase 3 implements the deterministic 5y Mock fixture only.
+      description: Phase 3 accepts the deterministic 5y Mock fixture only; other values return INVALID_REQUEST.
 
     Locale:
       type: string
@@ -840,10 +861,11 @@ components:
     DataMode:
       type: string
       description: |
-        REAL uses only real providers. MOCK uses only deterministic mock data and
-        must display DEMO DATA - NOT REAL MARKET DATA in the UI and every export.
+        Phase 3 ordinary user research is MOCK. REAL is reserved for approved future
+        providers. MOCK uses only deterministic mock data and must display
+        DEMO DATA - NOT REAL MARKET DATA in the UI and every export.
         MIXED_TEST may mix real and mock inputs only in automated tests or fault
-        drills and must never be published through ordinary user flows.
+        drills and must never be published or exported through ordinary user flows.
       enum: [REAL, MOCK, MIXED_TEST]
 
     ClaimType:
@@ -902,9 +924,7 @@ components:
       additionalProperties: false
       required:
         - query
-      anyOf:
-        - required: [symbol]
-        - required: [companyName]
+        - symbol
       properties:
         query:
           type: string
@@ -913,10 +933,12 @@ components:
         symbol:
           type: string
           pattern: '^[A-Za-z][A-Za-z0-9.-]{0,9}$'
+          description: Phase 3 target; case-insensitive MU, NVDA, or RKLB only.
         companyName:
           type: string
           minLength: 1
           maxLength: 200
+          description: Optional cross-check; when supplied it must resolve to the target symbol.
         locale:
           allOf:
             - $ref: '#/components/schemas/Locale'
@@ -925,28 +947,44 @@ components:
           type: string
           pattern: '^[A-Za-z][A-Za-z0-9.-]{0,9}$'
           default: SPY
+          description: Phase 3 accepts case-insensitive SPY or QQQ only.
         period:
-          $ref: '#/components/schemas/ResearchPeriod'
+          allOf:
+            - $ref: '#/components/schemas/ResearchPeriod'
+          description: Must be 5y in Phase 3.
         startDate:
           type: string
           format: date
+          description: Reserved for a later phase; any explicit date range is rejected in Phase 3.
         endDate:
           type: string
           format: date
+          description: Reserved for a later phase; any explicit date range is rejected in Phase 3.
         reportDepth:
-          $ref: '#/components/schemas/ReportDepth'
+          allOf:
+            - $ref: '#/components/schemas/ReportDepth'
+          description: Must be STANDARD in Phase 3.
         includeTechnicalAnalysis:
           type: boolean
+          const: true
           default: true
+          description: Mandatory in Phase 3; false returns INVALID_REQUEST.
         includeFundamentalAnalysis:
           type: boolean
           default: true
+          description: |
+            False skips only the optional ANALYZE_FUNDAMENTALS narrative step.
+            Normalized fundamentals are still fetched for mandatory scenarios, and
+            the safe report is PARTIALLY_COMPLETED/PASSED_WITH_WARNINGS.
         includeMacroAnalysis:
           type: boolean
           default: true
+          description: False skips FETCH_MACRO_DATA; a complete safe report may still be COMPLETED/PASSED.
       description: |
-        Either period or startDate/endDate may be used. If both are supplied,
-        explicit dates take precedence after validation.
+        Phase 3 deterministic Mock boundary: MU/NVDA/RKLB target, SPY/QQQ benchmark,
+        STANDARD depth, fixed 5y period, and mandatory technical analysis. Requests
+        outside this boundary fail before Research creation. dataMode is server-owned
+        and fixed to MOCK for ordinary Phase 3 flows.
 
     RetryResearchRequest:
       type: object
