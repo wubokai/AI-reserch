@@ -348,8 +348,8 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                     prompt_version, schema_version, request_hash, response_hash,
                     input_tokens, output_tokens, cached_tokens, estimated_cost_usd,
                     latency_ms, status, error_code, is_mock,
-                    provider_request_id, pricing_version
-                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    provider_request_id, pricing_version, network_call_count
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (step_attempt_id, request_hash) where step_attempt_id is not null
                 do nothing
                 """,
@@ -371,7 +371,8 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                 audit.errorCode(),
                 audit.mock(),
                 audit.providerRequestId(),
-                audit.pricingVersion()
+                audit.pricingVersion(),
+                audit.networkCallCount()
         );
         UUID id = jdbcTemplate.queryForObject("""
                 select id from llm_calls

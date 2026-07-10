@@ -21,6 +21,7 @@ public record LlmProperties(
         String validationModel,
         @NotBlank String reasoningEffort,
         @Min(256) @Max(128_000) int maxOutputTokens,
+        @Min(1_024) @Max(10_000_000) int maxInputBytes,
         @Min(0) @Max(8) int maxToolRounds,
         @NotNull Duration reservationTtl,
         boolean allowSafeFallback,

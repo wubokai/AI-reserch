@@ -2,19 +2,28 @@ package com.aiquantresearch.api.research.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.aiquantresearch.api.research.llm.LlmBudgetService;
 import com.aiquantresearch.api.research.llm.LlmCallAudit;
+import com.aiquantresearch.api.research.llm.LlmFailureAuditService;
+import com.aiquantresearch.api.research.llm.LlmProperties;
 import com.aiquantresearch.api.research.llm.LlmUsage;
 import com.aiquantresearch.api.research.llm.OpenAiResponseException;
+import com.aiquantresearch.api.research.llm.PreparedLlmRequest;
+import com.aiquantresearch.api.research.llm.ResearchLanguageModelRequest;
+import com.aiquantresearch.api.research.orchestration.ResearchExecutionContext;
 import com.aiquantresearch.api.research.orchestration.Phase3ArtifactStore;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.aiquantresearch.api.research.domain.StepType;
+import com.aiquantresearch.api.shared.domain.DataMode;
 import com.aiquantresearch.api.support.PostgresRedisIntegrationTestSupport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -77,6 +86,11 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
                  where table_schema = 'public' and table_name = 'llm_calls'
                    and column_name in ('provider_request_id', 'pricing_version')
                 """, Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("""
+                select count(*) from information_schema.columns
+                 where table_schema = 'public' and table_name = 'llm_calls'
+                   and column_name = 'network_call_count'
+                """, Integer.class)).isEqualTo(1);
     }
 
     @Test
@@ -90,13 +104,15 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
                 researchId,
                 first.attemptId(),
                 firstHash,
-                new BigDecimal("0.75000000")
+                new BigDecimal("0.75000000"),
+                2
         );
         var replay = budgetService.reserve(
                 researchId,
                 first.attemptId(),
                 firstHash,
-                new BigDecimal("0.75000000")
+                new BigDecimal("0.75000000"),
+                2
         );
 
         assertThat(replay.id()).isEqualTo(reservation.id());
@@ -104,15 +120,89 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
                 researchId,
                 second.attemptId(),
                 secondHash,
-                new BigDecimal("0.30000000")
+                new BigDecimal("0.30000000"),
+                2
         )).isInstanceOfSatisfying(OpenAiResponseException.class,
                 exception -> assertThat(exception.code()).isEqualTo("LLM_BUDGET_EXCEEDED"));
+
+        budgetService.settle(reservation.id(), new BigDecimal("0.12500000"), 1);
+        assertThat(jdbc.queryForMap("""
+                select status, reserved_call_count, actual_call_count
+                  from llm_budget_reservations where id = ?
+                """, reservation.id()))
+                .containsEntry("status", "SETTLED")
+                .containsEntry("reserved_call_count", 2)
+                .containsEntry("actual_call_count", 1);
 
         TransactionTemplate transactions = new TransactionTemplate(transactionManager);
         assertThatThrownBy(() -> transactions.executeWithoutResult(status -> jdbc.update("""
                 update llm_budget_reservations set request_hash = ? where id = ?
                 """, "d".repeat(64), reservation.id())))
                 .hasMessageContaining("identity or transition is immutable");
+    }
+
+    @Test
+    void persistsADeidentifiedFailureAuditForAnAttemptedProviderCall() {
+        Attempt attempt = createAttempt(1);
+        String requestHash = "9".repeat(64);
+        LlmProperties properties = mock(LlmProperties.class);
+        when(properties.reportModel()).thenReturn("configured-model");
+        when(properties.promptVersion()).thenReturn("report_prompt_v1");
+        when(properties.schemaVersion()).thenReturn("research_report_v1");
+        when(properties.pricingVersion()).thenReturn("pricing_2026_07_10");
+        LlmFailureAuditService failureAudit = new LlmFailureAuditService(jdbc, properties);
+        ResearchLanguageModelRequest request = new ResearchLanguageModelRequest(
+                attempt.attemptId(),
+                new ResearchExecutionContext(
+                        researchId,
+                        ownerId,
+                        "MU",
+                        "COMMON_STOCK",
+                        "en-US",
+                        DataMode.MOCK,
+                        objectMapper.createObjectNode()
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                1
+        );
+        PreparedLlmRequest prepared = new PreparedLlmRequest(
+                "instructions",
+                objectMapper.createArrayNode(),
+                objectMapper.createObjectNode(),
+                objectMapper.createArrayNode(),
+                requestHash,
+                "usr_hash",
+                "cache_hash",
+                "pack_hash",
+                128
+        );
+
+        failureAudit.record(
+                request,
+                prepared,
+                new LlmUsage(40, 5, 10),
+                new BigDecimal("0.00010000"),
+                75,
+                "LLM_INCOMPLETE_MAX_OUTPUT_TOKENS",
+                "resp_failed",
+                2
+        );
+
+        assertThat(jdbc.queryForMap("""
+                select status, error_code, response_hash, network_call_count,
+                       input_tokens, output_tokens, provider_request_id
+                  from llm_calls
+                 where step_attempt_id = ? and request_hash = ?
+                """, attempt.attemptId(), requestHash))
+                .containsEntry("status", "INCOMPLETE")
+                .containsEntry("error_code", "LLM_INCOMPLETE_MAX_OUTPUT_TOKENS")
+                .containsEntry("response_hash", null)
+                .containsEntry("network_call_count", 2)
+                .containsEntry("input_tokens", 40)
+                .containsEntry("output_tokens", 5)
+                .containsEntry("provider_request_id", "resp_failed");
     }
 
     @Test
@@ -134,7 +224,8 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
                 false,
                 "resp_phase6",
                 "pricing_2026_07_10",
-                null
+                null,
+                2
         );
         QueueClaim claim = new QueueClaim(
                 researchId,
@@ -155,10 +246,12 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
 
         assertThat(replayId).isEqualTo(firstId);
         assertThat(jdbc.queryForMap("""
-                select provider_request_id, pricing_version from llm_calls where id = ?
+                select provider_request_id, pricing_version, network_call_count
+                  from llm_calls where id = ?
                 """, firstId))
                 .containsEntry("provider_request_id", "resp_phase6")
-                .containsEntry("pricing_version", "pricing_2026_07_10");
+                .containsEntry("pricing_version", "pricing_2026_07_10")
+                .containsEntry("network_call_count", 2);
     }
 
     private Attempt createAttempt(int sequence) {

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,6 +63,7 @@ class OpenAiResearchLanguageModelTest {
         assertThat(result.audit().usage()).isEqualTo(new LlmUsage(100, 20, 25));
         assertThat(result.audit().estimatedCostUsd()).isEqualByComparingTo("0.00015750");
         assertThat(result.audit().budgetReservationId()).isEqualTo(fixture.reservationId());
+        assertThat(result.audit().networkCallCount()).isEqualTo(1);
 
         JsonNode request = objectMapper.readTree(requestBodies.getFirst());
         assertThat(request.path("store").asBoolean()).isFalse();
@@ -108,6 +110,7 @@ class OpenAiResearchLanguageModelTest {
         );
 
         assertThat(result.audit().usage()).isEqualTo(new LlmUsage(110, 15, 10));
+        assertThat(result.audit().networkCallCount()).isEqualTo(2);
         assertThat(requestBodies).hasSize(2);
         JsonNode second = objectMapper.readTree(requestBodies.get(1));
         assertThat(second.path("input").toString()).contains("function_call_output");
@@ -127,6 +130,9 @@ class OpenAiResearchLanguageModelTest {
             assertThat(exception.retryable()).isTrue();
         });
         verify(fixture.budgetService()).release(fixture.reservationId());
+        verify(fixture.failureAuditService()).record(
+                any(), any(), any(), any(), anyLong(), any(), any(), anyInt()
+        );
     }
 
     @Test
@@ -147,6 +153,9 @@ class OpenAiResearchLanguageModelTest {
             assertThat(exception.retryable()).isFalse();
         });
         verify(fixture.budgetService()).release(fixture.reservationId());
+        verify(fixture.failureAuditService()).record(
+                any(), any(), any(), any(), anyLong(), any(), any(), anyInt()
+        );
     }
 
     private ClientFixture client() {
@@ -166,9 +175,14 @@ class OpenAiResearchLanguageModelTest {
                 properties
         );
         LlmBudgetService budgetService = mock(LlmBudgetService.class);
+        LlmFailureAuditService failureAuditService = mock(LlmFailureAuditService.class);
         UUID reservationId = UUID.fromString("44444444-4444-4444-8444-444444444444");
-        when(budgetService.reserve(any(), any(), any(), any()))
-                .thenReturn(new LlmBudgetReservation(reservationId, java.math.BigDecimal.ONE));
+        when(budgetService.reserve(any(), any(), any(), any(), anyInt()))
+                .thenReturn(new LlmBudgetReservation(
+                        reservationId,
+                        java.math.BigDecimal.ONE,
+                        3
+                ));
         OpenAiResearchLanguageModel model = new OpenAiResearchLanguageModel(
                 WebClient.builder(),
                 objectMapper,
@@ -178,9 +192,10 @@ class OpenAiResearchLanguageModelTest {
                 new LlmToolExecutor(objectMapper, hashService),
                 new LlmPricingPolicy(properties),
                 budgetService,
+                failureAuditService,
                 hashService
         );
-        return new ClientFixture(model, budgetService, reservationId);
+        return new ClientFixture(model, budgetService, failureAuditService, reservationId);
     }
 
     private void start(ExchangeHandler handler) throws IOException {
@@ -235,6 +250,7 @@ class OpenAiResearchLanguageModelTest {
     private record ClientFixture(
             OpenAiResearchLanguageModel model,
             LlmBudgetService budgetService,
+            LlmFailureAuditService failureAuditService,
             UUID reservationId
     ) {
     }

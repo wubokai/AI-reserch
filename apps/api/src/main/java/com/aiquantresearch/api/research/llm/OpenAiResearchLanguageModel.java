@@ -30,6 +30,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
     private final LlmToolExecutor toolExecutor;
     private final LlmPricingPolicy pricingPolicy;
     private final LlmBudgetService budgetService;
+    private final LlmFailureAuditService failureAuditService;
     private final CanonicalHashService hashService;
 
     public OpenAiResearchLanguageModel(
@@ -41,6 +42,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
             LlmToolExecutor toolExecutor,
             LlmPricingPolicy pricingPolicy,
             LlmBudgetService budgetService,
+            LlmFailureAuditService failureAuditService,
             CanonicalHashService hashService
     ) {
         this.webClient = builder.baseUrl(properties.baseUrl().toString()).build();
@@ -51,6 +53,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
         this.toolExecutor = toolExecutor;
         this.pricingPolicy = pricingPolicy;
         this.budgetService = budgetService;
+        this.failureAuditService = failureAuditService;
         this.hashService = hashService;
     }
 
@@ -65,19 +68,25 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                 request.reportVersion()
         );
         PreparedLlmRequest prepared = promptFactory.prepare(request, baseline);
+        int maximumNetworkCalls = properties.maxToolRounds() + 1;
         LlmBudgetReservation reservation = budgetService.reserve(
                 request.context().researchId(),
                 request.attemptId(),
                 prepared.requestHash(),
-                pricingPolicy.reserveUpperBound(prepared.inputUtf8Bytes())
+                pricingPolicy.reserveUpperBound(prepared.inputUtf8Bytes(), maximumNetworkCalls),
+                maximumNetworkCalls
         );
         ArrayNode conversation = prepared.input().deepCopy();
         LlmUsage usage = LlmUsage.empty();
+        int networkCallCount = 0;
+        String providerRequestId = null;
         long started = System.nanoTime();
 
         try {
             for (int round = 0; round <= properties.maxToolRounds(); round++) {
+                networkCallCount++;
                 JsonNode response = send(requestBody(prepared, conversation));
+                providerRequestId = nullableText(response, "id");
                 usage = usage.plus(usage(response));
                 rejectNonCompleted(response);
 
@@ -130,16 +139,42 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                                 "SUCCEEDED",
                                 null,
                                 false,
-                                nullableText(response, "id"),
+                                providerRequestId,
                                 properties.pricingVersion(),
-                                reservation.id()
+                                reservation.id(),
+                                networkCallCount
                         )
                 );
             }
             throw new IllegalStateException("LLM tool loop terminated unexpectedly");
         } catch (RuntimeException exception) {
+            OpenAiResponseException normalized = exception instanceof OpenAiResponseException known
+                    ? known
+                    : new OpenAiResponseException(
+                            "LLM_INTERNAL_ERROR",
+                            "The LLM adapter failed before producing a safe structured report",
+                            false,
+                            exception
+                    );
             budgetService.release(reservation.id());
-            throw exception;
+            if (networkCallCount > 0) {
+                long latencyMs = Duration.ofNanos(System.nanoTime() - started).toMillis();
+                try {
+                    failureAuditService.record(
+                            request,
+                            prepared,
+                            usage,
+                            pricingPolicy.calculate(usage),
+                            latencyMs,
+                            normalized.code(),
+                            providerRequestId,
+                            networkCallCount
+                    );
+                } catch (RuntimeException auditFailure) {
+                    normalized.addSuppressed(auditFailure);
+                }
+            }
+            throw normalized;
         }
     }
 

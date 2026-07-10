@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record LlmBudgetReservation(
         UUID id,
-        BigDecimal reservedCostUsd
+        BigDecimal reservedCostUsd,
+        int reservedCallCount
 ) {
 }

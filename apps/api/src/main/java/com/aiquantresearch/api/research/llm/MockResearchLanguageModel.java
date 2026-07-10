@@ -85,7 +85,8 @@ public class MockResearchLanguageModel implements ResearchLanguageModel {
                         true,
                         null,
                         "mock_zero_cost_v1",
-                        null
+                        null,
+                        0
                 ),
                 partial,
                 partial

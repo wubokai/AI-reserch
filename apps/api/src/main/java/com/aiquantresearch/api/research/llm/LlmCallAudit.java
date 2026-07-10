@@ -18,7 +18,8 @@ public record LlmCallAudit(
         boolean mock,
         String providerRequestId,
         String pricingVersion,
-        UUID budgetReservationId
+        UUID budgetReservationId,
+        int networkCallCount
 ) {
 
     public LlmCallAudit {
@@ -30,7 +31,9 @@ public record LlmCallAudit(
                 || responseHash == null || !responseHash.matches("^[0-9a-f]{64}$")) {
             throw new IllegalArgumentException("LLM audit identity is invalid");
         }
-        if (usage == null || latencyMs < 0 || !"SUCCEEDED".equals(status) || errorCode != null) {
+        if (usage == null || latencyMs < 0 || networkCallCount < 0
+                || (!mock && networkCallCount < 1)
+                || !"SUCCEEDED".equals(status) || errorCode != null) {
             throw new IllegalArgumentException("Only successful generation audits can be published");
         }
     }

@@ -160,7 +160,8 @@ public class StepCommitService {
                 UUID callId = artifactStore.persistLlmCall(claim, result.llmCallAudit());
                 llmBudgetService.settle(
                         result.llmCallAudit().budgetReservationId(),
-                        result.llmCallAudit().estimatedCostUsd()
+                        result.llmCallAudit().estimatedCostUsd(),
+                        result.llmCallAudit().networkCallCount()
                 );
                 artifactIds.add(callId.toString());
                 manifest.put("llmCallId", callId.toString());

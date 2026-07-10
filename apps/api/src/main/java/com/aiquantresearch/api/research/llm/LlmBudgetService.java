@@ -28,7 +28,8 @@ public class LlmBudgetService {
             UUID researchId,
             UUID attemptId,
             String requestHash,
-            BigDecimal requestedCostUsd
+            BigDecimal requestedCostUsd,
+            int requestedCallCount
     ) {
         if (requestedCostUsd == null) {
             throw new OpenAiResponseException(
@@ -57,22 +58,25 @@ public class LlmBudgetService {
                 """, Timestamp.from(now), Timestamp.from(now), researchId, Timestamp.from(now));
 
         var existing = jdbc.query("""
-                select id, reserved_cost_usd
+                select id, reserved_cost_usd, reserved_call_count
                   from llm_budget_reservations
                  where step_attempt_id = ? and request_hash = ? and status = 'RESERVED'
                 """, (row, ignored) -> new LlmBudgetReservation(
                 row.getObject("id", UUID.class),
-                row.getBigDecimal("reserved_cost_usd")
+                row.getBigDecimal("reserved_cost_usd"),
+                row.getInt("reserved_call_count")
         ), attemptId, requestHash);
         if (!existing.isEmpty()) {
             return existing.getFirst();
         }
 
         Integer completedCalls = jdbc.queryForObject("""
-                select count(*) from llm_calls where research_job_id = ? and not is_mock
+                select coalesce(sum(network_call_count), 0)
+                  from llm_calls where research_job_id = ? and not is_mock
                 """, Integer.class, researchId);
         Integer reservedCalls = jdbc.queryForObject("""
-                select count(*) from llm_budget_reservations
+                select coalesce(sum(reserved_call_count), 0)
+                  from llm_budget_reservations
                  where research_job_id = ? and status = 'RESERVED'
                 """, Integer.class, researchId);
         BigDecimal spent = jdbc.queryForObject("""
@@ -85,9 +89,11 @@ public class LlmBudgetService {
                  where research_job_id = ? and status = 'RESERVED'
                 """, BigDecimal.class, researchId);
 
-        int calls = value(completedCalls) + value(reservedCalls);
+        int calls = value(completedCalls) + value(reservedCalls) + requestedCallCount;
         BigDecimal committed = zero(spent).add(zero(reserved)).add(requestedCostUsd);
-        if (calls >= properties.maxCalls() || committed.compareTo(properties.maxCostUsd()) > 0) {
+        if (requestedCallCount < 1
+                || calls > properties.maxCalls()
+                || committed.compareTo(properties.maxCostUsd()) > 0) {
             throw new OpenAiResponseException(
                     "LLM_BUDGET_EXCEEDED",
                     "The research LLM budget is exhausted before this call",
@@ -99,19 +105,21 @@ public class LlmBudgetService {
         jdbc.update("""
                 insert into llm_budget_reservations (
                     id, research_job_id, step_attempt_id, request_hash,
-                    reserved_cost_usd, status, expires_at, created_at, updated_at
-                ) values (?, ?, ?, ?, ?, 'RESERVED', ?, ?, ?)
+                    reserved_cost_usd, reserved_call_count, status,
+                    expires_at, created_at, updated_at
+                ) values (?, ?, ?, ?, ?, ?, 'RESERVED', ?, ?, ?)
                 """,
                 id,
                 researchId,
                 attemptId,
                 requestHash,
                 requestedCostUsd,
+                requestedCallCount,
                 Timestamp.from(now.plus(properties.reservationTtl())),
                 Timestamp.from(now),
                 Timestamp.from(now)
         );
-        return new LlmBudgetReservation(id, requestedCostUsd);
+        return new LlmBudgetReservation(id, requestedCostUsd, requestedCallCount);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -128,7 +136,7 @@ public class LlmBudgetService {
     }
 
     @Transactional
-    public void settle(UUID reservationId, BigDecimal actualCostUsd) {
+    public void settle(UUID reservationId, BigDecimal actualCostUsd, int actualCallCount) {
         if (reservationId == null) {
             return;
         }
@@ -136,9 +144,10 @@ public class LlmBudgetService {
         int updated = jdbc.update("""
                 update llm_budget_reservations
                    set status = 'SETTLED', actual_cost_usd = ?,
-                       updated_at = ?, settled_at = ?
+                       actual_call_count = ?, updated_at = ?, settled_at = ?
                  where id = ? and status = 'RESERVED'
-                """, actualCostUsd, Timestamp.from(now), Timestamp.from(now), reservationId);
+                """, actualCostUsd, actualCallCount,
+                Timestamp.from(now), Timestamp.from(now), reservationId);
         if (updated != 1) {
             throw new OpenAiResponseException(
                     "LLM_BUDGET_SETTLEMENT_FAILED",

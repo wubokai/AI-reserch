@@ -25,6 +25,7 @@ final class LlmTestFixtures {
                 "test-validation-model",
                 "low",
                 2_000,
+                500_000,
                 2,
                 Duration.ofMinutes(3),
                 true,

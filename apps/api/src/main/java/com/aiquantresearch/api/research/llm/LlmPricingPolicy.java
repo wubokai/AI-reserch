@@ -28,13 +28,18 @@ public class LlmPricingPolicy {
         return cost.divide(ONE_MILLION, 8, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal reserveUpperBound(int inputUtf8Bytes) {
+    public BigDecimal reserveUpperBound(int inputUtf8Bytes, int maximumNetworkCalls) {
         if (!properties.hasVersionedPricing()) {
             return null;
         }
-        BigDecimal cost = properties.inputPrice().multiply(BigDecimal.valueOf(inputUtf8Bytes))
+        long priorOutputContext = (long) properties.maxOutputTokens()
+                * maximumNetworkCalls * (maximumNetworkCalls - 1) / 2;
+        long inputUpperBound = (long) inputUtf8Bytes * maximumNetworkCalls
+                + priorOutputContext;
+        long outputUpperBound = (long) properties.maxOutputTokens() * maximumNetworkCalls;
+        BigDecimal cost = properties.inputPrice().multiply(BigDecimal.valueOf(inputUpperBound))
                 .add(properties.outputPrice()
-                        .multiply(BigDecimal.valueOf(properties.maxOutputTokens())));
+                        .multiply(BigDecimal.valueOf(outputUpperBound)));
         return cost.divide(ONE_MILLION, 8, RoundingMode.UP);
     }
 }

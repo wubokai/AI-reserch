@@ -72,6 +72,14 @@ public class ReportPromptFactory {
         pack.set("deterministicBaseline", deterministicBaseline.deepCopy());
 
         String canonicalPack = hashService.canonicalJson(pack);
+        int inputUtf8Bytes = canonicalPack.getBytes(StandardCharsets.UTF_8).length;
+        if (inputUtf8Bytes > properties.maxInputBytes()) {
+            throw new OpenAiResponseException(
+                    "LLM_INPUT_TOO_LARGE",
+                    "The evidence pack exceeds the configured LLM input boundary",
+                    false
+            );
+        }
         String packHash = hashService.hashText(canonicalPack);
         String requestHash = hashService.hashText(String.join("|",
                 properties.reportModel(),
@@ -103,7 +111,7 @@ public class ReportPromptFactory {
                         TOOL_VERSION
                 )),
                 packHash,
-                canonicalPack.getBytes(StandardCharsets.UTF_8).length
+                inputUtf8Bytes
         );
     }
 
