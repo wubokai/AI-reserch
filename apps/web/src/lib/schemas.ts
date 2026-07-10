@@ -1,6 +1,63 @@
 import { z } from "zod";
 
+export const DEMO_DATA_NOTICE = "DEMO DATA — NOT REAL MARKET DATA";
+export const RESEARCH_DISCLAIMER =
+  "仅供产品演示与研究辅助，不构成投资建议、交易建议或收益承诺。";
+
 export const dataModeSchema = z.enum(["REAL", "MOCK", "MIXED_TEST"]);
+export const researchStatusSchema = z.enum([
+  "CREATED",
+  "QUEUED",
+  "RESOLVING_SECURITY",
+  "FETCHING_MARKET_DATA",
+  "FETCHING_FUNDAMENTALS",
+  "FETCHING_FILINGS",
+  "FETCHING_MACRO_DATA",
+  "VALIDATING_DATA",
+  "RUNNING_QUANT_ANALYSIS",
+  "ANALYZING_FUNDAMENTALS",
+  "BUILDING_EVIDENCE",
+  "GENERATING_REPORT",
+  "VALIDATING_REPORT",
+  "COMPLETED",
+  "PARTIALLY_COMPLETED",
+  "FAILED",
+  "CANCELLED",
+]);
+export const stepTypeSchema = z.enum([
+  "RESOLVE_SECURITY",
+  "FETCH_MARKET_DATA",
+  "FETCH_FUNDAMENTALS",
+  "FETCH_FILINGS",
+  "FETCH_MACRO_DATA",
+  "VALIDATE_DATA",
+  "RUN_QUANT_ANALYSIS",
+  "ANALYZE_FUNDAMENTALS",
+  "BUILD_EVIDENCE",
+  "GENERATE_REPORT",
+  "VALIDATE_REPORT",
+]);
+export const stepStatusSchema = z.enum([
+  "PENDING",
+  "RUNNING",
+  "SUCCEEDED",
+  "FAILED",
+  "SKIPPED",
+  "CANCELLED",
+]);
+export const reportDepthSchema = z.enum(["QUICK", "STANDARD", "DEEP"]);
+export const claimTypeSchema = z.enum([
+  "FACT",
+  "CALCULATION",
+  "INFERENCE",
+  "OPINION",
+]);
+export const validationStatusSchema = z.enum([
+  "PENDING",
+  "PASSED",
+  "PASSED_WITH_WARNINGS",
+  "FAILED",
+]);
 
 export const healthResponseSchema = z.object({
   status: z.literal("UP"),
@@ -42,15 +99,332 @@ export const researchRequestSchema = z.object({
   query: z
     .string()
     .trim()
-    .min(12, "研究问题至少需要 12 个字符")
-    .max(1200, "研究问题不能超过 1200 个字符"),
+    .min(10, "研究问题至少需要 10 个字符")
+    .max(4000, "研究问题不能超过 4000 个字符"),
   benchmark: z.enum(["SPY", "QQQ"]),
   period: z.literal("5y"),
   reportDepth: z.literal("STANDARD"),
   includeTechnicalAnalysis: z.boolean(),
   includeFundamentalAnalysis: z.boolean(),
   includeMacroAnalysis: z.boolean(),
-  dataMode: z.literal("MOCK"),
 });
 
 export type ResearchRequest = z.infer<typeof researchRequestSchema>;
+
+const nullableDateTimeSchema = z.iso.datetime().nullable();
+const nullableStringSchema = z.string().nullable();
+
+export const problemDetailsSchema = z.object({
+  timestamp: z.string().optional(),
+  status: z.number().int(),
+  code: z.string().min(1),
+  message: z.string().min(1),
+  researchId: z.uuid().nullable().optional(),
+  details: z.unknown().optional(),
+});
+
+export const researchLinksSchema = z.object({
+  self: z.string(),
+  status: z.string(),
+  evidence: z.string().optional(),
+  reports: z.string().optional(),
+  export: z.string().optional(),
+});
+
+export const researchAcceptedSchema = z.object({
+  researchId: z.uuid(),
+  status: researchStatusSchema,
+  dataMode: dataModeSchema,
+  createdAt: z.iso.datetime(),
+  links: researchLinksSchema,
+});
+
+export const errorSummarySchema = z.object({
+  code: z.string().min(1),
+  message: z.string().min(1),
+  retryable: z.boolean(),
+  failedStep: stepTypeSchema.nullable().optional(),
+});
+
+export const warningSchema = z.object({
+  code: z.string().min(1),
+  message: z.string().min(1),
+  evidenceIds: z.array(z.string()).optional(),
+});
+
+export const pageMetadataSchema = z.object({
+  number: z.number().int().nonnegative(),
+  size: z.number().int().positive(),
+  totalElements: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+  first: z.boolean(),
+  last: z.boolean(),
+});
+
+export const researchItemSchema = z.object({
+  researchId: z.uuid(),
+  title: nullableStringSchema.optional(),
+  query: z.string(),
+  symbol: nullableStringSchema,
+  companyName: nullableStringSchema,
+  benchmark: nullableStringSchema.optional(),
+  status: researchStatusSchema,
+  progress: z.number().int().min(0).max(100),
+  reportDepth: reportDepthSchema,
+  dataMode: dataModeSchema,
+  latestReportVersion: z.number().int().positive().nullable().optional(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  completedAt: nullableDateTimeSchema.optional(),
+});
+
+export const researchPageSchema = z.object({
+  items: z.array(researchItemSchema),
+  page: pageMetadataSchema,
+});
+
+export const researchStepSchema = z.object({
+  step: stepTypeSchema,
+  status: stepStatusSchema,
+  attemptCount: z.number().int().nonnegative(),
+  startedAt: nullableDateTimeSchema.optional(),
+  completedAt: nullableDateTimeSchema.optional(),
+  durationMs: z.number().int().nonnegative().nullable().optional(),
+  retryable: z.boolean(),
+  error: errorSummarySchema.nullable().optional(),
+});
+
+export const researchStatusResponseSchema = z.object({
+  researchId: z.uuid(),
+  status: researchStatusSchema,
+  progress: z.number().int().min(0).max(100),
+  currentStep: stepTypeSchema.nullable().optional(),
+  completedSteps: z.number().int().nonnegative(),
+  totalSteps: z.number().int().positive(),
+  cancellationRequested: z.boolean(),
+  dataMode: dataModeSchema,
+  error: errorSummarySchema.nullable().optional(),
+  steps: z.array(researchStepSchema),
+  updatedAt: z.iso.datetime(),
+});
+
+export const researchDetailSchema = researchItemSchema.extend({
+  request: researchRequestSchema.extend({
+    locale: z.enum(["zh-CN", "en-US"]).optional(),
+    companyName: z.string().nullable().optional(),
+    startDate: z.iso.date().nullable().optional(),
+    endDate: z.iso.date().nullable().optional(),
+  }),
+  currentStep: stepTypeSchema.nullable().optional(),
+  startedAt: nullableDateTimeSchema.optional(),
+  cancellationRequested: z.boolean(),
+  lastError: errorSummarySchema.nullable().optional(),
+  warnings: z.array(warningSchema),
+  links: researchLinksSchema,
+  latestReport: z.unknown().nullable().optional(),
+});
+
+const publicIdSchema = z.string().regex(/^[a-z]+_[A-Za-z0-9_-]{1,64}$/);
+const decimalValueSchema = z.union([
+  z.number().finite(),
+  z.string().regex(/^-?[0-9]+(?:\.[0-9]+)?$/),
+]);
+
+export const numericReferenceSchema = z.object({
+  token: z.string().min(1),
+  normalizedValue: z.string().regex(/^-?[0-9]+(?:\.[0-9]+)?$/),
+  unit: z.string().min(1),
+  sourceKind: z.enum(["EVIDENCE", "CALCULATION"]),
+  sourceId: z.string().min(1),
+  jsonPointer: z.string().min(1),
+  tolerance: z.string().regex(/^[0-9]+(?:\.[0-9]+)?$/),
+});
+
+export const claimSchema = z.object({
+  id: z.string().regex(/^cl_[A-Za-z0-9_-]{1,64}$/),
+  statement: z.string().min(1),
+  claimType: claimTypeSchema,
+  materiality: z.enum(["MATERIAL", "SUPPORTING"]),
+  evidenceIds: z.array(z.string().regex(/^ev_[A-Za-z0-9_-]{1,64}$/)),
+  calculationIds: z.array(z.string()).default([]),
+  numericReferences: z.array(numericReferenceSchema).default([]),
+  confidence: z.number().min(0).max(1),
+  limitations: z.array(z.string()).default([]),
+});
+
+export const reportSectionSchema = z.object({
+  id: z.string().regex(/^[a-z][a-z0-9_-]{1,63}$/),
+  heading: z.string().min(1),
+  claims: z.array(claimSchema),
+  transitionText: z.string(),
+});
+
+export const reportScenarioSchema = z.object({
+  name: z.enum(["BULL", "BASE", "BEAR"]),
+  probability: decimalValueSchema,
+  revenueGrowth: decimalValueSchema,
+  targetEbitdaMargin: decimalValueSchema,
+  evToEbitdaMultiple: decimalValueSchema,
+  impliedEquityValue: decimalValueSchema,
+  impliedPrice: decimalValueSchema,
+  upsideDownside: decimalValueSchema,
+});
+
+export const scenarioAnalysisSchema = z.object({
+  calculationId: publicIdSchema,
+  currency: z.string().length(3).optional(),
+  scenarios: z.array(reportScenarioSchema).length(3),
+  weightedImpliedPrice: decimalValueSchema,
+  summaryClaims: z.array(claimSchema),
+});
+
+export const dataQualitySchema = z.object({
+  score: z.number().min(0).max(1),
+  missingData: z.array(z.string()),
+  staleEvidenceIds: z.array(z.string()),
+  sourceConflicts: z.array(z.string()),
+  limitations: z.array(z.string()),
+});
+
+export const canonicalResearchReportSchema = z.object({
+  schemaVersion: z.literal("research_report_v1"),
+  title: z.string().min(1),
+  symbol: z.string().min(1),
+  securityType: z.enum(["COMMON_STOCK", "ETF"]),
+  locale: z.enum(["zh-CN", "en-US"]),
+  asOfDate: z.iso.date(),
+  dataMode: dataModeSchema,
+  sections: z.array(reportSectionSchema),
+  bullCase: z.array(claimSchema),
+  bearCase: z.array(claimSchema),
+  catalysts: z.array(claimSchema),
+  risks: z.array(
+    z.object({
+      category: z.enum([
+        "BUSINESS",
+        "FINANCIAL",
+        "VALUATION",
+        "MARKET",
+        "REGULATORY",
+        "EXECUTION",
+        "DATA_QUALITY",
+      ]),
+      claim: claimSchema,
+    }),
+  ),
+  scenarioAnalysis: scenarioAnalysisSchema,
+  dataQuality: dataQualitySchema,
+  conclusion: z.array(claimSchema),
+  disclaimer: z.string().min(1),
+});
+
+const reportVersionMetadataSchema = z.object({
+  researchId: z.uuid(),
+  version: z.number().int().positive(),
+  validationStatus: validationStatusSchema,
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  createdAt: z.iso.datetime(),
+  generatedAt: z.iso.datetime().optional(),
+});
+
+const reportVersionEnvelopeSchema = reportVersionMetadataSchema.extend({
+  report: canonicalResearchReportSchema,
+});
+
+const flatReportVersionSchema = reportVersionMetadataSchema
+  .extend(canonicalResearchReportSchema.shape)
+  .transform((value) => {
+    const {
+      researchId,
+      version,
+      validationStatus,
+      contentHash,
+      createdAt,
+      generatedAt,
+      ...report
+    } = value;
+    return {
+      researchId,
+      version,
+      validationStatus,
+      contentHash,
+      createdAt,
+      ...(generatedAt ? { generatedAt } : {}),
+      report,
+    };
+  });
+
+export const reportVersionResponseSchema = z.union([
+  reportVersionEnvelopeSchema,
+  flatReportVersionSchema,
+]);
+
+export const reportVersionSummarySchema = z.object({
+  researchId: z.uuid(),
+  version: z.number().int().positive(),
+  title: z.string(),
+  symbol: z.string(),
+  asOfDate: z.iso.date(),
+  validationStatus: validationStatusSchema,
+  dataMode: dataModeSchema,
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  createdAt: z.iso.datetime(),
+});
+
+export const reportVersionPageSchema = z.object({
+  items: z.array(reportVersionSummarySchema),
+  page: pageMetadataSchema,
+});
+
+export const evidenceSchema = z.object({
+  evidenceId: z.string().regex(/^ev_[A-Za-z0-9_-]{1,64}$/),
+  evidenceType: z.enum([
+    "MARKET_PRICE",
+    "FINANCIAL_METRIC",
+    "SEC_FILING",
+    "MACRO_OBSERVATION",
+    "QUANT_RESULT",
+    "COMPANY_PROFILE",
+    "NEWS_ARTICLE",
+    "OTHER",
+  ]),
+  title: z.string(),
+  summary: z.string(),
+  value: z.unknown().optional(),
+  unit: z.string().nullable().optional(),
+  sourceName: z.string(),
+  sourceUrl: z.url().nullable().optional(),
+  sourceType: z.string(),
+  publishedAt: nullableDateTimeSchema.optional(),
+  retrievedAt: z.iso.datetime(),
+  effectiveDate: z.iso.date().nullable().optional(),
+  isPrimarySource: z.boolean(),
+  freshnessStatus: z.enum(["FRESH", "STALE", "VERY_STALE", "UNKNOWN"]),
+  qualityScore: z.number().min(0).max(1),
+  rawDataHash: z.string().regex(/^[a-f0-9]{64}$/),
+  isDemoData: z.boolean(),
+  relatedClaimIds: z.array(z.string()),
+});
+
+export const evidencePageSchema = z.object({
+  items: z.array(evidenceSchema),
+  page: pageMetadataSchema,
+  dataMode: dataModeSchema,
+});
+
+export type ResearchStatus = z.infer<typeof researchStatusSchema>;
+export type ResearchAccepted = z.infer<typeof researchAcceptedSchema>;
+export type ResearchItem = z.infer<typeof researchItemSchema>;
+export type ResearchPage = z.infer<typeof researchPageSchema>;
+export type ResearchDetail = z.infer<typeof researchDetailSchema>;
+export type ResearchStatusResponse = z.infer<
+  typeof researchStatusResponseSchema
+>;
+export type Claim = z.infer<typeof claimSchema>;
+export type Evidence = z.infer<typeof evidenceSchema>;
+export type CanonicalResearchReport = z.infer<
+  typeof canonicalResearchReportSchema
+>;
+export type ReportVersionResponse = z.infer<
+  typeof reportVersionResponseSchema
+>;

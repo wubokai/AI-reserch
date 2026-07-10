@@ -1,9 +1,19 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 import { LogoMark } from "@/components/icons";
 import { SystemHealth } from "@/components/system-health";
 
-const navItems = ["研究台", "历史报告", "数据源"];
+const navItems = [
+  { href: "/", label: "研究台" },
+  { href: "/research", label: "历史报告" },
+] as const;
 
 export function AppHeader() {
+  const pathname = usePathname();
+
   return (
     <header className="border-b border-[#1d3028] bg-[#08120f]/95">
       <div className="mx-auto flex min-h-16 max-w-[1440px] items-center justify-between gap-5 px-5 lg:px-8">
@@ -25,19 +35,24 @@ export function AppHeader() {
           aria-label="主导航"
           className="hidden items-center gap-1 rounded-lg border border-[#1d3028] bg-[#0b1712] p-1 md:flex"
         >
-          {navItems.map((item, index) => (
-            <button
-              key={item}
+          {navItems.map((item) => {
+            const active =
+              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            return (
+            <Link
+              aria-current={active ? "page" : undefined}
+              href={item.href}
+              key={item.href}
               className={
-                index === 0
+                active
                   ? "rounded-md bg-[#173529] px-4 py-2 text-xs font-medium text-emerald-100"
                   : "rounded-md px-4 py-2 text-xs font-medium text-[#829b90] transition-colors hover:bg-white/5 hover:text-white"
               }
-              type="button"
             >
-              {item}
-            </button>
-          ))}
+              {item.label}
+            </Link>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-3">

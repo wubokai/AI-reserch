@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useRef, useState, type FormEvent } from "react";
 
 import { ArrowRightIcon, SearchIcon } from "@/components/icons";
+import { fetchApi, errorMessage } from "@/lib/api-client";
 import { demoSecurities } from "@/lib/demo-data";
 import {
+  researchAcceptedSchema,
   researchRequestSchema,
   type ResearchRequest,
 } from "@/lib/schemas";
@@ -24,18 +28,19 @@ const initialValues: ResearchRequest = {
   includeTechnicalAnalysis: true,
   includeFundamentalAnalysis: true,
   includeMacroAnalysis: true,
-  dataMode: "MOCK",
 };
 
 const analysisOptions: ReadonlyArray<{
   key: AnalysisFlag;
   title: string;
   description: string;
+  locked?: boolean;
 }> = [
   {
     key: "includeTechnicalAnalysis",
     title: "量化与技术",
-    description: "收益、风险与确定性指标",
+    description: "收益、风险与确定性指标 · MVP 必选",
+    locked: true,
   },
   {
     key: "includeFundamentalAnalysis",
@@ -53,7 +58,6 @@ function toFieldErrors(
   issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>,
 ) {
   const errors: FieldErrors = {};
-
   for (const issue of issues) {
     const field = issue.path[0];
     if (typeof field === "string" && field in initialValues) {
@@ -61,38 +65,52 @@ function toFieldErrors(
       errors[key] ??= issue.message;
     }
   }
-
   return errors;
 }
 
 export function ResearchForm() {
+  const router = useRouter();
   const [values, setValues] = useState<ResearchRequest>(initialValues);
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [notice, setNotice] = useState<string | null>(null);
+  const idempotencyKey = useRef<string | null>(null);
+  const createResearch = useMutation({
+    mutationFn: async (request: ResearchRequest) => {
+      idempotencyKey.current ??= crypto.randomUUID();
+      return fetchApi("/api/research", researchAcceptedSchema, {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey.current },
+        body: JSON.stringify(request),
+      });
+    },
+    onSuccess: (research) => {
+      router.push(`/research/${research.researchId}`);
+    },
+  });
+
+  function updateValues(updater: (current: ResearchRequest) => ResearchRequest) {
+    idempotencyKey.current = null;
+    createResearch.reset();
+    setValues(updater);
+  }
 
   function submitResearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setNotice(null);
-
     const parsed = researchRequestSchema.safeParse(values);
-
     if (!parsed.success) {
       setErrors(toFieldErrors(parsed.error.issues));
       return;
     }
-
     setErrors({});
-    setNotice(
-      "模拟研究请求已通过本地校验。Phase 1 不会执行真实研究或产生金融结论。",
-    );
+    createResearch.mutate(parsed.data);
   }
 
   function setFlag(key: AnalysisFlag, checked: boolean) {
-    setValues((current) => ({ ...current, [key]: checked }));
+    updateValues((current) => ({ ...current, [key]: checked }));
   }
 
   return (
     <form
+      aria-busy={createResearch.isPending}
       className="rounded-xl border border-[#20342b] bg-[#0c1713] shadow-[0_18px_48px_rgba(0,0,0,0.2)]"
       onSubmit={submitResearch}
     >
@@ -100,7 +118,7 @@ export function ResearchForm() {
         <div>
           <p className="text-sm font-semibold text-white">创建研究任务</p>
           <p className="mt-1 text-xs text-[#81988d]">
-            先定义研究问题，再由数据与 Evidence 驱动报告。
+            提交后进入可恢复的异步研究工作流。
           </p>
         </div>
         <span className="rounded-md border border-emerald-300/20 bg-emerald-300/[0.06] px-2 py-1 text-[10px] font-semibold tracking-[0.14em] text-emerald-200">
@@ -110,10 +128,7 @@ export function ResearchForm() {
 
       <div className="space-y-6 p-5 sm:p-6">
         <div>
-          <label
-            className="mb-2 block text-xs font-medium text-[#b8c8c0]"
-            htmlFor="symbol"
-          >
+          <label className="mb-2 block text-xs font-medium text-[#b8c8c0]" htmlFor="symbol">
             证券代码
           </label>
           <div className="relative">
@@ -125,7 +140,7 @@ export function ResearchForm() {
               id="symbol"
               maxLength={10}
               onChange={(event) =>
-                setValues((current) => ({
+                updateValues((current) => ({
                   ...current,
                   symbol: event.target.value.toUpperCase(),
                 }))
@@ -133,20 +148,14 @@ export function ResearchForm() {
               value={values.symbol}
             />
           </div>
-          {errors.symbol ? (
-            <p className="mt-2 text-xs text-rose-300" id="symbol-error">
-              {errors.symbol}
-            </p>
-          ) : null}
+          {errors.symbol ? <p className="mt-2 text-xs text-rose-300" id="symbol-error">{errors.symbol}</p> : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-[#647b70]">演示证券</span>
             {demoSecurities.map((symbol) => (
               <button
                 className="rounded border border-[#263c32] bg-[#101d18] px-2.5 py-1 text-[11px] font-medium text-[#a9bdb3] transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
                 key={symbol}
-                onClick={() =>
-                  setValues((current) => ({ ...current, symbol }))
-                }
+                onClick={() => updateValues((current) => ({ ...current, symbol }))}
                 type="button"
               >
                 {symbol}
@@ -157,138 +166,93 @@ export function ResearchForm() {
 
         <div>
           <div className="mb-2 flex items-center justify-between gap-4">
-            <label
-              className="text-xs font-medium text-[#b8c8c0]"
-              htmlFor="query"
-            >
-              研究问题
-            </label>
-            <span className="text-[10px] text-[#5f756b]">
-              {values.query.length} / 1200
-            </span>
+            <label className="text-xs font-medium text-[#b8c8c0]" htmlFor="query">研究问题</label>
+            <span className="text-[10px] text-[#5f756b]">{values.query.length} / 4000</span>
           </div>
           <textarea
             aria-describedby={errors.query ? "query-error" : "query-help"}
             aria-invalid={Boolean(errors.query)}
             className="min-h-32 w-full resize-y rounded-lg border border-[#294137] bg-[#09120f] px-4 py-3 text-sm leading-6 text-[#edf5f0] placeholder:text-[#52685e] focus:border-emerald-300/50"
             id="query"
-            maxLength={1200}
-            onChange={(event) =>
-              setValues((current) => ({
-                ...current,
-                query: event.target.value,
-              }))
-            }
+            maxLength={4000}
+            onChange={(event) => updateValues((current) => ({ ...current, query: event.target.value }))}
             placeholder="例如：分析这家公司的增长动力、周期风险、财务质量和未来主要观察因素"
             value={values.query}
           />
           {errors.query ? (
-            <p className="mt-2 text-xs text-rose-300" id="query-error">
-              {errors.query}
-            </p>
+            <p className="mt-2 text-xs text-rose-300" id="query-error">{errors.query}</p>
           ) : (
             <p className="mt-2 text-[11px] text-[#657b71]" id="query-help">
-              系统不会把问题直接交给模型猜测，将先完成取数、计算和 Evidence 注册。
+              系统先完成取数、计算和 Evidence 注册，再生成受约束报告。
             </p>
           )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="block">
-            <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">
-              基准
-            </span>
+            <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">基准</span>
             <select
+              aria-label="基准"
               className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]"
-              onChange={(event) =>
-                setValues((current) => ({
-                  ...current,
-                  benchmark: event.target.value as ResearchRequest["benchmark"],
-                }))
-              }
+              onChange={(event) => updateValues((current) => ({ ...current, benchmark: event.target.value as ResearchRequest["benchmark"] }))}
               value={values.benchmark}
             >
               <option value="SPY">SPY · 默认基准</option>
               <option value="QQQ">QQQ · 可选基准</option>
             </select>
           </label>
-
           <label className="block">
-            <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">
-              研究周期
-            </span>
-            <select
-              className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]"
-              disabled
-              value={values.period}
-            >
+            <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">研究周期</span>
+            <select aria-label="研究周期" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" disabled value={values.period}>
               <option value="5y">5 年 · MVP</option>
             </select>
           </label>
-
           <label className="block">
-            <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">
-              研究深度
-            </span>
-            <select
-              className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]"
-              disabled
-              value={values.reportDepth}
-            >
+            <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">研究深度</span>
+            <select aria-label="研究深度" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" disabled value={values.reportDepth}>
               <option value="STANDARD">标准 · MVP</option>
             </select>
           </label>
         </div>
 
         <fieldset>
-          <legend className="mb-3 text-xs font-medium text-[#b8c8c0]">
-            分析模块
-          </legend>
+          <legend className="mb-3 text-xs font-medium text-[#b8c8c0]">分析模块</legend>
           <div className="grid gap-3 md:grid-cols-3">
             {analysisOptions.map((option) => (
-              <label
-                className="flex min-h-20 items-start gap-3 rounded-lg border border-[#263b32] bg-[#0a1410] p-3 transition-colors hover:border-[#365345]"
-                key={option.key}
-              >
+              <label className="flex min-h-20 items-start gap-3 rounded-lg border border-[#263b32] bg-[#0a1410] p-3 transition-colors hover:border-[#365345]" key={option.key}>
                 <input
+                  aria-label={option.title}
                   checked={values[option.key]}
-                  className="mt-0.5 size-4 accent-emerald-300"
-                  onChange={(event) =>
-                    setFlag(option.key, event.target.checked)
-                  }
+                  className="mt-0.5 size-4 accent-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={option.locked}
+                  onChange={(event) => setFlag(option.key, event.target.checked)}
                   type="checkbox"
                 />
                 <span>
-                  <span className="block text-xs font-semibold text-[#dbe8e1]">
-                    {option.title}
-                  </span>
-                  <span className="mt-1 block text-[11px] leading-4 text-[#687f74]">
-                    {option.description}
-                  </span>
+                  <span className="block text-xs font-semibold text-[#dbe8e1]">{option.title}</span>
+                  <span className="mt-1 block text-[11px] leading-4 text-[#687f74]">{option.description}</span>
                 </span>
               </label>
             ))}
           </div>
         </fieldset>
 
-        {notice ? (
-          <p
-            className="rounded-lg border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3 text-xs leading-5 text-emerald-100"
-            role="status"
-          >
-            {notice}
+        {createResearch.isError ? (
+          <p className="rounded-lg border border-rose-300/20 bg-rose-300/[0.06] px-4 py-3 text-xs leading-5 text-rose-100" role="alert">
+            {errorMessage(createResearch.error)}
           </p>
         ) : null}
 
         <div className="flex flex-col gap-3 border-t border-[#1b2c25] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-md text-[11px] leading-5 text-[#62796e]">
-            创建操作目前只进行本地 Schema 校验。后续阶段接入 Java 异步任务 API。
+            创建接口立即返回任务 ID；页面随后轮询 PostgreSQL 权威状态。
           </p>
           <button
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-300 px-4 text-xs font-bold text-[#062219] transition-colors hover:bg-emerald-200"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-300 px-4 text-xs font-bold text-[#062219] transition-colors hover:bg-emerald-200 disabled:cursor-wait disabled:opacity-60"
+            disabled={createResearch.isPending}
             type="submit"
           >
-            验证 DEMO 研究
+            {createResearch.isPending ? "正在创建…" : "创建 DEMO 研究"}
             <ArrowRightIcon className="size-4" />
           </button>
         </div>

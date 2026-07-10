@@ -13,7 +13,7 @@ export function DemoBanner() {
             DEMO DATA — NOT REAL MARKET DATA
           </p>
           <p className="mt-1 text-xs leading-5 text-amber-100/65">
-            当前为 Phase 1 界面骨架，仅展示固定 Mock 工作流，不包含实时行情或投资结论。
+            当前闭环使用固定 Mock fixture，不包含实时行情；所有结论只代表演示数据中的可审计结果。
           </p>
         </div>
       </div>

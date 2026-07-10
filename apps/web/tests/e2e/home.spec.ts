@@ -12,7 +12,7 @@ test("首页呈现专业研究工作台与明确 DEMO 语义", async ({ page }) 
   await expect(page.getByText("dataMode: MOCK")).toBeVisible();
   await expect(page.getByLabel("证券代码")).toHaveValue("MU");
   await expect(
-    page.getByRole("button", { name: "验证 DEMO 研究" }),
+    page.getByRole("button", { name: "创建 DEMO 研究" }),
   ).toBeVisible();
 });
 

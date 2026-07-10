@@ -1,7 +1,6 @@
 import { ActivityIcon } from "@/components/icons";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { CoveragePanel } from "@/components/coverage-panel";
-import { DemoBanner } from "@/components/demo-banner";
 import { RecentResearch } from "@/components/recent-research";
 import { ResearchForm } from "@/components/research-form";
 import { WorkflowChart } from "@/components/workflow-chart";
@@ -14,10 +13,7 @@ const principles = [
 
 export default function HomePage() {
   return (
-    <div className="app-grid min-h-screen bg-[#07100d]">
-      <AppHeader />
-      <DemoBanner />
-
+    <AppShell>
       <main className="mx-auto max-w-[1440px] px-5 py-8 lg:px-8 lg:py-10">
         <section className="mb-8 flex flex-col gap-6 border-b border-[#1b2d25] pb-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
@@ -66,12 +62,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      <footer className="border-t border-[#172820] bg-[#07100d]">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-6 text-[11px] leading-5 text-[#53695f] sm:flex-row sm:items-center sm:justify-between lg:px-8">
-          <p>AI 量化研究助手 · Phase 1 Web Skeleton</p>
-          <p>仅供产品演示与研究辅助，不构成投资建议。</p>
-        </div>
-      </footer>
-    </div>
+    </AppShell>
   );
 }
