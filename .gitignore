@@ -20,7 +20,7 @@
 logs/
 data/
 artifacts/
-reports/
+/reports/
 tmp/
 .cache/
 
