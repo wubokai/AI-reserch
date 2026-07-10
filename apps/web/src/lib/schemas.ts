@@ -12,7 +12,7 @@ export const healthResponseSchema = z.object({
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 
 export const serviceProbeSchema = z.object({
-  status: z.enum(["UP", "DOWN"]),
+  status: z.enum(["UP", "DEGRADED", "DOWN"]),
   service: z.enum(["web", "api", "analytics"]),
   version: z.string().min(1).optional(),
   dataMode: dataModeSchema.optional(),

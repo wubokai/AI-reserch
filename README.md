@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0 需求与架构基线、Phase 1 工程骨架及 Gate G1 均已完成。GitHub Actions 已验证 Docker build、五服务 Compose 启动和 smoke。研究任务持久化、量化计算、Evidence/Claim 闭环和报告生成从 Phase 2 起实现。当前页面只验证 Mock 表单与交互，不会产生真实金融结论。
+> 当前进度：Phase 0、Phase 1、Phase 2 与 Gate G2 已完成。PostgreSQL 持久任务、durable lease queue、Research API、状态机、幂等、重试、取消、软删除、所有权和健康降级均已通过 GitHub Actions 的 Testcontainers 与 Compose 终验。量化、Evidence/Claim 和报告闭环属于 Phase 3 以后；当前页面仍不会产生真实金融结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -20,7 +20,7 @@
 | 模块 | 技术 | 当前能力 |
 | --- | --- | --- |
 | `apps/web` | Next.js 16、React 19、TypeScript、Tailwind、TanStack Query、Zod | Mock 研究工作台、表单校验、健康端点、组件与 E2E 测试 |
-| `apps/api` | Java 21、Spring Boot 3.5、Spring Security、JPA、Flyway、Redis、Resilience4j | 分层骨架、dev-demo 安全边界、请求 ID、健康与指标端点 |
+| `apps/api` | Java 21、Spring Boot 3.5、Spring Security、JPA、Flyway、Redis、Resilience4j | Research API、PostgreSQL durable queue、lease/fencing/reaper、状态机、幂等、审计/outbox、dev-demo/所有权与真实依赖健康探针 |
 | `apps/analytics` | Python 3.12、FastAPI、Pydantic、Ruff、mypy、pytest | 版本化服务骨架、配置、JSON 日志、请求 ID、健康端点 |
 | 基础设施 | PostgreSQL 17、Redis 7.4、Docker Compose、GitHub Actions | 本地五服务编排与 CI 定义 |
 
@@ -74,9 +74,9 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前验证基线：Web 6 个单元/组件测试与 3 个 Playwright E2E，API 14 个测试，Analytics 7 个测试且覆盖率 97%。本机未安装 Docker；GitHub Actions 已在 Linux runner 完成 Compose config、全部镜像构建、五服务启动、健康 smoke 和清理，Gate G1 通过。
+当前验证基线：Web 8 个 Vitest、ESLint、TypeScript、production build 与 Playwright；API 89 个 Surefire 测试、27 个 Failsafe/Testcontainers 测试、Java 21 package、PostgreSQL 17 Flyway V1–V4、Hibernate validate 和真实 HTTP 验收；Analytics 7 个 pytest、Ruff、strict mypy，覆盖率 97%。本机未安装 Docker；Gate G2 的 Testcontainers 与 Compose 终验已由 GitHub Actions Linux runner 完成。
 
-当前尚未实现持久任务与研究业务 API、量化指标、数据 Provider、Evidence/Claim 存储、报告与导出，以及 OpenAI 调用。Java API 和 Analytics 在 Phase 1 只提供安全、配置与观测骨架及健康端点；这些能力会按 Phase 2–7 的 Gate 逐步加入。
+当前尚未实现量化指标、数据 Provider、Evidence/Claim 存储、报告与导出，以及 OpenAI 调用。这些能力从 Phase 3 起按 Gate 逐步加入；Phase 2 对没有已发布验证报告的成功终态明确失败关闭。
 
 ## 数据与模型配置
 
@@ -102,7 +102,7 @@ pnpm dev:web
 
 ## 下一步
 
-Phase 2 实现 Flyway 初始迁移、Research/Step 模型、PostgreSQL durable lease queue、状态机、幂等创建、重试、取消、重启恢复和所有权检查。通过 Gate G2 后，Phase 3 才接入固定 Mock 数据、核心量化、Evidence/Claim 验证、完整报告页面与三种导出。
+进入 Phase 3：接入固定 Mock 数据、核心量化、Evidence/Claim 验证、完整报告页面与 Markdown/HTML/PDF 三种导出，形成首个安全的纵向闭环。
 
 ## 免责声明
 

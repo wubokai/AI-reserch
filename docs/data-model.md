@@ -631,14 +631,18 @@ CREATE INDEX ix_claim_links_evidence
 
 ## 8. Flyway 迁移顺序
 
-建议拆分，避免一个巨大迁移难以回滚和审查：
+实际迁移按阶段拆分，避免一个巨大迁移难以回滚和审查：
 
 1. `V1__identity_and_securities.sql`
-2. `V2__research_jobs_and_steps.sql`
-3. `V3__source_snapshots_and_financial_facts.sql`
-4. `V4__quant_results.sql`
-5. `V5__evidence_claims_and_report_versions.sql`
-6. `V6__llm_cost_idempotency_and_audit.sql`
-7. `V7__indexes_invariants_and_mock_lineage.sql`
+2. `V2__durable_research_workflow.sql`（Research/Step/Attempt、幂等、审计与 outbox）
+3. `V3__durable_queue_api.sql`（状态守卫与 `queue_v1` lease/fencing 函数）
+4. `V4__source_snapshots_and_financial_facts.sql`（后续 Phase 3）
+5. `V5__quant_results.sql`（后续 Phase 3/4）
+6. `V6__evidence_claims_and_report_versions.sql`（后续 Phase 3/5）
+7. `V7__llm_cost.sql`（后续 Phase 3/6）
+8. `V8__indexes_invariants_and_mock_lineage.sql`（随相关模型落地）
+
+Phase 2 已实现的迁移、函数签名和实测范围见
+[Phase 2 PostgreSQL 与 Durable Queue](./database-phase2.md)。
 
 每个迁移必须由 Testcontainers PostgreSQL 集成测试验证：全新建库、从上一版本升级、唯一约束、软删除可见性、并发版本分配、同一步并发 attempt、Evidence 跨任务引用拒绝、报告不可变、Mock 血缘和 `MIXED_TEST` 发布阻断。

@@ -9,6 +9,10 @@ info:
     traceable to registered evidence. Research created with mock providers is
     marked as MOCK; the UI and exports render DEMO DATA - NOT REAL MARKET DATA.
     MIXED_TEST is test-only and cannot be published through ordinary user flows.
+    During Phase 2, Basic authentication is available only through an explicitly
+    enabled development/test demo principal. Bearer authentication is the production
+    contract but is not activated until the formal auth integration is delivered;
+    the Phase 2 production profile therefore fails closed at startup.
   contact:
     name: AI Quant Research Assistant maintainers
 servers:
@@ -29,12 +33,18 @@ tags:
     description: Service health
 security:
   - bearerAuth: []
+  - basicDemoAuth: []
 paths:
   /api/v1/research:
     post:
       tags: [Research]
       operationId: createResearch
       summary: Create and enqueue a research job
+      description: |
+        Locally known inactive/unsupported securities return INVALID_SYMBOL, and a
+        locally provable symbol/company-name contradiction returns SECURITY_MISMATCH.
+        Unknown but well-formed securities are queued for durable provider-backed
+        RESOLVE_SECURITY rather than resolved through a request-thread network call.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/XRequestId'
@@ -81,6 +91,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
@@ -150,6 +162,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/research/{researchId}:
     parameters:
@@ -169,6 +183,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResearchDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -189,10 +205,16 @@ paths:
           headers:
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/v1/research/{researchId}/status:
     parameters:
@@ -212,6 +234,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResearchStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -285,7 +309,10 @@ paths:
               $ref: '#/components/schemas/CancelResearchRequest'
       responses:
         '202':
-          description: Cancellation request accepted
+          description: |
+            Cancellation request accepted. COMPLETED, PARTIALLY_COMPLETED, and
+            CANCELLED are accepted no-ops returning the existing snapshot; FAILED
+            returns 409 because retry/delete, not cancellation, is the valid action.
           headers:
             Location:
               description: Status URL for this research job
@@ -418,6 +445,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReportVersion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -537,6 +566,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
@@ -558,8 +589,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProviderStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/health:
     get:
@@ -595,6 +630,14 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: |
+        Production authentication contract. Its implementation is intentionally
+        deferred beyond Phase 2; Phase 2 production startup fails closed.
+    basicDemoAuth:
+      type: http
+      scheme: basic
+      description: |
+        Explicit development/test demo principal only. It is rejected in production.
 
   parameters:
     ResearchId:
@@ -673,7 +716,7 @@ components:
           schema:
             $ref: '#/components/schemas/ApiError'
     Forbidden:
-      description: Caller cannot access this resource
+      description: Caller cannot access this resource or the account is not active
       headers:
         X-Request-Id:
           $ref: '#/components/headers/XRequestId'
@@ -682,7 +725,7 @@ components:
           schema:
             $ref: '#/components/schemas/ApiError'
     NotFound:
-      description: Resource does not exist, is inaccessible, or is soft-deleted
+      description: Route/resource does not exist, is inaccessible, or is soft-deleted
       headers:
         X-Request-Id:
           $ref: '#/components/headers/XRequestId'
@@ -973,9 +1016,9 @@ components:
         query:
           type: string
         symbol:
-          type: string
+          type: [string, 'null']
         companyName:
-          type: string
+          type: [string, 'null']
         benchmark:
           type: [string, 'null']
         status:
@@ -1604,6 +1647,7 @@ components:
         - code
         - message
         - requestId
+        - researchId
         - retryable
         - details
       properties:

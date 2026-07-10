@@ -1,13 +1,16 @@
 package com.aiquantresearch.api.shared.security;
 
+import com.aiquantresearch.api.shared.web.ApiErrorCode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Set;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -18,7 +21,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
@@ -29,7 +31,10 @@ public class SecurityConfiguration {
     private static final int MINIMUM_DEMO_PASSWORD_LENGTH = 16;
 
     @Bean
-    SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain apiSecurityFilterChain(
+            HttpSecurity http,
+            SecurityProblemWriter problemWriter
+    ) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -40,9 +45,29 @@ public class SecurityConfiguration {
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+                        .authenticationEntryPoint((request, response, exception) -> problemWriter.write(
+                                response,
+                                ApiErrorCode.UNAUTHORIZED,
+                                "Authentication is required"
+                        ))
+                        .accessDeniedHandler((request, response, exception) -> problemWriter.write(
+                                response,
+                                ApiErrorCode.FORBIDDEN,
+                                "The current principal cannot access this resource"
+                        )));
 
         return http.build();
+    }
+
+    @Bean
+    SecurityProblemWriter securityProblemWriter(
+            ObjectMapper objectMapper,
+            ObjectProvider<Clock> clockProvider
+    ) {
+        return new SecurityProblemWriter(
+                objectMapper,
+                clockProvider.getIfAvailable(Clock::systemUTC)
+        );
     }
 
     @Bean
@@ -56,6 +81,7 @@ public class SecurityConfiguration {
             Environment environment,
             PasswordEncoder passwordEncoder
     ) {
+        validateProductionAuthenticationBoundary(properties, environment);
         if (!properties.enabled()) {
             return username -> {
                 throw new UsernameNotFoundException("No local principals are configured");
@@ -63,16 +89,36 @@ public class SecurityConfiguration {
         }
 
         validateDemoBoundary(properties, environment);
-        var demoUser = User.withUsername(properties.username())
-                .password(passwordEncoder.encode(properties.password()))
-                .roles("USER")
-                .build();
+        var encodedPassword = passwordEncoder.encode(properties.password());
         return username -> {
-            if (!demoUser.getUsername().equals(username)) {
+            if (!properties.username().equals(username)) {
                 throw new UsernameNotFoundException("Principal not found");
             }
-            return demoUser;
+            // Spring Security erases credentials after authentication. Return a fresh
+            // principal so one Basic-auth request cannot invalidate later requests.
+            return User.withUsername(properties.username())
+                    .password(encodedPassword)
+                    .roles("USER")
+                    .build();
         };
+    }
+
+    static void validateProductionAuthenticationBoundary(
+            DemoPrincipalProperties properties,
+            Environment environment
+    ) {
+        boolean production = Arrays.asList(environment.getActiveProfiles())
+                .contains("production");
+        if (!production) {
+            return;
+        }
+        if (properties.enabled()) {
+            validateDemoBoundary(properties, environment);
+        }
+        throw new IllegalStateException(
+                "Production startup is fail-closed until formal Bearer authentication "
+                        + "is implemented after Phase 2"
+        );
     }
 
     static void validateDemoBoundary(DemoPrincipalProperties properties, Environment environment) {

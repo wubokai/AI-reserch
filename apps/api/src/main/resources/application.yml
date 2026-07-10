@@ -17,6 +17,8 @@ spring:
   jackson:
     time-zone: UTC
     default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: true
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ai_quant_research}
     username: ${POSTGRES_USER:ai_quant}

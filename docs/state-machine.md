@@ -1,8 +1,8 @@
 # Research、Step 与 Attempt 状态机
 
-状态：Phase 0 基线
+状态：Phase 2 实现基线
 
-最后更新：2026-07-09
+最后更新：2026-07-10
 
 本文是状态名、转换条件和竞态处理的规范来源。组件边界见[架构基线](./architecture.md)，时序见[数据流](./data-flow.md)，队列实现见 [ADR-0001](./adr/0001-postgres-job-queue.md)。
 
@@ -10,7 +10,7 @@
 
 - 所有权威转换使用 PostgreSQL 数据库时间和单事务条件更新。
 - Research 公开状态严格使用 canonical 枚举；内部 Step/Attempt 状态不得泄漏成新的公开状态。
-- Research 终态不可逆；重复请求返回已有终态，不改写 `completed_at` 或报告版本。
+- 普通工作流内 Research 终态不可逆；重复请求返回已有终态，不改写 `completed_at` 或报告版本。唯一例外是显式用户重试操作可把 `FAILED | PARTIALLY_COMPLETED` 开启为新的 `QUEUED` 执行周期，同时保留全部历史 Attempt 与既有不可变报告版本。
 - `cancellation_requested` 是与非终态正交的持久 flag，不是公开状态。
 - Java finalizer 独占 Research 终态裁决；Worker 只能转换当前 lease 授权的 Step/Attempt。
 - 每个转换递增 `row_version` 并写 outbox；事件可重复，转换必须幂等。
@@ -30,7 +30,7 @@ GENERATING_REPORT, VALIDATING_REPORT,
 COMPLETED, PARTIALLY_COMPLETED, FAILED, CANCELLED
 ```
 
-公共状态是单调阶段投影。内部 DAG 可并行；状态表示用户当前应理解的最前沿阶段，不代表其他模块没有同时运行。
+公共状态在单个执行周期内是单调阶段投影。内部 DAG 可并行；状态表示用户当前应理解的最前沿阶段，不代表其他模块没有同时运行。显式用户重试会开启新执行周期，因此可从 `FAILED | PARTIALLY_COMPLETED` 回到 `QUEUED`；这不是 Worker 或普通状态推进可调用的转换。
 
 ```mermaid
 stateDiagram-v2
@@ -58,6 +58,14 @@ stateDiagram-v2
 
 某些 Provider 未启用时仍保留 canonical 阶段顺序，但对应内部 Step 可为 `SKIPPED`，阶段投影可在同一 Java 事务中快速跨越。任何非终态都可能因不可恢复错误进入 `FAILED`，或在取消确认后进入 `CANCELLED`；图中不重复绘制所有同构边。
 
+### 2.1 显式用户重试
+
+- 仅 `FAILED` 与 `PARTIALLY_COMPLETED` 接受用户重试；`COMPLETED` 与 `CANCELLED` 保持不可重开。
+- 重试事务锁定 Research 和全部 Step，清除上一周期的 Research 完成时间与取消 flag，并把第一个需要执行的 Step 解锁。
+- `input_hash + implementation_version` 未变化的 `SUCCEEDED` Step 直接复用，不新增 Attempt，也不覆盖原 output hash。
+- 失败、取消、跳过或输入/实现版本变化的 Step 可重新排队；所有旧 Attempt 继续作为不可变审计历史保留。
+- 该例外必须同时受 Java 显式命令和数据库转换约束保护，Worker 数据库函数无权把 Research 终态重开。
+
 ## 3. 取消 flag 与 Research 终态
 
 `research_jobs.cancellation_requested=true` 后，公开 `status` 暂时保持当前 canonical 非终态；API 额外返回 `cancellationRequested=true`，UI 派生显示“取消中”。
@@ -84,7 +92,7 @@ stateDiagram-v2
 1. 对非终态 Research，取消事务写 flag、时间、审计和 outbox，并直接取消未运行 Step。
 2. 运行中 Step 继续维持 lease，直到 Worker 协作退出或 Reaper 回收。
 3. flag 先提交时，步骤成功提交谓词失败；所有活动 Step 终结后 Research 必须为 `CANCELLED`。
-4. `COMPLETED` 或 `PARTIALLY_COMPLETED` 报告终态先提交时，后来的取消是幂等 no-op/race result，返回既有终态。
+4. `COMPLETED`、`PARTIALLY_COMPLETED` 或已经 `CANCELLED` 时，后来的取消是幂等 `202` no-op/race result，返回既有终态；`FAILED` 取消返回 `409`，用户应选择 retry 或 delete。
 5. 用户主动取消不能因为已有内部 artifact 转为 `PARTIALLY_COMPLETED`。
 
 ## 4. Research 终态裁决
@@ -106,6 +114,8 @@ Java finalizer 锁定 `research_jobs` 后按以下顺序执行：
 | 否 | 不通过 | 不通过 | `FAILED` |
 
 最小安全策略至少要求：证券已解析、核心行情通过质量门槛、核心量化可复现、存在通过验证的报告，且所有保留 Claim 均有合法 Evidence。基本面/文件/宏观等可降级模块缺失，或修复后移除不合格 Claim，才允许 `PARTIALLY_COMPLETED`。
+
+Phase 2 尚无 `report_versions` 原子发布模型，因此 Java finalizer 对任何仅由两个 policy boolean 声称的成功结果都失败关闭，不能写 `COMPLETED` 或 `PARTIALLY_COMPLETED`。本阶段只允许 `FAILED` 与已经收敛的 `CANCELLED` 终结；上表中的成功分支在 Phase 3 必须以“验证通过的不可变报告在同一事务发布”为额外前置条件后才启用。
 
 ## 5. Step 状态机
 

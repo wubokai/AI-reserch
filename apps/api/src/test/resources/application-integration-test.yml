@@ -1,0 +1,24 @@
+spring:
+  cache:
+    type: redis
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+management:
+  health:
+    db:
+      enabled: true
+    redis:
+      enabled: true
+
+logging:
+  level:
+    root: WARN
+    com.aiquantresearch.api: INFO

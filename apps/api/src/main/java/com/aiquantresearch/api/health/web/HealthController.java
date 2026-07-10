@@ -1,6 +1,9 @@
 package com.aiquantresearch.api.health.web;
 
 import com.aiquantresearch.api.health.application.HealthService;
+import com.aiquantresearch.api.health.application.HealthSnapshot;
+import com.aiquantresearch.api.health.domain.ServiceStatus;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +22,10 @@ public class HealthController {
 
     @GetMapping
     public ResponseEntity<HealthResponse> health() {
-        return ResponseEntity.ok(HealthResponse.from(healthService.currentHealth()));
+        HealthSnapshot snapshot = healthService.currentHealth();
+        HealthResponse response = HealthResponse.from(snapshot);
+        return snapshot.status() == ServiceStatus.DOWN
+                ? ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response)
+                : ResponseEntity.ok(response);
     }
 }
