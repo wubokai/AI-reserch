@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0 需求与架构基线已完成；Phase 1 代码骨架与宿主机测试已完成，Gate G1 仍待 Docker build/Compose smoke 验证。研究任务持久化、量化计算、Evidence/Claim 闭环和报告生成从 Phase 2 起实现。当前页面只验证 Mock 表单与交互，不会产生真实金融结论。
+> 当前进度：Phase 0 需求与架构基线、Phase 1 工程骨架及 Gate G1 均已完成。GitHub Actions 已验证 Docker build、五服务 Compose 启动和 smoke。研究任务持久化、量化计算、Evidence/Claim 闭环和报告生成从 Phase 2 起实现。当前页面只验证 Mock 表单与交互，不会产生真实金融结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -74,7 +74,7 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前验证基线：Web 6 个单元/组件测试与 3 个 Playwright E2E，API 14 个测试，Analytics 7 个测试且覆盖率 97%。本机未安装 Docker，因此 Compose image build 与完整 smoke 尚未在本机执行；CI 已定义相同 Gate。
+当前验证基线：Web 6 个单元/组件测试与 3 个 Playwright E2E，API 14 个测试，Analytics 7 个测试且覆盖率 97%。本机未安装 Docker；GitHub Actions 已在 Linux runner 完成 Compose config、全部镜像构建、五服务启动、健康 smoke 和清理，Gate G1 通过。
 
 当前尚未实现持久任务与研究业务 API、量化指标、数据 Provider、Evidence/Claim 存储、报告与导出，以及 OpenAI 调用。Java API 和 Analytics 在 Phase 1 只提供安全、配置与观测骨架及健康端点；这些能力会按 Phase 2–7 的 Gate 逐步加入。
 

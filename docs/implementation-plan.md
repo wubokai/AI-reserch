@@ -2,7 +2,7 @@
 
 文档版本：0.1
 
-状态：Phase 0 已完成；Phase 1 源码与本地验证已完成，Gate G1 待 Docker smoke
+状态：Phase 0 与 Phase 1 已完成；Gate G1 已通过
 
 日期：2026-07-09
 
@@ -89,7 +89,7 @@
 
 ## 4. Phase 1：项目骨架
 
-状态：代码骨架与宿主机测试已完成；Gate G1 待 Docker build/Compose smoke 验证。
+状态：已完成；GitHub Actions 已通过 Docker build、五服务 Compose 启动和 smoke，Gate G1 通过。
 
 ### 4.1 实施内容
 
