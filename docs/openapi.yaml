@@ -1428,6 +1428,9 @@ components:
         - rawDataHash
         - isDemoData
         - relatedClaimIds
+        - sourceSnapshotId
+        - sourceSchemaVersion
+        - normalizedDataHash
       properties:
         evidenceId:
           type: string

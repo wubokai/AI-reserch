@@ -62,7 +62,7 @@ public class FilingRegistry {
                     id, source_snapshot_id, external_document_id, accession_number,
                     form_type, filing_date, report_period, title, raw_text_uri,
                     raw_text_hash, cleaned_text_hash, parser_version, is_demo_data
-                ) values (?, ?, ?, ?, ?, ?, ?, ?, null, ?, ?, ?, true)
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, null, ?, ?, ?, ?)
                 on conflict (source_snapshot_id, external_document_id) do nothing
                 """,
                 proposedId,
@@ -75,7 +75,8 @@ public class FilingRegistry {
                 title,
                 rawHash,
                 cleanedHash,
-                FilingTextProcessor.PARSER_VERSION
+                FilingTextProcessor.PARSER_VERSION,
+                source.demoData()
         );
         UUID filingId = jdbc.queryForObject("""
                 select id from filings

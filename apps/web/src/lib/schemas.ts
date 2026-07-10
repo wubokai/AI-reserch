@@ -413,9 +413,9 @@ export const evidenceSchema = z.object({
   rawDataHash: z.string().regex(/^[a-f0-9]{64}$/),
   isDemoData: z.boolean(),
   relatedClaimIds: z.array(z.string()),
-  sourceSnapshotId: z.uuid().nullable().optional(),
-  sourceSchemaVersion: z.string().nullable().optional(),
-  normalizedDataHash: z.string().regex(/^[a-f0-9]{64}$/).nullable().optional(),
+  sourceSnapshotId: z.uuid().nullable(),
+  sourceSchemaVersion: z.string().nullable(),
+  normalizedDataHash: z.string().regex(/^[a-f0-9]{64}$/).nullable(),
 });
 
 export const evidencePageSchema = z.object({

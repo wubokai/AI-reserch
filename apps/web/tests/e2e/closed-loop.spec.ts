@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   phase3EvidencePage,
+  phase3EvidenceSearchResponse,
   phase3ReportEnvelope,
   phase3ResearchId,
 } from "../../src/test/phase3-fixtures";
@@ -103,6 +104,11 @@ async function mockClosedLoop(page: Page) {
     }
     if (path.endsWith("/reports/1")) {
       await route.fulfill(json(phase3ReportEnvelope));
+      return;
+    }
+    if (path.endsWith("/evidence/search")) {
+      expect(url.searchParams.get("q")).toBe("supply risk");
+      await route.fulfill(json(phase3EvidenceSearchResponse));
       return;
     }
     if (path.endsWith("/evidence")) {
@@ -244,6 +250,15 @@ test("从创建、进度、报告和三格式导出到历史重开形成 Mock �
 
   await page.getByRole("button", { name: "ev_MU_RETURN_01" }).first().click();
   await expect(page.getByRole("dialog", { name: "Evidence ev_MU_RETURN_01" })).toBeVisible();
+  await page.getByRole("button", { name: "关闭 Evidence" }).click();
+
+  await page.getByLabel("检索 Filing Chunk").fill("supply risk");
+  const filingResult = page.getByRole("button", { name: /10-K · ITEM_1A_RISK_FACTORS/ });
+  await expect(filingResult).toBeVisible();
+  await expect(filingResult).toContainText("Supply concentration creates inventory risk.");
+  await filingResult.click();
+  await expect(page.getByRole("dialog", { name: "Evidence ev_MU_FILING_01" })).toBeVisible();
+  await expect(page.getByText("mock_filings_v1")).toBeVisible();
   await page.getByRole("button", { name: "关闭 Evidence" }).click();
 
   const markdown = await downloadedBytes(page, "markdown");

@@ -74,7 +74,7 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
     public Optional<StoredSource> source(UUID researchId, String purpose) {
         return jdbcTemplate.query("""
                 select s.id, l.purpose, s.external_source_id, s.provider,
-                       s.is_primary_source, s.freshness_status,
+                       s.is_primary_source, s.freshness_status, s.is_demo_data,
                        s.payload_json::text as payload_json,
                        s.normalized_data_hash
                   from research_source_links l
@@ -90,7 +90,7 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
     public List<StoredSource> sources(UUID researchId) {
         return jdbcTemplate.query("""
                 select s.id, l.purpose, s.external_source_id, s.provider,
-                       s.is_primary_source, s.freshness_status,
+                       s.is_primary_source, s.freshness_status, s.is_demo_data,
                        s.payload_json::text as payload_json,
                        s.normalized_data_hash
                   from research_source_links l
@@ -203,8 +203,15 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                     id, provider, source_type, external_source_id,
                     request_fingerprint, retrieved_at, effective_date,
                     raw_data_hash, normalized_data_hash, payload_json,
-                    is_primary_source, freshness_status, is_demo_data, schema_version
-                ) values (?, ?, 'MOCK', ?, ?, ?, ?, ?, ?, ?::jsonb, ?, 'FRESH', true, ?)
+                    is_primary_source, freshness_status, is_demo_data, schema_version,
+                    metadata_json
+                ) values (?, ?, 'MOCK', ?, ?, ?, ?, ?, ?, ?::jsonb, ?, 'FRESH', true, ?,
+                          jsonb_build_object(
+                              'missingPublishedAtReason',
+                              'synthetic fixture uses its effective date',
+                              'snapshotPolicyVersion', 'source_snapshot_v1',
+                              'rawEqualsNormalized', true
+                          ))
                 on conflict (provider, raw_data_hash, schema_version) do nothing
                 """,
                 proposedId,
@@ -244,7 +251,8 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                 contentHash,
                 provider,
                 primary,
-                "FRESH"
+                "FRESH",
+                true
         );
     }
 
@@ -368,7 +376,8 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                 row.getString("normalized_data_hash"),
                 row.getString("provider"),
                 row.getBoolean("is_primary_source"),
-                row.getString("freshness_status")
+                row.getString("freshness_status"),
+                row.getBoolean("is_demo_data")
         );
     }
 

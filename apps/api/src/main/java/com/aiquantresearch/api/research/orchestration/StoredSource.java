@@ -11,7 +11,8 @@ public record StoredSource(
         String contentHash,
         String provider,
         boolean primarySource,
-        String freshnessStatus
+        String freshnessStatus,
+        boolean demoData
 ) {
 
     public StoredSource(
@@ -22,6 +23,6 @@ public record StoredSource(
             String contentHash
     ) {
         this(id, purpose, externalSourceId, payload, contentHash,
-                "MOCK_FIXTURE", true, "FRESH");
+                "MOCK_FIXTURE", true, "FRESH", true);
     }
 }
