@@ -31,14 +31,14 @@
 | R-002 | LLM 伪造价格、财务数字、日期或增长率 | 高 | 严重 | 报告出现 Evidence 中不存在的数值；自由文本包含未结构化数字 | Claim/Evidence 模型；数值引用；确定性验证器；不合格 Claim 隔离；LLM 不计算指标 | Phase 3-6 | 缓解中 |
 | R-003 | 报告纯文本字段绕过四类 Claim 和 Evidence 要求 | 高 | 严重 | executive summary 或 conclusion 无 evidenceIds | 所有可验证叙事改为 Claim；模板只渲染已验证 Claim | Phase 0、5 | 缓解中 |
 | R-004 | 指标口径含糊造成结果看似正确但实际错误 | 高 | 严重 | Java/Python/文档得到不同 CAGR、VaR、Alpha；测试只检查不报错 | 固化 calculation_version、公式、符号、年化、对齐和舍入；黄金数据测试 | Phase 0、4 | 缓解中 |
-| R-005 | 使用内存线程或 Spring @Async 导致任务在重启时丢失 | 高 | 高 | 重启后 RUNNING 任务永久卡住；无 Worker 所有权 | PostgreSQL 持久队列、lease、heartbeat、超时回收和锁 | Phase 2 | 开放 |
-| R-006 | 步骤重试产生重复数据、报告版本或 LLM 费用 | 高 | 高 | attempt 增加时重复行；相同调用多次计费 | 步骤幂等键、输入哈希、唯一约束、调用去重键和事务边界 | Phase 2、6 | 开放 |
+| R-005 | 使用内存线程或 Spring @Async 导致任务在重启时丢失 | 高 | 高 | 重启后 RUNNING 任务永久卡住；无 Worker 所有权 | PostgreSQL 持久队列、lease、heartbeat、超时回收和锁 | Phase 2 | 已缓解 |
+| R-006 | 步骤重试产生重复数据、报告版本或 LLM 费用 | 高 | 高 | attempt 增加时重复行；相同调用多次计费 | 步骤幂等键、输入哈希、唯一约束、调用去重键和事务边界 | Phase 2、6 | 缓解中 |
 | R-007 | 行情或基本面 Provider 许可不允许持久化、缓存、展示或导出 | 中 | 严重 | 服务条款限制再分发；供应商要求删除历史数据 | Phase 7 前不选定；完成书面许可矩阵；不满足存储/导出权即停止接入 | Phase 7 | 延后决策 |
 | R-008 | Provider 限流、超时或响应 Schema 变化破坏研究流程 | 高 | 高 | 429/5xx 增多；字段缺失；解析失败 | Adapter 隔离、Contract Test、版本化解析、超时、分类重试、熔断、Rate Limiter、Mock 降级 | Phase 7 | 开放 |
 | R-009 | Java、Python、TypeScript 契约漂移 | 高 | 高 | 相同字段命名/枚举不同；前端收到无法解析响应 | OpenAPI/JSON Schema 唯一真源；生成或校验 DTO；CI 契约测试 | Phase 0-3 | 缓解中 |
 | R-010 | SEC 或网页内容包含 Prompt Injection 并诱导模型改变规则或调用工具 | 中 | 严重 | Filing 文本出现指令；模型尝试引用未授权来源 | 外部文本不可信标记、指令/数据隔离、工具白名单、Schema、Evidence 验证、禁止执行抓取内容命令 | Phase 5-7 | 开放 |
 | R-011 | API Key、密码或 Token 进入代码、Git、日志或错误响应 | 中 | 严重 | secret scan 命中；日志出现 Authorization | 环境变量、.env.example、日志脱敏、错误过滤、CI secret scan、测试伪密钥 | Phase 1、9 | 开放 |
-| R-012 | 证券资源缺少所有权检查，用户可通过 UUID 读取或删除他人报告 | 中 | 严重 | 按 ID Repository 查询不含 user_id | Service 层统一 currentUser；Repository 查询包含 owner；IDOR 集成测试 | Phase 2、9 | 开放 |
+| R-012 | 证券资源缺少所有权检查，用户可通过 UUID 读取或删除他人报告 | 中 | 严重 | 按 ID Repository 查询不含 user_id | Service 层统一 currentUser；Repository 查询包含 owner；IDOR 集成测试 | Phase 2、9 | 缓解中 |
 | R-013 | ETF 被套用普通公司财务和 SEC 分析，产生错误结论 | 高 | 高 | ETF 报告出现 ROIC、公司客户、10-K 结论 | SecurityType 能力矩阵；NOT_APPLICABLE；按类型选择报告模板和步骤 | Phase 2-5 | 开放 |
 | R-014 | 数据过期、缺失或冲突却在报告中被描述为当前数据 | 中 | 严重 | asOfDate 晚于 Evidence；页面无 stale 标记 | Freshness 规则版本化；asOfDate 取证据有效期；Data Quality；冲突进入 limitations | Phase 3-7 | 开放 |
 | R-015 | 公司行动、复权方式或交易日对齐错误，扭曲收益和 Beta | 中 | 严重 | 拆股附近出现异常收益；标的和基准长度不一致 | adjustedClose 为收益真源；保留原始 OHLCV；共同日期 inner join；公司行动测试 | Phase 4、7 | 开放 |
@@ -52,13 +52,24 @@
 | R-023 | PDF 在 Docker 中中文缺字、分页破碎或图表缺失 | 高 | 中 | 本地正常、容器 PDF 空白或乱码 | 固定 OpenHTMLtoPDF；内置 Noto Sans CJK；渲染快照测试；PDF 失败不阻断 HTML | Phase 3、9 | 开放 |
 | R-024 | 缓存键不完整导致不同 Provider、时间范围或 Schema 互相污染 | 中 | 高 | 报告读到另一 Provider 数据；升级后旧缓存异常 | Key 包含 provider、symbol、type、range、interval、schemaVersion；Cache Key 单测 | Phase 3、7 | 开放 |
 | R-025 | 缓存和数据库数据无法复现旧报告 | 中 | 高 | 历史报告重新打开后数字变化 | 报告绑定 Source Snapshot、Evidence 和 calculationVersion；不动态重算旧版本 | Phase 3、5 | 开放 |
-| R-026 | 删除研究记录破坏审计链或留下孤儿数据 | 中 | 中 | Evidence/Report 外键丢失；删除后费用记录不可追踪 | 默认软删除；定义保留期；外键和级联策略测试 | Phase 2、9 | 开放 |
+| R-026 | 删除研究记录破坏审计链或留下孤儿数据 | 中 | 中 | Evidence/Report 外键丢失；删除后费用记录不可追踪 | 默认软删除；定义保留期；外键和级联策略测试 | Phase 2、9 | 缓解中 |
 | R-027 | Testcontainers、Playwright、Compose smoke 在 CI 中不稳定 | 中 | 高 | 偶发超时；共享端口；依赖真实时间 | 固定镜像和种子；动态端口；健康等待；分层 CI；保留失败日志和产物 | Phase 1-9 | 开放 |
 | R-028 | scikit-learn、scipy 等未使用依赖增加镜像和供应链面 | 中 | 中 | 大镜像、安装慢、CVE 告警 | 只安装实际使用依赖；锁版本；定期扫描；不因原始建议而强制空依赖 | Phase 1、9 | 开放 |
 | R-029 | Data Quality 或 Confidence 由 LLM 随意给分，产生虚假精确感 | 高 | 高 | 相同 Evidence 多次运行得分变化 | 使用 confidence_v1 与 data_quality_v1 确定性公式；记录各分项 | Phase 3、5 | 缓解中 |
 | R-030 | 部分完成报告仍包含验证失败的事实 | 中 | 严重 | PARTIALLY_COMPLETED 页面显示 unsupported Claim | 不安全 Claim 必须隔离；可安全删减才发布 partial，否则 FAILED | Phase 5-6 | 开放 |
 | R-031 | 实时“当前”概念与美股交易日、时区、延迟数据不一致 | 中 | 高 | 周末被标 stale；盘中使用未完成日线 | 交易日历和 Provider 数据延迟元数据；报告显示 asOfDate/generatedAt；UTC 存储 | Phase 4、7 | 开放 |
 | R-032 | 导出 HTML 存在 XSS，PDF 渲染器访问外部资源导致 SSRF | 中 | 严重 | HTML 包含 script；渲染器请求任意 URL | 严格转义和 CSP；禁用远程资源；图表/字体本地内嵌；URL 白名单 | Phase 3、9 | 开放 |
+
+### 2.1 Gate G2 风险处置（2026-07-10）
+
+远端证据：[GitHub Actions run 29076405369](https://github.com/wubokai/AI-reserch/actions/runs/29076405369)，其中完整 API Testcontainers、并发/恢复、真实 HTTP 与五服务 Compose smoke 全部通过。
+
+| 风险 | Gate G2 处置与证据 | 剩余风险 |
+|---|---|---|
+| R-005 | PostgreSQL durable queue、lease/heartbeat、reaper、20 Worker 竞争与旧 token fencing 已通过真实数据库测试 | 无 Phase 2 残余；架构变更时重新评审 |
+| R-006 | Step input/implementation hash、attempt 唯一约束、checkpoint、fencing、幂等重放及成功输出复用已验证 | Phase 6 仍需 LLM 调用去重和费用预留，因此保持“缓解中” |
+| R-012 | 所有 Research 读写均为 owner-scoped，真实 Basic Auth HTTP IDOR 用例通过 | Phase 9 新增 Report/Evidence/Export 资源时必须复用所有权边界，因此保持“缓解中” |
+| R-026 | Research 默认软删除、并发行锁、审计/outbox 保留及外键顺序清理已验证 | Phase 9 仍需定义 Report/Evidence/费用记录保留期，因此保持“缓解中” |
 
 ## 3. MVP 接受的受控限制
 

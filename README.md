@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0、Phase 1 与 Gate G1 已完成。Phase 2 的 PostgreSQL 持久任务、durable lease queue、Research API、状态机、幂等、重试、取消、软删除、所有权和健康降级已经实现并通过本地验证，正在等待 GitHub Actions 的 Docker/Testcontainers Gate G2 终验。量化、Evidence/Claim 和报告闭环属于 Phase 3 以后；当前页面仍不会产生真实金融结论。
+> 当前进度：Phase 0、Phase 1、Phase 2 与 Gate G2 已完成。PostgreSQL 持久任务、durable lease queue、Research API、状态机、幂等、重试、取消、软删除、所有权和健康降级均已通过 GitHub Actions 的 Testcontainers 与 Compose 终验。量化、Evidence/Claim 和报告闭环属于 Phase 3 以后；当前页面仍不会产生真实金融结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -74,7 +74,7 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前本地验证基线：Web 8 个 Vitest、ESLint、TypeScript 与 production build；API 89 个 Surefire 测试、Java 21 package、PostgreSQL 17 Flyway V1–V4、Hibernate validate 和真实 HTTP 验收；Analytics 7 个 pytest、Ruff、strict mypy，覆盖率 97%。本机未安装 Docker；Gate G2 的 Testcontainers 与 Compose 终验由 GitHub Actions Linux runner 执行。
+当前验证基线：Web 8 个 Vitest、ESLint、TypeScript、production build 与 Playwright；API 89 个 Surefire 测试、27 个 Failsafe/Testcontainers 测试、Java 21 package、PostgreSQL 17 Flyway V1–V4、Hibernate validate 和真实 HTTP 验收；Analytics 7 个 pytest、Ruff、strict mypy，覆盖率 97%。本机未安装 Docker；Gate G2 的 Testcontainers 与 Compose 终验已由 GitHub Actions Linux runner 完成。
 
 当前尚未实现量化指标、数据 Provider、Evidence/Claim 存储、报告与导出，以及 OpenAI 调用。这些能力从 Phase 3 起按 Gate 逐步加入；Phase 2 对没有已发布验证报告的成功终态明确失败关闭。
 
@@ -102,7 +102,7 @@ pnpm dev:web
 
 ## 下一步
 
-先由 GitHub Actions 完成 Phase 2 的 Testcontainers 并发/恢复、真实 HTTP 生命周期和 Compose smoke 终验。Gate G2 通过后，Phase 3 才接入固定 Mock 数据、核心量化、Evidence/Claim 验证、完整报告页面与三种导出。
+进入 Phase 3：接入固定 Mock 数据、核心量化、Evidence/Claim 验证、完整报告页面与 Markdown/HTML/PDF 三种导出，形成首个安全的纵向闭环。
 
 ## 免责声明
 

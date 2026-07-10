@@ -1,6 +1,8 @@
 # Phase 2 Gate 测试矩阵
 
-状态：本地验证通过；等待 GitHub Actions Docker/Testcontainers 终验
+状态：Gate G2 已通过；GitHub Actions Docker/Testcontainers 与 Compose smoke 全绿
+
+远端证据：[GitHub Actions run 29076405369](https://github.com/wubokai/AI-reserch/actions/runs/29076405369)
 
 日期：2026-07-10
 

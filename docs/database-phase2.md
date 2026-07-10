@@ -1,6 +1,8 @@
 # Phase 2 PostgreSQL 与 Durable Queue
 
-状态：已实现，本地 Gate 验证通过；Docker/Testcontainers 由 GitHub Actions 终验
+状态：已实现；Gate G2 的 Docker/Testcontainers 与 Compose 终验通过
+
+远端证据：[GitHub Actions run 29076405369](https://github.com/wubokai/AI-reserch/actions/runs/29076405369)
 
 本页记录 Phase 2 已落地的 Flyway 基线和 `queue_v1` 数据库边界。逻辑模型仍以
 [数据模型](./data-model.md)、[状态机](./state-machine.md)和
