@@ -54,6 +54,11 @@ class HealthControllerTest {
         mockMvc.perform(get("/api/v1/health").header("X-Request-Id", "req-client-123"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Request-Id", "req-client-123"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                .andExpect(header().string("Content-Security-Policy",
+                        org.hamcrest.Matchers.containsString("default-src 'none'")))
                 .andExpect(jsonPath("$.service").doesNotExist())
                 .andExpect(jsonPath("$.status").value("UP"))
                 .andExpect(jsonPath("$.version").value("0.2.0-test"))

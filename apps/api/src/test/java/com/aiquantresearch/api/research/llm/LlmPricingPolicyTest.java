@@ -10,7 +10,7 @@ class LlmPricingPolicyTest {
     @Test
     void calculatesVersionedCachedAndUncachedTokenCost() {
         LlmPricingPolicy policy = new LlmPricingPolicy(
-                LlmTestFixtures.properties(URI.create("https://api.openai.test"))
+                LlmTestFixtures.properties(URI.create("https://api.openai.com"))
         );
 
         assertThat(policy.calculate(new LlmUsage(1_000, 500, 250)))

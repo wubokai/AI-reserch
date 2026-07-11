@@ -15,6 +15,11 @@
 | `calculation-methodology.md` | 量化、技术、基本面和情景计算口径 |
 | `llm-design.md` | Claim/Evidence、Responses API、结构化输出和验证 |
 | `security.md` | 威胁模型与安全控制 |
+| `observability.md` | JSON 日志、Prometheus、SLO、告警和容量边界 |
+| `operations-runbook.md` | 干净启动、发布、故障分诊、恢复和回滚 |
+| `provider-extension-guide.md` | 新 Provider 的许可、Adapter、安全与测试门禁 |
+| `retention-policy.md` | 精确保留行为、软删除和生产策略门 |
+| `external-inputs.md` | 工程完成后由项目负责人一次提供的外部事实与凭据清单 |
 | `risk-register.md` | 风险、触发信号、缓解和责任阶段 |
 | `implementation-plan.md` | 分阶段任务、入口条件、出口门禁和测试要求 |
 | `roadmap.md` | MVP、完整 v1 与明确非目标 |
@@ -24,6 +29,9 @@
 | `phase4-test-matrix.md` | Gate G4 完整量化、黄金数据和数值边界的通过证据 |
 | `phase5-test-matrix.md` | Gate G5 Evidence 安全、Filing 检索和快照复现的通过证据 |
 | `phase6-test-matrix.md` | Gate G6 Responses API、结构化输出、预算与失败降级的验证证据 |
+| `phase7-test-matrix.md` | 真实 SEC/FRED/XBRL、Runtime 与 Market 外部门禁记录 |
+| `phase8-test-matrix.md` | 完整前端产品与 Gate G8 证据 |
+| `phase9-test-matrix.md` | 发布硬化、AC-01–35 与 Gate G9 证据 |
 | `adr/` | 关键、可追溯的架构决策 |
 
 ## 决策优先级

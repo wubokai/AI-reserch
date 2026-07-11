@@ -14,7 +14,7 @@ class ResearchLanguageModelRouterTest {
     @Test
     void explicitlyFallsBackToSafeDeterministicReportAfterRealFailure() {
         LlmProperties properties = LlmTestFixtures.properties(
-                URI.create("https://api.openai.test")
+                URI.create("https://api.openai.com")
         );
         MockResearchLanguageModel mockModel = mock(MockResearchLanguageModel.class);
         OpenAiResearchLanguageModel openAiModel = mock(OpenAiResearchLanguageModel.class);

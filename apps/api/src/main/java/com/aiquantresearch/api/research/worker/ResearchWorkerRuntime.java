@@ -1,6 +1,9 @@
 package com.aiquantresearch.api.research.worker;
 
 import com.aiquantresearch.api.research.domain.StepType;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,6 +26,7 @@ public class ResearchWorkerRuntime {
     private final ActiveLeaseRegistry activeLeases;
     private final WorkerProperties properties;
     private final ExecutorService executor;
+    private final MeterRegistry meters;
     private final AtomicInteger activeTasks = new AtomicInteger();
 
     public ResearchWorkerRuntime(
@@ -30,13 +34,18 @@ public class ResearchWorkerRuntime {
             ResearchStepProcessor processor,
             ActiveLeaseRegistry activeLeases,
             WorkerProperties properties,
-            @Qualifier("researchWorkerExecutor") ExecutorService executor
+            @Qualifier("researchWorkerExecutor") ExecutorService executor,
+            MeterRegistry meters
     ) {
         this.queueClient = queueClient;
         this.processor = processor;
         this.activeLeases = activeLeases;
         this.properties = properties;
         this.executor = executor;
+        this.meters = meters;
+        Gauge.builder("research.worker.active", activeTasks, AtomicInteger::doubleValue)
+                .description("Research steps currently executing in this worker process")
+                .register(meters);
     }
 
     @Scheduled(
@@ -53,18 +62,26 @@ public class ResearchWorkerRuntime {
             if (claim.isEmpty()) {
                 return;
             }
+            meters.counter(
+                    "research.worker.claims",
+                    "step", claim.orElseThrow().stepType().name()
+            ).increment();
             activeTasks.incrementAndGet();
             executor.submit(() -> execute(claim.orElseThrow()));
         }
     }
 
     void execute(QueueClaim claim) {
+        Timer.Sample sample = Timer.start(meters);
+        String outcome = "success";
         activeLeases.register(claim);
         try {
             processor.process(claim);
         } catch (StepExecutionException exception) {
+            outcome = exception.retryable() ? "retryable_failure" : "permanent_failure";
             fail(claim, exception.code(), exception.getMessage(), exception.retryable());
         } catch (RuntimeException exception) {
+            outcome = "unexpected_failure";
             LOGGER.error(
                     "Unexpected research step failure researchId={} step={} attemptId={} errorType={}",
                     claim.researchJobId(),
@@ -81,6 +98,11 @@ public class ResearchWorkerRuntime {
         } finally {
             activeLeases.unregister(claim.attemptId());
             activeTasks.decrementAndGet();
+            sample.stop(Timer.builder("research.worker.executions")
+                    .description("Research step execution latency by bounded step and outcome")
+                    .tag("step", claim.stepType().name())
+                    .tag("outcome", outcome)
+                    .register(meters));
         }
     }
 

@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,16 +36,19 @@ class ResearchWorkerRuntimeTest {
     private ActiveLeaseRegistry leases;
     private ResearchWorkerRuntime runtime;
     private QueueClaim claim;
+    private SimpleMeterRegistry meters;
 
     @BeforeEach
     void setUp() {
         leases = new ActiveLeaseRegistry();
+        meters = new SimpleMeterRegistry();
         runtime = new ResearchWorkerRuntime(
                 queueClient,
                 processor,
                 leases,
                 properties(),
-                executor
+                executor,
+                meters
         );
         claim = new QueueClaim(
                 UUID.randomUUID(),
@@ -87,6 +91,8 @@ class ResearchWorkerRuntimeTest {
                 30
         );
         assertThat(leases.snapshot()).isEmpty();
+        assertThat(meters.find("research.worker.executions")
+                .tag("outcome", "unexpected_failure").timer().count()).isOne();
     }
 
     @Test
@@ -117,6 +123,8 @@ class ResearchWorkerRuntimeTest {
                 1,
                 30
         );
+        assertThat(meters.find("research.worker.executions")
+                .tag("outcome", "permanent_failure").timer().count()).isOne();
     }
 
     @Test

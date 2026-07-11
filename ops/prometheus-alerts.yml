@@ -1,0 +1,35 @@
+groups:
+  - name: ai-quant-research-v1
+    rules:
+      - alert: ApiErrorRateHigh
+        expr: >-
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          / clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 1) > 0.02
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: API 5xx rate exceeds 2% for ten minutes
+      - alert: ResearchQueueOldestRunnableHigh
+        expr: research_queue_oldest_runnable_seconds > 120
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: Oldest runnable research step has waited over two minutes
+      - alert: ResearchFailureRatioHigh
+        expr: >-
+          research_jobs{status="FAILED"}
+          / clamp_min(sum(research_jobs), 1) > 0.10
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: More than 10% of retained visible research jobs have failed
+      - alert: ProviderCircuitOpen
+        expr: increase(provider_requests_seconds_count{outcome="circuit_open"}[10m]) > 0
+        for: 1m
+        labels:
+          severity: ticket
+        annotations:
+          summary: A configured provider circuit is open

@@ -45,6 +45,7 @@ import com.aiquantresearch.api.research.domain.ResearchStatus;
 import com.aiquantresearch.api.research.domain.StepStatus;
 import com.aiquantresearch.api.research.domain.StepType;
 import com.aiquantresearch.api.shared.domain.DataMode;
+import com.aiquantresearch.api.shared.config.JsonBoundaryConfiguration;
 import com.aiquantresearch.api.shared.security.CurrentUserResolver;
 import com.aiquantresearch.api.shared.security.SecurityConfiguration;
 import com.aiquantresearch.api.shared.web.GlobalApiExceptionHandler;
@@ -73,6 +74,7 @@ import org.springframework.test.web.servlet.MockMvc;
         CurrentUserResolver.class,
         AuthenticatedOwnerService.class,
         GlobalApiExceptionHandler.class,
+        JsonBoundaryConfiguration.class,
         RequestIdFilter.class,
         ResearchIdMdcFilter.class
 })
@@ -382,6 +384,21 @@ class ResearchControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("ROUTE_NOT_FOUND"))
                 .andExpect(jsonPath("$.researchId").value(nullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = ALICE, roles = "USER")
+    void oversizedInboundJsonIsRejectedBeforeApplicationServices() throws Exception {
+        String body = "{\"query\":\"" + "x".repeat(16_385) + "\",\"symbol\":\"MU\"}";
+
+        mockMvc.perform(post("/api/v1/research")
+                        .header("Idempotency-Key", "oversized-json")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+
+        verifyNoInteractions(commandService);
     }
 
     @Test

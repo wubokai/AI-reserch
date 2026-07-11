@@ -374,6 +374,8 @@ Market 和 Fundamental Provider 尚未选择。选择前必须完成：
 
 ## 12. Phase 9：发布硬化
 
+实施状态：工程实现与本地 Gate 已完成；远端全仓 CI、Compose 和连续成功记录待终验。
+
 ### 12.1 实施内容
 
 - JSON 日志和敏感信息审计。
@@ -476,5 +478,5 @@ Companyfacts/XBRL 和统一 Provider Runtime 工程检查点。Gate G7 的下一
 4. SEC/FRED 的 UI、Markdown、HTML 与 PDF 来源归属已完成；Market 归属随许可后的 Adapter 一并验证；
 5. 通过最终 Web、Analytics、API/Testcontainers、secret scan 与 Compose 终验后关闭 Gate G7。
 
-Phase 8 完整前端功能与 Gate G8 已完成。下一工程阶段为 Phase 9 发布硬化；
-Gate G7 的 Market 外部许可阻塞保持独立记录，不允许通过前端能力绕过。
+Phase 9 发布硬化已完成本地实现。下一步执行远端 Gate G9、连续 CI 和文档证据收口；
+Gate G7/AC-22 的 Market 外部许可阻塞保持独立记录，不允许通过 Mock 或局部真实数据绕过。

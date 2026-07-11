@@ -39,6 +39,7 @@ public record LlmProperties(
 ) {
 
     public LlmProperties {
+        validateBaseUrl(baseUrl);
         apiKey = normalize(apiKey);
         reportModel = normalize(reportModel);
         validationModel = normalize(validationModel);
@@ -48,6 +49,27 @@ public record LlmProperties(
         inputUsdPerMillionTokens = normalize(inputUsdPerMillionTokens);
         cachedInputUsdPerMillionTokens = normalize(cachedInputUsdPerMillionTokens);
         outputUsdPerMillionTokens = normalize(outputUsdPerMillionTokens);
+    }
+
+    static void validateBaseUrl(URI uri) {
+        if (uri == null || uri.getHost() == null || uri.getUserInfo() != null
+                || uri.getQuery() != null || uri.getFragment() != null) {
+            throw new IllegalArgumentException("OpenAI base URL is outside the approved boundary");
+        }
+        String host = uri.getHost();
+        boolean loopback = "localhost".equalsIgnoreCase(host)
+                || "127.0.0.1".equals(host)
+                || "::1".equals(host);
+        boolean official = "api.openai.com".equalsIgnoreCase(host)
+                && "https".equalsIgnoreCase(uri.getScheme())
+                && (uri.getPort() == -1 || uri.getPort() == 443);
+        if (!loopback && !official) {
+            throw new IllegalArgumentException("OpenAI base URL is outside the approved boundary");
+        }
+        if (loopback && !"http".equalsIgnoreCase(uri.getScheme())
+                && !"https".equalsIgnoreCase(uri.getScheme())) {
+            throw new IllegalArgumentException("OpenAI loopback test URL uses an unsupported scheme");
+        }
     }
 
     public boolean mockMode() {

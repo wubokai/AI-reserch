@@ -134,11 +134,11 @@ flowchart LR
 
 ## 13. 上线门禁
 
-- [ ] 生产配置拒绝 demo auth、Mock 数据和默认密码。
-- [ ] 所有资源接口有 ownership 测试。
-- [ ] SSRF、重定向、超时、body 限制与恶意 HTML 测试通过。
-- [ ] Prompt injection fixture 无法调用未授权工具或新增 Evidence。
-- [ ] 日志/trace/metrics 扫描无密钥与 token。
-- [ ] 报告数字/日期/Evidence 验证失败时不会发布 COMPLETED。
-- [ ] Markdown/HTML/PDF 中的 Mock 标记和免责声明不可移除。
-- [ ] 依赖、容器和基础安全测试通过。
+- [x] production profile 拒绝 demo auth；正式 Bearer/OIDC 未实现时整体启动失败关闭，不能用 Mock/default 冒充生产。
+- [x] 所有 Research、Report、Evidence 和 Export 接口有 owner-scoped/跨用户隐藏测试。
+- [x] SSRF official-host、超时、body/content-type 限制、恶意 HTML 和 PDF 远程资源禁用测试通过。
+- [x] Prompt injection fixture 无法调用未授权工具或新增 Evidence。
+- [x] 访问日志不记录 query/body/header；metric label 低基数且不含 key、用户或 Research ID；secret scan 必过。
+- [x] 报告数字/日期/Evidence 验证失败时不会发布 COMPLETED。
+- [x] Markdown/HTML/PDF 中的 Mock 标记和免责声明不可移除。
+- [x] Node/Python 依赖扫描、最小权限容器策略和基础安全测试纳入 CI。

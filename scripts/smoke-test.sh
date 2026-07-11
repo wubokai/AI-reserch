@@ -104,6 +104,35 @@ wait_for_url "Web" "$WEB_HEALTH_URL"
 wait_for_url "API" "$API_HEALTH_URL"
 wait_for_url "Analytics" "$ANALYTICS_HEALTH_URL"
 
+curl --fail --silent --show-error --max-time 10 \
+  --user "$DEMO_USERNAME:$DEMO_PASSWORD" \
+  "$API_BASE_URL/actuator/prometheus" > "$TMP_DIR/prometheus.txt"
+for metric in research_jobs research_queue_oldest_runnable_seconds research_llm_cost_usd; do
+  if ! grep -q "^# HELP $metric" "$TMP_DIR/prometheus.txt"; then
+    printf 'Prometheus metric is missing: %s\n' "$metric" >&2
+    exit 1
+  fi
+done
+
+curl --fail --silent --show-error --max-time 10 \
+  --dump-header "$TMP_DIR/web-root.headers" \
+  --output /dev/null \
+  "$WEB_BASE_URL/"
+python3 - "$TMP_DIR/web-root.headers" <<'PY'
+import sys
+
+headers = {}
+with open(sys.argv[1], encoding="iso-8859-1") as handle:
+    for line in handle:
+        if ":" in line:
+            name, value = line.split(":", 1)
+            headers[name.strip().lower()] = value.strip()
+assert headers.get("x-content-type-options") == "nosniff", headers
+assert headers.get("x-frame-options") == "DENY", headers
+assert headers.get("referrer-policy") == "no-referrer", headers
+assert "object-src 'none'" in headers.get("content-security-policy", ""), headers
+PY
+
 web_request \
   "Read aggregate system health" \
   "/api/system-health" \

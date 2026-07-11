@@ -2,6 +2,11 @@ server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
   forward-headers-strategy: framework
+  max-http-request-header-size: 16KB
+  tomcat:
+    max-http-form-post-size: 64KB
+    max-parameter-count: 100
+    max-swallow-size: 1MB
 
 spring:
   application:
@@ -117,6 +122,10 @@ app:
     input-usd-per-million-tokens: ${OPENAI_INPUT_USD_PER_MILLION_TOKENS:}
     cached-input-usd-per-million-tokens: ${OPENAI_CACHED_INPUT_USD_PER_MILLION_TOKENS:}
     output-usd-per-million-tokens: ${OPENAI_OUTPUT_USD_PER_MILLION_TOKENS:}
+  exports:
+    max-pdf-bytes: ${REPORT_MAX_PDF_BYTES:26214400}
+    max-pdf-pages: ${REPORT_MAX_PDF_PAGES:200}
+    max-font-bytes: ${REPORT_MAX_FONT_BYTES:52428800}
   worker:
     enabled: ${RESEARCH_WORKER_ENABLED:true}
     worker-id: ${RESEARCH_WORKER_ID:api-worker-1}

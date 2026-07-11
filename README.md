@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 8 完整前端产品与 Gate G8 已完成；Phase 7 的真实 Market 仍因许可未确认保持禁用，因此默认业务闭环继续使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 9 发布硬化已完成本地 Gate，正在执行远端 G9 终验；Phase 7 的真实 Market 仍因许可未确认保持禁用，因此默认业务闭环继续使用固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -22,7 +22,7 @@
 | `apps/web` | Next.js 16、React 19、TypeScript、Tailwind、TanStack Query、Zod、Recharts | Dashboard、完整表单、任务控制/耗时、报告图表、Evidence、Data Quality、版本/历史筛选、Provider 状态和有反馈的三格式导出 |
 | `apps/api` | Java 21、Spring Boot 3.5、Spring Security、JPA、Flyway、Redis、Resilience4j、OpenAI Responses API | Research API、durable Worker、Mock Provider、确定性 Evidence/Claim 校验与修复、Filing 检索、Mock/Real LLM 路由、调用预算与审计、报告原子发布/版本/导出 |
 | `apps/analytics` | Python 3.12、FastAPI、Pydantic、Ruff、mypy、pytest | 版本化无状态分析 API：73 个收益/风险/技术/基本面/估值/情景 Metric 与可解释 Trend |
-| 基础设施 | PostgreSQL 17、Redis 7.4、Docker Compose、GitHub Actions | 本地五服务编排与 CI 定义 |
+| 基础设施 | PostgreSQL 17、Redis 7.4、Prometheus、Docker Compose、GitHub Actions | JSON 日志、SLO/告警、供应链扫描、最小权限容器和五服务闭环 CI |
 
 完整系统设计见[架构基线](docs/architecture.md)，机器可读接口见 [OpenAPI 3.1](docs/openapi.yaml)，分阶段 Gate 见[实施计划](docs/implementation-plan.md)。
 
@@ -76,6 +76,8 @@ pnpm dev:web
 
 当前验证基线：Web 的 ESLint、TypeScript、30 个 Vitest、production build 与 5 个 Playwright 用例通过；Phase 8 覆盖 Loading/Empty/Error/Partial/Completed、创建/取消/重试、Evidence、版本、历史筛选、导出成功/失败、Zod 拒绝、Provider 状态与移动视口。Web、API/Testcontainers、Analytics、secret scan 与 Compose 全仓终验见 [GitHub Actions run 29144269701](https://github.com/wubokai/AI-reserch/actions/runs/29144269701)，详细证据见 [Phase 8 测试矩阵](docs/phase8-test-matrix.md)。
 
+Phase 9 本地基线：Web 全 Gate、Analytics 41 个 pytest/93.92% branch coverage、API 208 个 Surefire、`pnpm audit` 与 `pip-audit` 0 已知漏洞均通过；容器策略和 Compose 由本阶段远端 CI 终验。
+
 FRED 检查点将 API 基线提升到 179 个 Surefire 与 46 个 Failsafe/Testcontainers；全仓终验见 [GitHub Actions run 29134411188](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)。
 
 Provider 许可检查点当前为 181 个 Surefire 测试通过。Fundamental 已选择 SEC Companyfacts/XBRL；Market 在取得覆盖持久化、外部展示和报告导出的书面权利前保持禁用，详见 [Provider 许可矩阵](docs/provider-license-matrix.md)。
@@ -116,13 +118,18 @@ FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`
 - [数据源与许可门禁](docs/data-sources.md)
 - [Phase 7 Provider 许可矩阵](docs/provider-license-matrix.md)
 - [Phase 8 前端验收矩阵](docs/phase8-test-matrix.md)
+- [Phase 9 发布硬化矩阵](docs/phase9-test-matrix.md)
+- [运行与发布手册](docs/operations-runbook.md)
+- [可观测性与告警](docs/observability.md)
+- [Provider 扩展指南](docs/provider-extension-guide.md)
+- [数据保留策略](docs/retention-policy.md)
 - [SEC Companyfacts/XBRL 映射与数据质量](docs/sec-xbrl-mapping.md)
 - [安全与风险登记](docs/security.md)
 - [实时进度](docs/progress.md)
 
 ## 下一步
 
-Phase 8 已实现。下一步进入 Phase 9 发布硬化；真实 Market Adapter 和完整 REAL 终验继续受书面展示/导出/再分发权利约束，在授权前保持禁用。
+Phase 9 工程实现已完成，下一步是远端 Gate G9 与连续 CI 收口。之后只剩必须由项目负责人提供的真实 Market 书面许可/测试账户、生产认证与部署决策、生产模型/价格和数据保留决定；这些事项会集中一次处理，未授权前所有真实能力继续失败关闭。
 
 ## 免责声明
 

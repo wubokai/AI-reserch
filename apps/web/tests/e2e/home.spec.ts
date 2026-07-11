@@ -21,6 +21,10 @@ test("健康接口返回 Web Mock 状态", async ({ request }) => {
   const payload = await response.json();
 
   expect(response.ok()).toBeTruthy();
+  expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(response.headers()["x-frame-options"]).toBe("DENY");
+  expect(response.headers()["referrer-policy"]).toBe("no-referrer");
+  expect(response.headers()["content-security-policy"]).toContain("object-src 'none'");
   expect(payload).toMatchObject({
     status: "UP",
     service: "web",

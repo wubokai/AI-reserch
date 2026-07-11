@@ -13,7 +13,7 @@
 | Phase 6：真实 LLM 安全接入 | 完成 | `ResearchLanguageModel` Mock/Real 双实现、Responses API、6 个严格 Schema、三工具 allowlist、预算预留/结算、调用/失败审计和安全回退已通过；Gate G6 通过 |
 | Phase 7：真实数据源 | 进行中 | SEC/FRED/XBRL、Runtime 与多格式归属已通过 CI；provider-neutral REAL 创建/解析/发布边界已完成本地检查点；Market 许可和 Adapter 仍阻塞完整 REAL 终验 |
 | Phase 8：完整前端产品 | 完成 | Dashboard、完整表单、进度控制、报告图表、Evidence/Data Quality、版本/历史、Provider 状态、导出反馈、响应校验、移动端均完成；Gate G8 通过 |
-| Phase 9：发布硬化 | 未开始 | 可观测性阈值、安全回归、性能、依赖与部署文档待完成 |
+| Phase 9：发布硬化 | 本地完成，CI 待终验 | JSON 日志、Prometheus/SLO、输入/SSRF/XSS/IDOR/PDF、供应链、最小权限容器、运行/扩展/保留文档均完成 |
 
 ## 已验证
 
@@ -21,9 +21,10 @@
 - OpenAPI 3.1 YAML 可解析，本地引用与必需操作完整；
 - LLM/Analytics JSON Schema 是合法 JSON；
 - Web：ESLint、TypeScript、30 个 Vitest、Next.js production build 与 5 个 Playwright 用例通过；Phase 8 状态、操作、版本、筛选、导出、Zod、Provider 和移动端矩阵已覆盖；
-- API：Java 21 / Spring Boot 3.5，200 个 Surefire 本地通过，上一检查点 48 个 Failsafe/Testcontainers 通过；新增 REAL 模式编排/发布隔离与不可变归属、三格式导出覆盖；
+- API：Java 21 / Spring Boot 3.5，208 个 Surefire 本地通过，上一检查点 48 个 Failsafe/Testcontainers 通过；新增 Phase 9 日志/指标、JSON/PDF 边界、SSRF 和安全头覆盖；
 - PostgreSQL 17：Flyway V1–V8；V8 的 `llm_budget_reservations`、provider/pricing/request 元数据、真实 HTTP 调用计数、原子预留、幂等、超支阻断、结算、失败审计和不可变约束均通过 Testcontainers；
 - Analytics：Ruff、strict mypy、41 个 pytest 通过，branch coverage 93.92%；完整覆盖收益、风险、技术/Trend、基本面、估值与情景；
+- 供应链：`pnpm audit` 与 Python `pip-audit --local` 均为 0 已知漏洞；PostCSS 已提升到修复版本，Dependabot 覆盖 npm/pip/Maven/Actions；
 - 本地真实服务链路：MU、NVDA、RKLB 完整研究均形成已验证报告；关闭基本面叙事时安全部分完成，关闭宏观时完整完成；所有保留的重要 Claim 都关联同任务 Evidence；
 - 故障恢复：Analytics 不可用时任务在重试预算耗尽后失败，恢复服务后从 `RUN_QUANT_ANALYSIS` 续跑，早期成功步骤未重复执行，最终发布报告与 manifest；
 - 导出：Markdown/HTML/PDF 响应类型、文件名、ETag、SHA-256、版本与数据模式已验证；重复 PDF 字节一致，中文 PDF 已完成逐页视觉检查和文本抽取检查，HTML 无脚本和外部资源；

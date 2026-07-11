@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle;
 import com.openhtmltopdf.outputdevice.helper.ExternalResourceControlPriority;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -35,9 +37,14 @@ public class ReportPdfRenderer {
     );
 
     private final ReportHtmlRenderer htmlRenderer;
+    private final ReportExportProperties properties;
 
-    public ReportPdfRenderer(ReportHtmlRenderer htmlRenderer) {
+    public ReportPdfRenderer(
+            ReportHtmlRenderer htmlRenderer,
+            ReportExportProperties properties
+    ) {
         this.htmlRenderer = htmlRenderer;
+        this.properties = properties;
     }
 
     public byte[] render(JsonNode report, List<StoredEvidence> evidence) {
@@ -74,6 +81,9 @@ public class ReportPdfRenderer {
             }
             builder.run();
             byte[] pdf = output.toByteArray();
+            if (pdf.length > properties.maxPdfBytes()) {
+                throw new IllegalStateException("The report PDF exceeds the configured byte boundary");
+            }
             if (pdf.length < 5
                     || pdf[0] != '%'
                     || pdf[1] != 'P'
@@ -81,31 +91,45 @@ public class ReportPdfRenderer {
                     || pdf[3] != 'F') {
                 throw new IllegalStateException("The offline renderer did not produce a PDF document");
             }
+            verifyPageBoundary(pdf);
             return pdf;
         } catch (IOException exception) {
             throw new IllegalStateException("The report PDF could not be rendered offline", exception);
         }
     }
 
-    private static java.util.Optional<File> findCjkFont() {
+    private void verifyPageBoundary(byte[] pdf) throws IOException {
+        try (PDDocument document = Loader.loadPDF(pdf)) {
+            if (document.getNumberOfPages() > properties.maxPdfPages()) {
+                throw new IllegalStateException("The report PDF exceeds the configured page boundary");
+            }
+        }
+    }
+
+    private java.util.Optional<File> findCjkFont() {
         String configured = System.getenv("AI_QUANT_CJK_FONT");
         if (configured != null && !configured.isBlank()) {
             Path candidate = Path.of(configured);
-            if (isSupportedFont(candidate)) {
+            if (isSupportedFont(candidate, properties.maxFontBytes())) {
                 return java.util.Optional.of(candidate.toFile());
             }
         }
         return CJK_FONT_CANDIDATES.stream()
-                .filter(ReportPdfRenderer::isSupportedFont)
+                .filter(path -> isSupportedFont(path, properties.maxFontBytes()))
                 .map(Path::toFile)
                 .findFirst();
     }
 
-    private static boolean isSupportedFont(Path path) {
+    private static boolean isSupportedFont(Path path, int maximumBytes) {
         if (!Files.isRegularFile(path) || !Files.isReadable(path)) {
             return false;
         }
         String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
-        return name.endsWith(".ttf") || name.endsWith(".otf") || name.endsWith(".ttc");
+        try {
+            return Files.size(path) <= maximumBytes
+                    && (name.endsWith(".ttf") || name.endsWith(".otf") || name.endsWith(".ttc"));
+        } catch (IOException exception) {
+            return false;
+        }
     }
 }

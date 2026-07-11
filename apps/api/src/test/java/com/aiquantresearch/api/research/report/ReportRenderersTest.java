@@ -1,6 +1,7 @@
 package com.aiquantresearch.api.research.report;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.aiquantresearch.api.research.orchestration.StoredEvidence;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -60,7 +61,7 @@ class ReportRenderersTest {
     @Test
     void pdfIsOfflineSelfContainedAndContainsRequiredDisclosure() throws IOException {
         JsonNode report = fixture.report();
-        ReportPdfRenderer renderer = new ReportPdfRenderer(new ReportHtmlRenderer());
+        ReportPdfRenderer renderer = pdfRenderer();
 
         byte[] pdf = renderer.render(report, fixture.evidence());
 
@@ -79,6 +80,18 @@ class ReportRenderersTest {
                     .contains("ev_market_snapshot")
                     .contains("不构成投资建议");
         }
+    }
+
+    @Test
+    void pdfFailsClosedWhenTheConfiguredByteBoundaryIsExceeded() {
+        ReportPdfRenderer constrained = new ReportPdfRenderer(
+                new ReportHtmlRenderer(),
+                new ReportExportProperties(4, 200, 50 * 1024 * 1024)
+        );
+
+        assertThatThrownBy(() -> constrained.render(fixture.report(), fixture.evidence()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("byte boundary");
     }
 
     @Test
@@ -113,7 +126,7 @@ class ReportRenderersTest {
 
         String markdown = new ReportMarkdownRenderer().render(report, evidence);
         String html = new ReportHtmlRenderer().render(report, evidence);
-        byte[] pdf = new ReportPdfRenderer(new ReportHtmlRenderer()).render(report, evidence);
+        byte[] pdf = pdfRenderer().render(report, evidence);
 
         assertThat(markdown)
                 .contains("## Data source attribution", "FRED", "SEC\\_EDGAR",
@@ -159,6 +172,13 @@ class ReportRenderersTest {
                 sourceType,
                 attribution,
                 policy
+        );
+    }
+
+    private static ReportPdfRenderer pdfRenderer() {
+        return new ReportPdfRenderer(
+                new ReportHtmlRenderer(),
+                new ReportExportProperties(25 * 1024 * 1024, 200, 50 * 1024 * 1024)
         );
     }
 }
