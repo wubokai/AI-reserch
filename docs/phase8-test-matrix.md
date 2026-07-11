@@ -48,4 +48,6 @@
 - QUICK/DEEP、1y/3y 和真实 Market 由后端能力/许可门控制，前端不伪装为可用；
 - Gate G8 只验收前端产品完整性，不替代仍受 Market 许可阻塞的 Gate G7。
 
-远端 Web/Playwright、API/Testcontainers、Analytics、secret scan 与 Compose 终验待本次 CI 记录。
+## 5. 远端终验
+
+GitHub Actions [run `29144269701`](https://github.com/wubokai/AI-reserch/actions/runs/29144269701) 的 Web/Playwright、API/Testcontainers、Analytics、secret scan 与 Compose smoke 全部通过；Gate G8 完成。

@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 8 完整前端产品已实现并通过本地 Gate；Phase 7 的真实 Market 仍因许可未确认保持禁用，因此默认业务闭环继续使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 8 完整前端产品与 Gate G8 已完成；Phase 7 的真实 Market 仍因许可未确认保持禁用，因此默认业务闭环继续使用固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -74,7 +74,7 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前验证基线：Web 的 ESLint、TypeScript、30 个 Vitest、production build 与 5 个 Playwright 用例通过；Phase 8 覆盖 Loading/Empty/Error/Partial/Completed、创建/取消/重试、Evidence、版本、历史筛选、导出成功/失败、Zod 拒绝、Provider 状态与移动视口。详细证据见 [Phase 8 测试矩阵](docs/phase8-test-matrix.md)。
+当前验证基线：Web 的 ESLint、TypeScript、30 个 Vitest、production build 与 5 个 Playwright 用例通过；Phase 8 覆盖 Loading/Empty/Error/Partial/Completed、创建/取消/重试、Evidence、版本、历史筛选、导出成功/失败、Zod 拒绝、Provider 状态与移动视口。Web、API/Testcontainers、Analytics、secret scan 与 Compose 全仓终验见 [GitHub Actions run 29144269701](https://github.com/wubokai/AI-reserch/actions/runs/29144269701)，详细证据见 [Phase 8 测试矩阵](docs/phase8-test-matrix.md)。
 
 FRED 检查点将 API 基线提升到 179 个 Surefire 与 46 个 Failsafe/Testcontainers；全仓终验见 [GitHub Actions run 29134411188](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)。
 

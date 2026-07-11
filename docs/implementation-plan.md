@@ -341,7 +341,7 @@ Market 和 Fundamental Provider 尚未选择。选择前必须完成：
 
 ## 11. Phase 8：完整前端产品
 
-实施状态：功能与本地 Gate G8 测试已完成；远端全仓 CI 待记录。
+实施状态：完成；Gate G8 已通过本地与远端全仓终验。
 
 ### 11.1 实施内容
 
@@ -476,5 +476,5 @@ Companyfacts/XBRL 和统一 Provider Runtime 工程检查点。Gate G7 的下一
 4. SEC/FRED 的 UI、Markdown、HTML 与 PDF 来源归属已完成；Market 归属随许可后的 Adapter 一并验证；
 5. 通过最终 Web、Analytics、API/Testcontainers、secret scan 与 Compose 终验后关闭 Gate G7。
 
-Phase 8 完整前端功能与本地 Gate G8 已完成。下一工程阶段为 Phase 9 发布硬化；
+Phase 8 完整前端功能与 Gate G8 已完成。下一工程阶段为 Phase 9 发布硬化；
 Gate G7 的 Market 外部许可阻塞保持独立记录，不允许通过前端能力绕过。
