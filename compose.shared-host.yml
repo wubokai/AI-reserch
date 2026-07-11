@@ -1,0 +1,27 @@
+# Runtime guardrails for a shared 8 GB host. This file does not change data mode,
+# credentials, or provider selection; combine it with the chosen env file.
+services:
+  postgres:
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1.0
+
+  redis:
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+
+  analytics:
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1.5
+
+  api:
+    restart: unless-stopped
+    mem_limit: 1536m
+    cpus: 2.0
+
+  web:
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
