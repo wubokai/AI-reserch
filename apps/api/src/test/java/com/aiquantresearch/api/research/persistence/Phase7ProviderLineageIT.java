@@ -186,4 +186,51 @@ class Phase7ProviderLineageIT extends PostgresRedisIntegrationTestSupport {
         assertThat(source.payload().path("attribution").asText()).contains("FRED® API");
         assertThat(source.payload().toString()).doesNotContain("api_key");
     }
+
+    @Test
+    void persistsSecXbrlConceptAndAccessionLineage() throws Exception {
+        JsonNode snapshot = objectMapper.readTree("""
+                {"provider":"SEC_EDGAR_XBRL",
+                 "schemaVersion":"sec_companyfacts_normalized_v1","symbol":"MU",
+                 "asOfDate":"2025-08-31","retrievedAt":"2026-07-11T12:00:00Z",
+                 "sourceUrl":"https://data.sec.gov/api/xbrl/companyfacts/CIK0000000123.json",
+                 "rawDataHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                 "metrics":[{"name":"revenue","value":1100,"unit":"USD",
+                   "periodType":"FY","periodEndDate":"2025-08-31","taxonomy":"us-gaap",
+                   "concept":"RevenueFromContractWithCustomerExcludingAssessedTax",
+                   "accessionNumber":"0000000123-25-000002","filedDate":"2025-11-01",
+                   "derived":false,"componentConcepts":["RevenueFromContractWithCustomerExcludingAssessedTax"]}],
+                 "scenarios":[],"warnings":[],"demoData":false,
+                 "freshnessStatus":"VERY_STALE",
+                 "licensePolicyVersion":"sec_public_edgar_2025_04_08"}
+                """);
+        SourceRegistration registration = new SourceRegistration(
+                "SEC_EDGAR_XBRL", "SEC_FILING", "sec_companyfacts_normalized_v1",
+                "FUNDAMENTALS", "MU",
+                "https://data.sec.gov/api/xbrl/companyfacts/CIK0000000123.json",
+                Instant.parse("2026-07-11T12:00:00Z"),
+                LocalDate.parse("2025-08-31"), "b".repeat(64), true,
+                "VERY_STALE", false, "sec_public_edgar_2025_04_08"
+        );
+        QueueClaim claim = new QueueClaim(
+                researchId, null, null, 1, null, null,
+                StepType.FETCH_FUNDAMENTALS, "c".repeat(64), "sec-xbrl-v1", 1,
+                objectMapper.createObjectNode()
+        );
+
+        var source = artifactStore.persistSource(claim, registration, snapshot);
+
+        assertThat(jdbc.queryForMap("""
+                select provider, source_type, is_demo_data,
+                       payload_json #>> '{metrics,0,concept}' as concept,
+                       payload_json #>> '{metrics,0,accessionNumber}' as accession
+                  from source_snapshots where id = ?
+                """, source.id()))
+                .containsEntry("provider", "SEC_EDGAR_XBRL")
+                .containsEntry("source_type", "SEC_FILING")
+                .containsEntry("is_demo_data", false)
+                .containsEntry("concept",
+                        "RevenueFromContractWithCustomerExcludingAssessedTax")
+                .containsEntry("accession", "0000000123-25-000002");
+    }
 }

@@ -91,3 +91,22 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 - 全仓终验 [run `29138819196`](https://github.com/wubokai/AI-reserch/actions/runs/29138819196)：
   Web/Playwright、Analytics、181 个 Surefire、46 个 Failsafe/Testcontainers、secret scan
   与 Compose 全部通过。
+
+## 8. SEC Companyfacts/XBRL 本地检查点
+
+| 要求 | 自动化证据 | 结果 |
+| --- | --- | --- |
+| Company identity | ticker → CIK 与 Companyfacts `cik` 必须一致 | 通过 |
+| 修订去重 | 同期 10-K 与更晚 10-K/A 从 1000 选择 1100 | 通过 |
+| Time travel | retrieval date 之后 filed 的 9999 被排除 | 通过 |
+| Period validity | FY 只接受 300–400 天和 `fp=FY` | 通过 |
+| Unit validity | USD/shares 精确匹配，`val` 必须为 JSON number | 通过 |
+| Cross-period | 不同 start/end 的 Gross Profit 与 Revenue 不生成 Gross Margin | 通过 |
+| 手算派生 | Margin 0.4、FCF 220、EBITDA proxy 250、Net Debt 300 | 通过 |
+| Lineage | 每项保留 taxonomy/concept/accession/filed/component concepts | 通过 |
+| Freshness | mixed FY/quarterly period 产生 warning，按 FY coverage 评估 | 通过 |
+| 数据模式 | `MOCK + fundamental=sec-xbrl` 启动失败关闭 | 通过 |
+| 不可变落库 | Testcontainers 验证 SEC source type、concept 与 accession | 已编译，等待 CI |
+| 全量回归 | API 185 个 Surefire，0 失败 | 通过 |
+
+完整 grain、映射、质量风险和限制见 [`sec-xbrl-mapping.md`](./sec-xbrl-mapping.md)。

@@ -76,15 +76,23 @@ public class EvidenceBuilder {
             }
             case "FUNDAMENTALS" -> {
                 type = "FINANCIAL_METRIC";
-                title = source.externalSourceId() + " synthetic fundamentals";
-                summary = "Fixed synthetic normalized fundamentals for deterministic analysis.";
+                title = source.externalSourceId() + (source.demoData()
+                        ? " synthetic fundamentals"
+                        : " SEC XBRL fundamentals");
+                summary = source.demoData()
+                        ? "Fixed synthetic normalized fundamentals for deterministic analysis."
+                        : "Normalized financial facts with SEC taxonomy, concept, period and accession lineage.";
                 value.set("metrics", source.payload().path("metrics"));
                 value.put("asOfDate", source.payload().path("asOfDate").asText());
             }
             case "FILING" -> {
                 type = "SEC_FILING";
-                title = source.externalSourceId() + " synthetic filings";
-                summary = "Two fixed synthetic filing summaries used only for demo Evidence.";
+                title = source.externalSourceId() + (source.demoData()
+                        ? " synthetic filings"
+                        : " SEC filings");
+                summary = source.demoData()
+                        ? "Two fixed synthetic filing summaries used only for demo Evidence."
+                        : "Official SEC filing metadata and normalized document summaries.";
                 ArrayNode filings = value.putArray("filings");
                 source.payload().path("filings").forEach(document -> {
                     ObjectNode metadata = filings.addObject();
@@ -101,8 +109,10 @@ public class EvidenceBuilder {
             }
             case "MACRO" -> {
                 type = "MACRO_OBSERVATION";
-                title = "Synthetic macro series";
-                summary = "Fixed synthetic policy-rate and inflation observations.";
+                title = source.demoData() ? "Synthetic macro series" : "FRED macro series";
+                summary = source.demoData()
+                        ? "Fixed synthetic policy-rate and inflation observations."
+                        : "FRED observations with frequency, vintage and revision boundaries.";
                 value.set("series", source.payload().path("series"));
                 value.put("asOfDate", source.payload().path("asOfDate").asText());
             }

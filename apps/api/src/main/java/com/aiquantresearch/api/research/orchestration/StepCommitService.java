@@ -283,6 +283,7 @@ public class StepCommitService {
     private static String sourceType(String purpose) {
         return switch (purpose) {
             case "FILING" -> "SEC_FILING";
+            case "FUNDAMENTALS" -> "SEC_FILING";
             case "MACRO" -> "GOVERNMENT_DATA";
             case "MARKET_DATA", "BENCHMARK_DATA" -> "MARKET_DATA_PROVIDER";
             default -> "OTHER";

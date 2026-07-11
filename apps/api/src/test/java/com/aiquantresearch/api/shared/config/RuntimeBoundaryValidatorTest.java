@@ -80,6 +80,18 @@ class RuntimeBoundaryValidatorTest {
     }
 
     @Test
+    void mockModeRejectsRealFundamentalProvider() {
+        var environment = new MockEnvironment();
+        environment.setActiveProfiles("development");
+        environment.setProperty("app.providers.fundamental", "sec-xbrl");
+        var validator = new RuntimeBoundaryValidator(properties(DataMode.MOCK), environment);
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("real fundamental provider");
+    }
+
+    @Test
     void confirmedMarketRightsRequireAVersionedDecision() {
         var environment = new MockEnvironment();
         environment.setActiveProfiles("development");

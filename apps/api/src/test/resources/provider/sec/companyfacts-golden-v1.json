@@ -1,0 +1,42 @@
+{
+  "cik": 123,
+  "entityName": "Micron Golden Corp",
+  "facts": {
+    "us-gaap": {
+      "RevenueFromContractWithCustomerExcludingAssessedTax": {
+        "units": {"USD": [
+          {"start":"2024-09-01","end":"2025-08-31","val":1000,"accn":"0000000123-25-000001","fy":2025,"fp":"FY","form":"10-K","filed":"2025-10-01"},
+          {"start":"2024-09-01","end":"2025-08-31","val":1100,"accn":"0000000123-25-000002","fy":2025,"fp":"FY","form":"10-K/A","filed":"2025-11-01"},
+          {"start":"2025-09-01","end":"2026-08-31","val":9999,"accn":"0000000123-26-000099","fy":2026,"fp":"FY","form":"10-K","filed":"2026-10-01"}
+        ]}
+      },
+      "GrossProfit": {"units":{"USD":[
+        {"start":"2024-09-01","end":"2025-08-31","val":440,"accn":"0000000123-25-000002","fy":2025,"fp":"FY","form":"10-K/A","filed":"2025-11-01"}
+      ]}},
+      "OperatingIncomeLoss": {"units":{"USD":[
+        {"start":"2024-09-01","end":"2025-08-31","val":200,"accn":"0000000123-25-000002","fy":2025,"fp":"FY","form":"10-K/A","filed":"2025-11-01"}
+      ]}},
+      "DepreciationDepletionAndAmortization": {"units":{"USD":[
+        {"start":"2024-09-01","end":"2025-08-31","val":50,"accn":"0000000123-25-000002","fy":2025,"fp":"FY","form":"10-K/A","filed":"2025-11-01"}
+      ]}},
+      "NetIncomeLoss": {"units":{"USD":[
+        {"start":"2024-09-01","end":"2025-08-31","val":150,"accn":"0000000123-25-000002","fy":2025,"fp":"FY","form":"10-K/A","filed":"2025-11-01"}
+      ]}},
+      "WeightedAverageNumberOfDilutedSharesOutstanding": {"units":{"shares":[
+        {"start":"2024-09-01","end":"2025-08-31","val":100,"accn":"0000000123-25-000002","fy":2025,"fp":"FY","form":"10-K/A","filed":"2025-11-01"}
+      ]}},
+      "NetCashProvidedByUsedInOperatingActivities": {"units":{"USD":[
+        {"start":"2024-09-01","end":"2025-08-31","val":300,"accn":"0000000123-25-000002","fy":2025,"fp":"FY","form":"10-K/A","filed":"2025-11-01"}
+      ]}},
+      "PaymentsToAcquirePropertyPlantAndEquipment": {"units":{"USD":[
+        {"start":"2024-09-01","end":"2025-08-31","val":80,"accn":"0000000123-25-000002","fy":2025,"fp":"FY","form":"10-K/A","filed":"2025-11-01"}
+      ]}},
+      "LongTermDebtAndFinanceLeaseObligations": {"units":{"USD":[
+        {"end":"2026-05-31","val":500,"accn":"0000000123-26-000010","fy":2026,"fp":"Q3","form":"10-Q","filed":"2026-06-20"}
+      ]}},
+      "CashAndCashEquivalentsAtCarryingValue": {"units":{"USD":[
+        {"end":"2026-05-31","val":200,"accn":"0000000123-26-000010","fy":2026,"fp":"Q3","form":"10-Q","filed":"2026-06-20"}
+      ]}}
+    }
+  }
+}
