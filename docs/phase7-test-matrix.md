@@ -106,7 +106,11 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 | Lineage | 每项保留 taxonomy/concept/accession/filed/component concepts | 通过 |
 | Freshness | mixed FY/quarterly period 产生 warning，按 FY coverage 评估 | 通过 |
 | 数据模式 | `MOCK + fundamental=sec-xbrl` 启动失败关闭 | 通过 |
-| 不可变落库 | Testcontainers 验证 SEC source type、concept 与 accession | 已编译，等待 CI |
+| 不可变落库 | Testcontainers 验证 SEC source type、concept 与 accession | 通过 |
 | 全量回归 | API 185 个 Surefire，0 失败 | 通过 |
 
 完整 grain、映射、质量风险和限制见 [`sec-xbrl-mapping.md`](./sec-xbrl-mapping.md)。
+
+全仓终验 [run `29141192029`](https://github.com/wubokai/AI-reserch/actions/runs/29141192029)：
+Web/Playwright、Analytics、185 个 Surefire、47 个 Failsafe/Testcontainers、secret scan
+与 Compose 全部通过。
