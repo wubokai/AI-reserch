@@ -16,7 +16,7 @@
 | IDOR | Research/Report/Evidence/Export owner-scoped，跨用户统一 404 | 回归覆盖 |
 | PDF | 离线字体、无 URI/JS、25 MiB、200 页、字体 50 MiB、失败隔离 | 本地通过 |
 | 供应链 | pnpm lock/audit、Python 精确版本/pip-audit、Dependabot、secret scan、固定校验和 Grype 镜像扫描 | 应用依赖 0 已知漏洞；镜像 Critical 阻断，高风险显式评审 |
-| 容器 | 三个应用 non-root、read-only、tmpfs、cap-drop ALL、no-new-privileges、PID limit | CI 待终验 |
+| 容器 | 三个应用 non-root、read-only、tmpfs、cap-drop ALL、no-new-privileges、PID limit | 远端通过 |
 | 文档 | README、运行手册、可观测性、Provider 扩展、保留策略、风险与验收矩阵 | 已完成 |
 
 ## 2. AC-01–AC-35 完整验收
@@ -30,17 +30,19 @@
 | 22 | 外部门禁 | 真实 Market 必须先取得展示/导出/再分发书面许可；工程端口、runtime、REAL 发布门已完成 |
 | 23 | 通过 | SEC Companyfacts/XBRL 与黄金映射 |
 | 24–28 | 通过 | env secret、IDOR、Prompt 对抗、LLM 预算、JSON 日志/Prometheus |
-| 29–35 | CI 待终验 | 全 CI、README clean start、浏览器、错误映射、无硬编码金融结论/交易、免责声明 |
+| 29–35 | 通过 | 全 CI、README clean start、浏览器、错误映射、无硬编码金融结论/交易、免责声明 |
 
 ## 3. 本地命令
 
 - `pnpm audit`：0 已知漏洞；
 - API Surefire：208 个通过；
 - Python `pip-audit --local`：0 已知漏洞；
-- Web、Analytics、API 全量与 Compose 结果将在本阶段最终 CI 记录。
+- Web、Analytics、API/Testcontainers、三应用镜像 Grype、最小权限策略与 Compose smoke：
+  [GitHub Actions run `29145630809`](https://github.com/wubokai/AI-reserch/actions/runs/29145630809) 全部通过；
+- 连续 CI：上述功能终验与本文件所在最终证据提交的同名 `ci` check 共同构成两次连续主干验证。
 
 ## 4. Gate 判定
 
-G9 工程硬化在全量本地测试及连续远端 CI 通过后完成。完整 REAL v1 仍必须等待 AC-22 的行情许可、
+G9 工程硬化已在全量本地测试及连续远端 CI 通过后完成。完整 REAL v1 仍必须等待 AC-22 的行情许可、
 Adapter 凭据/测试账户和真实全 Worker 终验；未取得书面权利前系统正确行为是保持 Market disabled，
 不得以 Mock 或 SEC/FRED 局部真实数据冒充完整 REAL。

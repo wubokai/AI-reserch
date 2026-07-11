@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 9 发布硬化已完成本地 Gate，正在执行远端 G9 终验；Phase 7 的真实 Market 仍因许可未确认保持禁用，因此默认业务闭环继续使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 9 发布硬化与远端 G9 工程 Gate 已完成；Phase 7 的真实 Market 仍因许可未确认保持禁用，因此默认业务闭环继续使用固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -76,7 +76,7 @@ pnpm dev:web
 
 当前验证基线：Web 的 ESLint、TypeScript、30 个 Vitest、production build 与 5 个 Playwright 用例通过；Phase 8 覆盖 Loading/Empty/Error/Partial/Completed、创建/取消/重试、Evidence、版本、历史筛选、导出成功/失败、Zod 拒绝、Provider 状态与移动视口。Web、API/Testcontainers、Analytics、secret scan 与 Compose 全仓终验见 [GitHub Actions run 29144269701](https://github.com/wubokai/AI-reserch/actions/runs/29144269701)，详细证据见 [Phase 8 测试矩阵](docs/phase8-test-matrix.md)。
 
-Phase 9 本地基线：Web 全 Gate、Analytics 41 个 pytest/93.92% branch coverage、API 208 个 Surefire、`pnpm audit` 与 `pip-audit` 0 已知漏洞均通过；容器策略和 Compose 由本阶段远端 CI 终验。
+Phase 9 终验：Web 全 Gate、Analytics 41 个 pytest/93.92% branch coverage、API 208 个 Surefire、`pnpm audit` 与 `pip-audit` 0 已知漏洞、三应用镜像 Grype 扫描、最小权限 Compose 与五服务 smoke 均通过，见 [GitHub Actions run 29145630809](https://github.com/wubokai/AI-reserch/actions/runs/29145630809)。
 
 FRED 检查点将 API 基线提升到 179 个 Surefire 与 46 个 Failsafe/Testcontainers；全仓终验见 [GitHub Actions run 29134411188](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)。
 
@@ -129,7 +129,7 @@ FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`
 
 ## 下一步
 
-Phase 9 工程实现已完成，下一步是远端 Gate G9 与连续 CI 收口。之后只剩必须由项目负责人提供的真实 Market 书面许可/测试账户、生产认证与部署决策、生产模型/价格和数据保留决定；这些事项会集中一次处理，未授权前所有真实能力继续失败关闭。
+Phase 0–9 的可自主工程、测试、硬化与文档工作已经完成。剩余事项全部依赖项目负责人提供外部事实：真实 Market 书面许可/测试账户、生产认证与部署决策、生产模型/价格、数据保留决定及 SEC/FRED 身份；集中清单见[项目负责人外部输入](docs/external-inputs.md)。未授权前所有真实能力继续失败关闭。
 
 ## 免责声明
 

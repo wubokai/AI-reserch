@@ -125,7 +125,7 @@
 | R-011 / R-012 | 安全访问日志不记录 query/body/header；secret scan；全部资源 owner-scoped 与跨用户隐藏回归 | 已缓解 |
 | R-023 / R-032 | HTML 转义、CSP、PDF 禁远程资源、字节/页数/字体上限和失败隔离 | 已缓解 |
 | R-024 / R-028 | Provider cache key/TTL/oversize/Redis 故障测试；精确依赖、pnpm/pip audit、Dependabot | 已缓解 |
-| 容器供应链 | Web runtime 移除 npm/npx，API 启动镜像执行 Alpine security upgrade，Analytics 移除 pip/setuptools/wheel；三服务 non-root/read-only/cap-drop/no-new-privileges | CI 镜像终验待记录 |
+| 容器供应链 | Web runtime 移除 npm/npx，API 启动镜像执行 Alpine security upgrade，Analytics 移除 pip/setuptools/wheel；三服务 non-root/read-only/cap-drop/no-new-privileges；确定性 image tag、存在性检查与 Grype 扫描 | [CI `29145630809`](https://github.com/wubokai/AI-reserch/actions/runs/29145630809) 通过；Critical 阻断保持启用 |
 | Python 3.12 基础运行时高风险公告 | Grype 公开报告 CVE-2026-7210、6100、4224、15308、9669、3298、3644、4786；截至本次评审，官方稳定 Python 3.12 镜像尚无对应 3.12 修复版本，项目规范仍要求 3.12 | 显式、限期接受：镜像 Critical 仍阻断；Analytics 只接收有界 JSON、不解析 HTML/Filing，不以 root 运行；最晚在下一 3.12 security release 或 2026-10-31 复审，先到者为准 |
 | R-007 / R-015 / R-031 | 真实 Market 未取得许可，REAL 行情、收益与“当前”结论保持 disabled；Mock 永久水印 | 作为 fail-closed 外部门禁接受，不进入公开 REAL 发布 |
 | R-020 / 正式认证 | 未提供生产模型/价格或 Bearer/OIDC 时真实调用/production profile 启动失败关闭 | 作为明确发布限制接受，不以 demo 配置冒充生产 |
