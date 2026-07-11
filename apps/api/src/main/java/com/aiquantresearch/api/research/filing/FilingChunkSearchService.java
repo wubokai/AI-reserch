@@ -25,10 +25,14 @@ public class FilingChunkSearchService {
                        f.filing_date,
                        fc.section_name,
                        fc.chunk_index,
-                       ts_headline(
-                           'english', fc.content, websearch_to_tsquery('english', ?),
-                           'StartSel=, StopSel=, MaxWords=80, MinWords=20'
-                       ) as excerpt,
+                       replace(replace(
+                           ts_headline(
+                               'english', fc.content,
+                               websearch_to_tsquery('english', ?),
+                               'MaxWords=80, MinWords=20'
+                           ),
+                           '<b>', ''
+                       ), '</b>', '') as excerpt,
                        'filing:' || f.external_document_id || '#'
                            || fc.section_name || ':chunk=' || fc.chunk_index
                            || ':chars=' || fc.character_start || '-' || fc.character_end
