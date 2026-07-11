@@ -148,6 +148,7 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
         Attempt attempt = createAttempt(1);
         String requestHash = "9".repeat(64);
         LlmProperties properties = mock(LlmProperties.class);
+        when(properties.providerName()).thenReturn("LANYI");
         when(properties.reportModel()).thenReturn("configured-model");
         when(properties.promptVersion()).thenReturn("report_prompt_v1");
         when(properties.schemaVersion()).thenReturn("research_report_v1");
@@ -203,11 +204,12 @@ class Phase6LlmIT extends PostgresRedisIntegrationTestSupport {
         );
 
         assertThat(jdbc.queryForMap("""
-                select status, error_code, response_hash, network_call_count,
+                select provider, status, error_code, response_hash, network_call_count,
                        input_tokens, output_tokens, provider_request_id
                   from llm_calls
                  where step_attempt_id = ? and request_hash = ?
                 """, attempt.attemptId(), requestHash))
+                .containsEntry("provider", "LANYI")
                 .containsEntry("status", "INCOMPLETE")
                 .containsEntry("error_code", "LLM_INCOMPLETE_MAX_OUTPUT_TOKENS")
                 .containsEntry("response_hash", null)
