@@ -126,6 +126,24 @@ class SecurityConfigurationTest {
     }
 
     @Test
+    void developmentCanUseTheSameExplicitServiceBearerBoundary() {
+        var properties = new ServiceJwtProperties(
+                true,
+                "ai-quant-web",
+                "ai-quant-api",
+                Base64.getEncoder().encodeToString(new byte[32]),
+                "primary-owner",
+                "bw2754@nyu.edu",
+                Duration.ofSeconds(60)
+        );
+
+        assertThat(properties.enabled()).isTrue();
+        assertThatNoException().isThrownBy(
+                () -> new SecurityConfiguration().serviceJwtDecoder(properties)
+        );
+    }
+
+    @Test
     void rejectsWeakServiceJwtSecret() {
         var properties = new ServiceJwtProperties(
                 true,

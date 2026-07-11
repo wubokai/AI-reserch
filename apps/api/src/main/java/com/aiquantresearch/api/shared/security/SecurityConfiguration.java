@@ -48,7 +48,8 @@ public class SecurityConfiguration {
             HttpSecurity http,
             SecurityProblemWriter problemWriter,
             Environment environment,
-            ObjectProvider<JwtDecoder> jwtDecoderProvider
+            ObjectProvider<JwtDecoder> jwtDecoderProvider,
+            ServiceJwtProperties serviceJwtProperties
     ) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
@@ -83,11 +84,11 @@ public class SecurityConfiguration {
                                 "The current principal cannot access this resource"
                         )));
 
-        if (isProduction(environment)) {
+        if (serviceJwtProperties.enabled()) {
             JwtDecoder decoder = jwtDecoderProvider.getIfAvailable();
             if (decoder == null) {
                 throw new IllegalStateException(
-                        "Production startup is fail-closed without a service JWT decoder"
+                        "Service JWT authentication is enabled without a JWT decoder"
                 );
             }
             http.oauth2ResourceServer(oauth -> oauth
