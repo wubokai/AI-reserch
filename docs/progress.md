@@ -21,7 +21,7 @@
 - OpenAPI 3.1 YAML 可解析，本地引用与必需操作完整；
 - LLM/Analytics JSON Schema 是合法 JSON；
 - Web：ESLint、TypeScript、32 个 Vitest、Next.js production build 与 5 个 Playwright 用例通过；Phase 8 状态、操作、版本、筛选、导出、Zod、company-only、周期/深度、Provider 和移动端矩阵已覆盖；
-- API：Java 21 / Spring Boot 3.5，231 个 Surefire 本地通过，49 个 Failsafe/Testcontainers 已定义（新增 V9/FTS/血缘覆盖待本提交远端执行）；新增 Phase 9 日志/指标、JSON/PDF 边界、SSRF、安全头、company-only、1y/3y/5y、QUICK/STANDARD/DEEP、完整安全报告章节、Research 全局执行截止时间、outbox relay 与 LLM Filing FTS 覆盖；
+- API：Java 21 / Spring Boot 3.5，231 个 Surefire 与 50 个 Failsafe/Testcontainers 通过；新增 Phase 9 日志/指标、JSON/PDF 边界、SSRF、安全头、company-only、1y/3y/5y、QUICK/STANDARD/DEEP、完整安全报告章节、Research 全局执行截止时间、outbox relay 与 LLM Filing FTS 覆盖；
 - PostgreSQL 17：Flyway V1–V9；V8 提供 LLM 原子预算/审计，V9 提供带 Research/Source 血缘、唯一约束和不可变触发器的 `market_price_bars`、`financial_metrics`、`macro_series` 规范化事实投影；
 - Analytics：Ruff、strict mypy、41 个 pytest 通过，branch coverage 93.92%；完整覆盖收益、风险、技术/Trend、基本面、估值与情景；
 - 供应链：`pnpm audit` 与 Python `pip-audit --local` 均为 0 已知漏洞；PostCSS 已提升到修复版本，Dependabot 覆盖 npm/pip/Maven/Actions；
@@ -41,6 +41,7 @@
 - GitHub Actions：Phase 7 来源归属检查点的 Web/Playwright、Analytics、193+48 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29143064626`](https://github.com/wubokai/AI-reserch/actions/runs/29143064626)）；SEC/FRED 归属、许可策略、REAL/Mock 标识隔离和 Markdown/HTML/PDF 模板版本均已验证；
 - GitHub Actions：Phase 8 Gate G8 的 Web/Playwright、Analytics、API/Testcontainers、secret scan 与 Compose 全部通过（[run `29144269701`](https://github.com/wubokai/AI-reserch/actions/runs/29144269701)）；完整前端状态、操作、图表、Evidence/Data Quality、版本、历史、Provider、导出与移动端闭环均已验证；
 - GitHub Actions：Phase 9 G9 工程 Gate 的 Web/Playwright、Analytics、208 个 API Surefire 与 Testcontainers、依赖审计、secret scan、最小权限容器策略、三应用镜像 Grype 扫描及五服务闭环全部通过（[run `29145630809`](https://github.com/wubokai/AI-reserch/actions/runs/29145630809)）；本文件所在最终证据提交的同名 `ci` check 作为连续第二次主干验证；
+- GitHub Actions：最终 DOCX 需求审计增量的 231 个 Surefire、50 个 Testcontainers、Flyway V9、Research-scoped Filing FTS、规范化行情/财务/宏观投影、Outbox relay、完整安全报告、镜像扫描与 Compose 闭环全部通过（[run `29147659738`](https://github.com/wubokai/AI-reserch/actions/runs/29147659738)）。
 - Phase 3–9 详细证据见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)、[`phase4-test-matrix.md`](./phase4-test-matrix.md)、[`phase5-test-matrix.md`](./phase5-test-matrix.md)、[`phase6-test-matrix.md`](./phase6-test-matrix.md)、[`phase7-test-matrix.md`](./phase7-test-matrix.md)、[`phase8-test-matrix.md`](./phase8-test-matrix.md) 和 [`phase9-test-matrix.md`](./phase9-test-matrix.md)。
 
 ## 当前限制

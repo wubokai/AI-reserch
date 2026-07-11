@@ -14,9 +14,9 @@
 | XSS/浏览器 | HTML 全转义；Web/API CSP、nosniff、DENY、no-referrer、Permissions Policy | 本地通过 |
 | Prompt Injection | untrusted Evidence 边界、三工具 allowlist、严格 Schema、发布验证 | 回归覆盖 |
 | 周期与深度预算 | 1y/3y/5y/显式范围；QUICK/STANDARD/DEEP 约束 Filing/Evidence/Calculation/LLM 工具轮次 | 本地通过 |
-| 规范化金融事实 | Flyway V9；行情/财务/宏观关联不可变 Snapshot、去重、血缘触发器；Compose smoke 验证非空 | 待本提交远端容器终验 |
-| 公司名与 Filing RAG | company-only 唯一解析；`search_evidence` 连接 Research-scoped PostgreSQL FTS 并复核 Evidence allowlist | 本地通过；FTS SQL 待远端容器终验 |
-| Transactional outbox | `SKIP LOCKED` 有界 relay、event ID、失败码/重放；Compose 等待 backlog 清零 | 本地单测通过；待远端容器终验 |
+| 规范化金融事实 | Flyway V9；行情/财务/宏观关联不可变 Snapshot、去重、血缘触发器；Compose smoke 验证非空 | 远端通过：2606/8/8 行 |
+| 公司名与 Filing RAG | company-only 唯一解析；`search_evidence` 连接 Research-scoped PostgreSQL FTS 并复核 Evidence allowlist | 远端 Testcontainers 通过 |
+| Transactional outbox | `SKIP LOCKED` 有界 relay、event ID、失败码/重放；Compose 等待 backlog 清零 | 远端 PostgreSQL IT + backlog 清零通过 |
 | 完整安全报告 | Executive/Company/Financial/Quant/Technical/Valuation/Scenario、3 条可用 Bull/Bear、7 类风险；缺客户/历史/同行估值显式限制 | 本地 Validator/Renderer 通过 |
 | 执行时间预算 | 持久化 `started_at` + 1–1440 分钟配置；边界前允许、边界时永久失败、发布前复查 | 本地通过 |
 | IDOR | Research/Report/Evidence/Export owner-scoped，跨用户统一 404 | 回归覆盖 |
@@ -41,10 +41,12 @@
 ## 3. 本地命令
 
 - `pnpm audit`：0 已知漏洞；
-- API Surefire：231 个通过；49 个 Failsafe/Testcontainers 已定义；
+- API Surefire：231 个通过；50 个 Failsafe/Testcontainers 通过；
 - Python `pip-audit --local`：0 已知漏洞；
 - Web、Analytics、API/Testcontainers、三应用镜像 Grype、最小权限策略与 Compose smoke：
   [GitHub Actions run `29145630809`](https://github.com/wubokai/AI-reserch/actions/runs/29145630809) 全部通过；
+- 最终需求审计、Flyway V9、Filing FTS、规范化事实投影、完整安全报告与 Outbox relay：
+  [GitHub Actions run `29147659738`](https://github.com/wubokai/AI-reserch/actions/runs/29147659738) 全部通过；
 - 连续 CI：上述功能终验与本文件所在最终证据提交的同名 `ci` check 共同构成两次连续主干验证。
 
 ## 4. Gate 判定

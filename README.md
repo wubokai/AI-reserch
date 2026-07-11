@@ -88,7 +88,7 @@ pnpm dev:web
 
 当前验证基线：Web 的 ESLint、TypeScript、30 个 Vitest、production build 与 5 个 Playwright 用例通过；Phase 8 覆盖 Loading/Empty/Error/Partial/Completed、创建/取消/重试、Evidence、版本、历史筛选、导出成功/失败、Zod 拒绝、Provider 状态与移动视口。Web、API/Testcontainers、Analytics、secret scan 与 Compose 全仓终验见 [GitHub Actions run 29144269701](https://github.com/wubokai/AI-reserch/actions/runs/29144269701)，详细证据见 [Phase 8 测试矩阵](docs/phase8-test-matrix.md)。
 
-Phase 9 终验基线：Web 全 Gate、Analytics 41 个 pytest/93.92% branch coverage、API 208 个 Surefire、`pnpm audit` 与 `pip-audit` 0 已知漏洞、三应用镜像 Grype 扫描、最小权限 Compose 与五服务 smoke 均通过，见 [GitHub Actions run 29145630809](https://github.com/wubokai/AI-reserch/actions/runs/29145630809)。后续需求审计新增周期、深度和执行截止时间测试，最新数量以[进度文档](docs/progress.md)与当前 CI 为准。
+Phase 9 最终需求审计：Web 全 Gate、Analytics 41 个 pytest/93.92% branch coverage、API 231 个 Surefire + 50 个 Failsafe/Testcontainers、`pnpm audit` 与 `pip-audit` 0 已知漏洞、三应用镜像 Grype 扫描、最小权限 Compose、规范化事实投影、Outbox relay 与五服务闭环均通过，见 [GitHub Actions run 29147659738](https://github.com/wubokai/AI-reserch/actions/runs/29147659738)。
 
 FRED 检查点将 API 基线提升到 179 个 Surefire 与 46 个 Failsafe/Testcontainers；全仓终验见 [GitHub Actions run 29134411188](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)。
 
