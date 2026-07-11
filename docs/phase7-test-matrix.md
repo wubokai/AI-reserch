@@ -114,3 +114,18 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 全仓终验 [run `29141192029`](https://github.com/wubokai/AI-reserch/actions/runs/29141192029)：
 Web/Playwright、Analytics、185 个 Surefire、47 个 Failsafe/Testcontainers、secret scan
 与 Compose 全部通过。
+
+## 9. Provider Runtime 本地检查点
+
+| 要求 | 自动化证据 | 结果 |
+| --- | --- | --- |
+| Cache key | subject 只以 SHA-256 出现在 key，不含原始 subject | 通过 |
+| Cache hit | 第二次请求不执行 loader | 通过 |
+| TTL | Testcontainers Redis 验证 6 小时以内的正 TTL | 已编译，等待 CI |
+| Entry boundary | 超过 5 MB 配置上限时跳过缓存，不阻断 Provider | 通过 |
+| Cache degradation | Redis 读取异常按 miss 继续并记录 error metric | 通过 |
+| Circuit predicate | 两次可重试故障可打开测试电路 | 通过 |
+| Permanent errors | 多次永久 Schema 错误后电路仍为 CLOSED | 通过 |
+| Metrics | requests/cache/retries 仅使用受控低基数 tags | 通过 |
+| Adapter integration | SEC Filing、SEC XBRL、FRED 均通过统一 Runtime | 通过 |
+| 全量回归 | API 191 个 Surefire，0 失败；48 个 Failsafe 已编译 | 通过 |

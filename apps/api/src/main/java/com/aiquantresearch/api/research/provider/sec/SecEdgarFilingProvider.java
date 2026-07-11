@@ -5,6 +5,8 @@ import com.aiquantresearch.api.research.provider.FilingProvider;
 import com.aiquantresearch.api.research.provider.FilingSnapshot;
 import com.aiquantresearch.api.research.provider.ProviderAccessException;
 import com.aiquantresearch.api.research.provider.ProviderDataNotFoundException;
+import com.aiquantresearch.api.research.provider.runtime.ProviderCall;
+import com.aiquantresearch.api.research.provider.runtime.ProviderRuntime;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -22,6 +24,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpHeaders;
@@ -53,12 +56,24 @@ public class SecEdgarFilingProvider implements FilingProvider {
     private final SecEdgarProperties properties;
     private final SecRequestGovernor governor;
     private final Clock clock;
+    private final ProviderRuntime runtime;
 
     public SecEdgarFilingProvider(
             WebClient.Builder builder,
             ObjectMapper objectMapper,
             SecEdgarProperties properties,
             Clock clock
+    ) {
+        this(builder, objectMapper, properties, clock, ProviderRuntime.direct());
+    }
+
+    @Autowired
+    public SecEdgarFilingProvider(
+            WebClient.Builder builder,
+            ObjectMapper objectMapper,
+            SecEdgarProperties properties,
+            Clock clock,
+            ProviderRuntime runtime
     ) {
         properties.requireConfiguredIdentity();
         validateEndpoint(properties.dataBaseUrl(), "data.sec.gov");
@@ -73,11 +88,23 @@ public class SecEdgarFilingProvider implements FilingProvider {
         this.properties = properties;
         this.governor = new SecRequestGovernor(properties.maxRequestsPerSecond());
         this.clock = clock;
+        this.runtime = runtime;
     }
 
     @Override
     public FilingSnapshot fetch(String symbol) {
         String normalizedSymbol = normalizeSymbol(symbol);
+        return runtime.execute(
+                new ProviderCall<>(
+                        PROVIDER, "secEdgar", SCHEMA_VERSION,
+                        normalizedSymbol + "|maxFilings=" + properties.maxFilings(),
+                        FilingSnapshot.class
+                ),
+                () -> fetchLive(normalizedSymbol)
+        );
+    }
+
+    private FilingSnapshot fetchLive(String normalizedSymbol) {
         List<byte[]> rawParts = new ArrayList<>();
         byte[] tickersBytes = fetchBytes(
                 properties.companyTickersUrl(),
@@ -250,6 +277,7 @@ public class SecEdgarFilingProvider implements FilingProvider {
             if (!last.retryable() || attempt == properties.maxAttempts()) {
                 throw last;
             }
+            runtime.recordRetry(PROVIDER, last.code());
             java.util.concurrent.locks.LockSupport.parkNanos(
                     100_000_000L * (1L << (attempt - 1))
             );

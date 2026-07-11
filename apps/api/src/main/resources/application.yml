@@ -69,6 +69,9 @@ app:
     macro: ${MACRO_DATA_PROVIDER:mock}
     market-license-confirmed: ${MARKET_DATA_LICENSE_CONFIRMED:false}
     market-license-policy-version: ${MARKET_DATA_LICENSE_POLICY_VERSION:}
+    runtime:
+      cache-ttl: ${PROVIDER_CACHE_TTL:6h}
+      max-cache-entry-bytes: ${PROVIDER_MAX_CACHE_ENTRY_BYTES:5000000}
     sec:
       data-base-url: ${SEC_DATA_BASE_URL:https://data.sec.gov}
       archives-base-url: ${SEC_ARCHIVES_BASE_URL:https://www.sec.gov}
@@ -163,6 +166,13 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
+    instances:
+      secEdgar:
+        base-config: default
+        record-failure-predicate: com.aiquantresearch.api.research.provider.runtime.ProviderCircuitFailurePredicate
+      fred:
+        base-config: default
+        record-failure-predicate: com.aiquantresearch.api.research.provider.runtime.ProviderCircuitFailurePredicate
   retry:
     configs:
       default:

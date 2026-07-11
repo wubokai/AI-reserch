@@ -5,6 +5,8 @@ import com.aiquantresearch.api.research.provider.FundamentalDataSnapshot;
 import com.aiquantresearch.api.research.provider.FundamentalMetric;
 import com.aiquantresearch.api.research.provider.ProviderAccessException;
 import com.aiquantresearch.api.research.provider.ProviderDataNotFoundException;
+import com.aiquantresearch.api.research.provider.runtime.ProviderCall;
+import com.aiquantresearch.api.research.provider.runtime.ProviderRuntime;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -27,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -66,12 +69,24 @@ public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvid
     private final SecEdgarProperties properties;
     private final SecRequestGovernor governor;
     private final Clock clock;
+    private final ProviderRuntime runtime;
 
     public SecCompanyFactsFundamentalProvider(
             WebClient.Builder builder,
             ObjectMapper objectMapper,
             SecEdgarProperties properties,
             Clock clock
+    ) {
+        this(builder, objectMapper, properties, clock, ProviderRuntime.direct());
+    }
+
+    @Autowired
+    public SecCompanyFactsFundamentalProvider(
+            WebClient.Builder builder,
+            ObjectMapper objectMapper,
+            SecEdgarProperties properties,
+            Clock clock,
+            ProviderRuntime runtime
     ) {
         properties.requireConfiguredIdentity();
         validateEndpoint(properties.dataBaseUrl(), "data.sec.gov");
@@ -84,11 +99,22 @@ public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvid
         this.properties = properties;
         governor = new SecRequestGovernor(properties.maxRequestsPerSecond());
         this.clock = clock;
+        this.runtime = runtime;
     }
 
     @Override
     public FundamentalDataSnapshot fetch(String symbol) {
         String normalizedSymbol = normalizeSymbol(symbol);
+        return runtime.execute(
+                new ProviderCall<>(
+                        PROVIDER, "secEdgar", SCHEMA_VERSION,
+                        normalizedSymbol, FundamentalDataSnapshot.class
+                ),
+                () -> fetchLive(normalizedSymbol)
+        );
+    }
+
+    private FundamentalDataSnapshot fetchLive(String normalizedSymbol) {
         List<byte[]> rawParts = new ArrayList<>();
         byte[] tickerBytes = fetchBytes(properties.companyTickersUrl());
         rawParts.add(tickerBytes);
@@ -389,6 +415,7 @@ public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvid
             if (!last.retryable() || attempt == properties.maxAttempts()) {
                 throw last;
             }
+            runtime.recordRetry(PROVIDER, last.code());
             java.util.concurrent.locks.LockSupport.parkNanos(
                     100_000_000L * (1L << (attempt - 1))
             );

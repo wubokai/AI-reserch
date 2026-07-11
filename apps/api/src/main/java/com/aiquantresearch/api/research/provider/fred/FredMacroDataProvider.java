@@ -5,6 +5,8 @@ import com.aiquantresearch.api.research.provider.MacroDataSnapshot;
 import com.aiquantresearch.api.research.provider.MacroObservation;
 import com.aiquantresearch.api.research.provider.MacroSeries;
 import com.aiquantresearch.api.research.provider.ProviderAccessException;
+import com.aiquantresearch.api.research.provider.runtime.ProviderCall;
+import com.aiquantresearch.api.research.provider.runtime.ProviderRuntime;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -23,6 +25,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -48,12 +51,24 @@ public class FredMacroDataProvider implements MacroDataProvider {
     private final FredProperties properties;
     private final FredRequestGovernor governor;
     private final Clock clock;
+    private final ProviderRuntime runtime;
 
     public FredMacroDataProvider(
             WebClient.Builder builder,
             ObjectMapper objectMapper,
             FredProperties properties,
             Clock clock
+    ) {
+        this(builder, objectMapper, properties, clock, ProviderRuntime.direct());
+    }
+
+    @Autowired
+    public FredMacroDataProvider(
+            WebClient.Builder builder,
+            ObjectMapper objectMapper,
+            FredProperties properties,
+            Clock clock,
+            ProviderRuntime runtime
     ) {
         properties.requireConfiguredAccess();
         validateEndpoint(properties.baseUrl());
@@ -65,10 +80,21 @@ public class FredMacroDataProvider implements MacroDataProvider {
         this.properties = properties;
         governor = new FredRequestGovernor(properties.maxRequestsPerSecond());
         this.clock = clock;
+        this.runtime = runtime;
     }
 
     @Override
     public MacroDataSnapshot fetch() {
+        String subject = String.join(",", properties.seriesIds())
+                + "|" + properties.observationStart();
+        return runtime.execute(
+                new ProviderCall<>(PROVIDER, "fred", SCHEMA_VERSION,
+                        subject, MacroDataSnapshot.class),
+                this::fetchLive
+        );
+    }
+
+    private MacroDataSnapshot fetchLive() {
         LocalDate vintageDate = LocalDate.now(clock);
         List<byte[]> rawParts = new ArrayList<>();
         List<MacroSeries> series = properties.seriesIds().stream()
@@ -227,6 +253,7 @@ public class FredMacroDataProvider implements MacroDataProvider {
             if (!last.retryable() || attempt == properties.maxAttempts()) {
                 throw last;
             }
+            runtime.recordRetry(PROVIDER, last.code());
             java.util.concurrent.locks.LockSupport.parkNanos(
                     100_000_000L * (1L << (attempt - 1))
             );

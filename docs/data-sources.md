@@ -165,6 +165,18 @@ storageLocator
 
 缓存失效只影响性能；数据库中的快照与研究步骤仍是恢复依据。不得把 Redis 命中当作 Evidence，命中内容仍须解析为已注册快照。
 
+Phase 7 Provider Runtime 实现细则：
+
+- SEC Filing、SEC XBRL 与 FRED 规范快照使用统一 Redis JSON 缓存，默认 TTL 6 小时；
+- Key 为 `provider:v1:{provider}:{schemaVersion}:{sha256(subject)}`，不保存 symbol 以外的原始请求内容、API Key 或查询参数；
+- 单项默认最多 5 MB，超大 Filing 快照跳过缓存但仍正常返回并落 PostgreSQL；
+- Redis 读写失败只记录 `provider.cache{outcome="error"}` 并按 miss 继续，不把缓存变成真实数据可用性的单点故障；
+- 缓存命中仍通过后续 Source Snapshot/Evidence 注册，不直接成为 Evidence。
+
+统一熔断只统计 `retryable=true` 的 `ProviderAccessException`。Schema、许可、无数据、非法路径等
+永久错误不计入 failure rate。Prometheus 暴露 `provider.requests`、`provider.cache`、
+`provider.retries`，tag 仅包含受控 provider/outcome/reason，不包含 symbol、URL 或密钥。
+
 ## 8. 合并、冲突与缺失
 
 - 对同一事实的多来源值不静默择优。保存每个快照并生成 `SOURCE_CONFLICT`。
