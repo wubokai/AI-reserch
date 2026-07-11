@@ -90,6 +90,61 @@ export type SystemHealthResponse = z.infer<
   typeof systemHealthResponseSchema
 >;
 
+const nullableDateTimeSchema = z.iso.datetime().nullable();
+const nullableStringSchema = z.string().nullable();
+
+export const securityItemSchema = z.object({
+  securityId: z.uuid(),
+  symbol: z.string().min(1),
+  companyName: z.string().min(1),
+  exchange: z.string().min(1),
+  securityType: z.enum(["COMMON_STOCK", "ETF"]),
+  currency: z.string().length(3),
+  sector: z.string().nullable(),
+  industry: z.string().nullable(),
+  cik: z.string().nullable(),
+  active: z.boolean(),
+  dataMode: dataModeSchema,
+});
+
+export const securitySearchResponseSchema = z.object({
+  items: z.array(securityItemSchema),
+  dataMode: dataModeSchema,
+});
+
+export const providerStatusSchema = z.object({
+  name: z.string().min(1),
+  capabilities: z.array(z.enum([
+    "MARKET_DATA",
+    "FUNDAMENTALS",
+    "FILINGS",
+    "MACRO",
+    "LLM",
+    "ANALYTICS",
+  ])),
+  mode: z.enum(["REAL", "MOCK", "DISABLED"]),
+  status: z.enum(["UP", "DEGRADED", "DOWN", "UNKNOWN"]),
+  configured: z.boolean(),
+  lastCheckedAt: nullableDateTimeSchema.optional(),
+  lastSuccessAt: nullableDateTimeSchema.optional(),
+  latencyMs: z.number().int().nonnegative().nullable(),
+  rateLimit: z.object({
+    limited: z.boolean(),
+    remaining: z.number().int().nonnegative().nullable(),
+    resetsAt: nullableDateTimeSchema.optional(),
+  }),
+  message: z.string().nullable(),
+});
+
+export const providerStatusResponseSchema = z.object({
+  status: z.enum(["UP", "DEGRADED", "DOWN", "UNKNOWN"]),
+  dataMode: dataModeSchema,
+  providers: z.array(providerStatusSchema),
+  checkedAt: z.iso.datetime(),
+});
+
+export type ProviderStatusResponse = z.infer<typeof providerStatusResponseSchema>;
+
 export const researchRequestSchema = z.object({
   symbol: z
     .string()
@@ -101,6 +156,8 @@ export const researchRequestSchema = z.object({
     .trim()
     .min(10, "研究问题至少需要 10 个字符")
     .max(4000, "研究问题不能超过 4000 个字符"),
+  companyName: z.string().trim().min(1).max(200).optional(),
+  locale: z.enum(["zh-CN", "en-US"]).optional(),
   benchmark: z.enum(["SPY", "QQQ"]),
   period: z.literal("5y"),
   reportDepth: z.literal("STANDARD"),
@@ -110,9 +167,6 @@ export const researchRequestSchema = z.object({
 });
 
 export type ResearchRequest = z.infer<typeof researchRequestSchema>;
-
-const nullableDateTimeSchema = z.iso.datetime().nullable();
-const nullableStringSchema = z.string().nullable();
 
 export const problemDetailsSchema = z.object({
   timestamp: z.string().optional(),

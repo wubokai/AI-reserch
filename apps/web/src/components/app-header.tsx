@@ -9,6 +9,7 @@ import { SystemHealth } from "@/components/system-health";
 const navItems = [
   { href: "/", label: "研究台" },
   { href: "/research", label: "历史报告" },
+  { href: "/providers", label: "数据源" },
 ] as const;
 
 export function AppHeader() {
@@ -65,6 +66,9 @@ export function AppHeader() {
           </div>
         </div>
       </div>
+      <nav aria-label="移动导航" className="mx-auto flex max-w-[1440px] overflow-x-auto border-t border-[#14251e] px-5 py-2 md:hidden">
+        {navItems.map((item) => <Link className="mr-2 shrink-0 rounded-md px-3 py-2 text-xs text-[#9bb0a6]" href={item.href} key={item.href}>{item.label}</Link>)}
+      </nav>
     </header>
   );
 }

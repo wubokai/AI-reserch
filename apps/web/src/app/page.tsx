@@ -1,6 +1,7 @@
 import { ActivityIcon } from "@/components/icons";
 import { AppShell } from "@/components/app-shell";
 import { CoveragePanel } from "@/components/coverage-panel";
+import { DashboardSummary } from "@/components/dashboard-summary";
 import { RecentResearch } from "@/components/recent-research";
 import { ResearchForm } from "@/components/research-form";
 import { WorkflowChart } from "@/components/workflow-chart";
@@ -48,6 +49,8 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
+        <DashboardSummary />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.8fr)]">
           <ResearchForm />

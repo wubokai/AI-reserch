@@ -11,6 +11,9 @@ import { researchPageSchema, researchStatusSchema } from "@/lib/schemas";
 export function ResearchHistory() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [page, setPage] = useState(0);
   const params = new URLSearchParams({
     page: String(page),
@@ -19,15 +22,18 @@ export function ResearchHistory() {
   });
   if (query.trim()) params.set("q", query.trim());
   if (status) params.set("status", status);
+  if (symbol.trim()) params.set("symbol", symbol.trim().toUpperCase());
+  if (from) params.set("from", new Date(`${from}T00:00:00Z`).toISOString());
+  if (to) params.set("to", new Date(`${to}T23:59:59Z`).toISOString());
 
   const research = useQuery({
-    queryKey: ["research", "history", page, query.trim(), status],
+    queryKey: ["research", "history", page, query.trim(), status, symbol.trim(), from, to],
     queryFn: () => fetchApi(`/api/research?${params}`, researchPageSchema),
   });
 
   return (
     <section className="rounded-xl border border-[#20342b] bg-[#0c1713]">
-      <div className="grid gap-4 border-b border-[#1b2c25] p-5 sm:grid-cols-[minmax(0,1fr)_220px] sm:p-6">
+      <div className="grid gap-4 border-b border-[#1b2c25] p-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_140px_190px_150px_150px] sm:p-6">
         <label className="relative">
           <span className="sr-only">搜索历史研究</span>
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#60786d]" />
@@ -41,6 +47,7 @@ export function ResearchHistory() {
             value={query}
           />
         </label>
+        <label><span className="sr-only">按证券筛选</span><input aria-label="按证券筛选" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs uppercase text-white" maxLength={10} onChange={(event) => { setPage(0); setSymbol(event.target.value); }} placeholder="Ticker" value={symbol} /></label>
         <label>
           <span className="sr-only">按状态筛选</span>
           <select
@@ -57,6 +64,8 @@ export function ResearchHistory() {
             ))}
           </select>
         </label>
+        <label><span className="sr-only">开始日期</span><input aria-label="开始日期" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" onChange={(event) => { setPage(0); setFrom(event.target.value); }} type="date" value={from} /></label>
+        <label><span className="sr-only">结束日期</span><input aria-label="结束日期" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" onChange={(event) => { setPage(0); setTo(event.target.value); }} type="date" value={to} /></label>
       </div>
 
       {research.isPending ? <p className="p-6 text-xs text-[#789085]">正在读取研究历史…</p> : null}

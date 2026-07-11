@@ -147,3 +147,44 @@ export async function proxyResearchRequest(
     return problem(503, "API_UPSTREAM_UNAVAILABLE", "Research API is currently unavailable");
   }
 }
+
+export async function proxyReadOnlyApiRequest(
+  request: Request,
+  upstreamPath: "/api/v1/providers/status" | "/api/v1/securities/search",
+): Promise<Response> {
+  if (request.method.toUpperCase() !== "GET") {
+    return problem(405, "METHOD_NOT_ALLOWED", "The requested method is not allowed");
+  }
+  const config = configuration();
+  if (!config) {
+    return problem(503, "BFF_NOT_CONFIGURED", "Research API credentials are not configured for the Web server");
+  }
+  const incomingUrl = new URL(request.url);
+  const upstreamUrl = new URL(upstreamPath, config.baseUrl);
+  upstreamUrl.search = incomingUrl.search;
+  const requestId = request.headers.get("x-request-id") ?? `web_${crypto.randomUUID()}`;
+  try {
+    const upstream = await fetch(upstreamUrl, {
+      headers: {
+        Accept: "application/json",
+        Authorization: config.authorization,
+        "X-Request-Id": requestId,
+      },
+      cache: "no-store",
+      redirect: "manual",
+      signal: AbortSignal.timeout(15_000),
+    });
+    const responseHeaders = new Headers({
+      "Cache-Control": upstream.headers.get("cache-control") ?? "no-store",
+      "Content-Type": upstream.headers.get("content-type") ?? "application/json",
+      "X-Request-Id": upstream.headers.get("x-request-id") ?? requestId,
+    });
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+    });
+  } catch {
+    return problem(503, "API_UPSTREAM_UNAVAILABLE", "Research API is currently unavailable");
+  }
+}

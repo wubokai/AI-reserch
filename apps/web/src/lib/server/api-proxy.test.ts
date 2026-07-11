@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { proxyResearchRequest } from "@/lib/server/api-proxy";
+import { proxyReadOnlyApiRequest, proxyResearchRequest } from "@/lib/server/api-proxy";
 
 describe("research BFF", () => {
   afterEach(() => {
@@ -73,5 +73,22 @@ describe("research BFF", () => {
     const response = await proxyResearchRequest(new Request("http://web.local/api/research"), []);
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain("API_DEMO_PASSWORD");
+  });
+
+  it("forwards only authenticated GET requests to read-only operational endpoints", async () => {
+    process.env.API_INTERNAL_BASE_URL = "http://api.internal:8080";
+    process.env.API_DEMO_USERNAME = "demo";
+    process.env.API_DEMO_PASSWORD = "password";
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ status: "UP" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await proxyReadOnlyApiRequest(
+      new Request("http://web.local/api/providers/status"),
+      "/api/v1/providers/status",
+    );
+
+    expect(response.status).toBe(200);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("http://api.internal:8080/api/v1/providers/status");
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("authorization")).toMatch(/^Basic /);
   });
 });

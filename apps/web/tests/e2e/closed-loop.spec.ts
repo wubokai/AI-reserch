@@ -106,6 +106,13 @@ async function mockClosedLoop(page: Page) {
       await route.fulfill(json(phase3ReportEnvelope));
       return;
     }
+    if (path.endsWith("/reports")) {
+      await route.fulfill(json({
+        items: [{ researchId: phase3ResearchId, version: 1, title: "MU Mock 证据研究报告", symbol: "MU", asOfDate: "2025-12-31", validationStatus: "PASSED_WITH_WARNINGS", dataMode: "MOCK", contentHash: "a".repeat(64), createdAt: now }],
+        page: { number: 0, size: 100, totalElements: 1, totalPages: 1, first: true, last: true },
+      }));
+      return;
+    }
     if (path.endsWith("/evidence/search")) {
       expect(url.searchParams.get("q")).toBe("supply risk");
       await route.fulfill(json(phase3EvidenceSearchResponse));
@@ -188,7 +195,7 @@ async function mockClosedLoop(page: Page) {
 
 async function downloadedBytes(page: Page, linkName: "markdown" | "html" | "pdf") {
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("link", { name: linkName, exact: true }).click();
+  await page.getByRole("button", { name: linkName, exact: true }).click();
   const download = await downloadPromise;
   const path = await download.path();
   if (!path) throw new Error(`${linkName} download did not produce a local file`);

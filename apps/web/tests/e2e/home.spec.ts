@@ -50,3 +50,22 @@ test("页头展示 Web、API 与 Analytics 三服务状态", async ({ page }) =>
     page.getByLabel("Web ↑ · API ↑ · Analytics ↑"),
   ).toBeVisible();
 });
+
+test("移动端可打开只读 Provider 状态页", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/api/providers/status", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      status: "UP",
+      dataMode: "MOCK",
+      checkedAt: "2026-07-11T12:00:00Z",
+      providers: [{ name: "Deterministic Mock Data", capabilities: ["MARKET_DATA"], mode: "MOCK", status: "UP", configured: true, lastCheckedAt: "2026-07-11T12:00:00Z", lastSuccessAt: "2026-07-11T12:00:00Z", latencyMs: 0, rateLimit: { limited: false, remaining: null, resetsAt: null }, message: "Fixed fixtures" }],
+    }),
+  }));
+  await page.goto("/");
+  await page.getByRole("navigation", { name: "移动导航" }).getByRole("link", { name: "数据源" }).click();
+
+  await expect(page).toHaveURL(/\/providers$/);
+  await expect(page.getByRole("heading", { name: "数据源状态" })).toBeVisible();
+  await expect(page.getByText("Deterministic Mock Data")).toBeVisible();
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 
@@ -10,6 +10,7 @@ import { demoSecurities } from "@/lib/demo-data";
 import {
   researchAcceptedSchema,
   researchRequestSchema,
+  securitySearchResponseSchema,
   type ResearchRequest,
 } from "@/lib/schemas";
 
@@ -21,6 +22,8 @@ type AnalysisFlag =
 
 const initialValues: ResearchRequest = {
   symbol: "MU",
+  companyName: undefined,
+  locale: "zh-CN",
   query: "",
   benchmark: "SPY",
   period: "5y",
@@ -72,6 +75,7 @@ export function ResearchForm() {
   const router = useRouter();
   const [values, setValues] = useState<ResearchRequest>(initialValues);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [showSecurityMatches, setShowSecurityMatches] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
   const createResearch = useMutation({
     mutationFn: async (request: ResearchRequest) => {
@@ -85,6 +89,12 @@ export function ResearchForm() {
     onSuccess: (research) => {
       router.push(`/research/${research.researchId}`);
     },
+  });
+  const securities = useQuery({
+    queryKey: ["securities", values.symbol],
+    queryFn: () => fetchApi(`/api/securities/search?q=${encodeURIComponent(values.symbol)}&limit=6`, securitySearchResponseSchema),
+    enabled: showSecurityMatches && values.symbol.length >= 1,
+    staleTime: 60_000,
   });
 
   function updateValues(updater: (current: ResearchRequest) => ResearchRequest) {
@@ -140,15 +150,20 @@ export function ResearchForm() {
               id="symbol"
               maxLength={10}
               onChange={(event) =>
-                updateValues((current) => ({
-                  ...current,
-                  symbol: event.target.value.toUpperCase(),
-                }))
+                { setShowSecurityMatches(true); updateValues((current) => ({
+                    ...current,
+                    symbol: event.target.value.toUpperCase(),
+                  })); }
               }
               value={values.symbol}
             />
           </div>
           {errors.symbol ? <p className="mt-2 text-xs text-rose-300" id="symbol-error">{errors.symbol}</p> : null}
+          {showSecurityMatches && securities.data?.items.length ? (
+            <div aria-label="证券搜索结果" className="mt-2 overflow-hidden rounded-lg border border-[#294137] bg-[#09120f]">
+              {securities.data.items.map((item) => <button className="flex w-full items-center justify-between gap-3 border-t border-[#1b2c25] px-3 py-2 text-left first:border-t-0 hover:bg-white/[0.03]" key={item.securityId} onClick={() => { setShowSecurityMatches(false); updateValues((current) => ({ ...current, symbol: item.symbol, companyName: item.companyName })); }} type="button"><span><span className="text-xs font-semibold text-emerald-100">{item.symbol}</span><span className="ml-2 text-[11px] text-[#9aafa5]">{item.companyName}</span></span><span className="text-[10px] text-[#647b70]">{item.exchange}</span></button>)}
+            </div>
+          ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-[#647b70]">演示证券</span>
             {demoSecurities.map((symbol) => (
@@ -162,6 +177,11 @@ export function ResearchForm() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block"><span className="mb-2 block text-xs font-medium text-[#b8c8c0]">公司名称（可选核对）</span><input className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" maxLength={200} onChange={(event) => updateValues((current) => ({ ...current, companyName: event.target.value.trim() || undefined }))} placeholder="例如 Micron Technology, Inc." value={values.companyName ?? ""} /></label>
+          <label className="block"><span className="mb-2 block text-xs font-medium text-[#b8c8c0]">报告语言</span><select className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" onChange={(event) => updateValues((current) => ({ ...current, locale: event.target.value as ResearchRequest["locale"] }))} value={values.locale ?? "zh-CN"}><option value="zh-CN">简体中文</option><option value="en-US">English</option></select></label>
         </div>
 
         <div>

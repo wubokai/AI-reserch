@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { fetchApi, errorMessage } from "@/lib/api-client";
+import { ReportCharts } from "@/components/report-charts";
+import { ReportExportCenter } from "@/components/report-export-center";
+import { ReportVersionNav } from "@/components/report-version-nav";
 import {
   DEMO_DATA_NOTICE,
   RESEARCH_DISCLAIMER,
@@ -191,20 +194,13 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
             <h1 className="mt-5 text-3xl font-semibold leading-tight tracking-[-0.03em] text-white">{document.title}</h1>
             <p className="mt-4 text-xs text-[#71887d]">数据截至 {document.asOfDate} · {evidenceCount} 条 Evidence · Schema {document.schemaVersion}</p>
           </div>
-          <div className="grid shrink-0 grid-cols-3 gap-2">
-            {(["markdown", "html", "pdf"] as const).map((format) => (
-              <a
-                className="rounded-lg border border-[#294137] bg-[#0a1511] px-3 py-2 text-center text-xs font-semibold uppercase text-emerald-100 hover:border-emerald-300/40"
-                href={`/api/research/${researchId}/export?format=${format}&reportVersion=${version}`}
-                key={format}
-              >
-                {format}
-              </a>
-            ))}
-          </div>
+          <ReportExportCenter dataMode={document.dataMode} researchId={researchId} symbol={document.symbol} version={version} />
         </div>
+        <div className="mt-5 border-t border-[#1b2c25] pt-4"><ReportVersionNav currentVersion={version} researchId={researchId} /></div>
         {document.dataMode !== "REAL" ? <p className="mt-6 rounded-lg border border-amber-300/20 bg-amber-300/[0.05] px-4 py-3 text-xs font-semibold tracking-[0.06em] text-amber-100">{DEMO_DATA_NOTICE}</p> : null}
       </section>
+
+      <ReportCharts report={document} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
@@ -267,6 +263,7 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
             <h2 className="text-sm font-semibold text-white">Data Quality</h2>
             <p className="mt-4 text-3xl font-semibold text-emerald-100">{percent(document.dataQuality.score)}</p>
             <p className="mt-1 text-[11px] text-[#647b70]">确定性 completeness/freshness 评分</p>
+            <dl className="mt-4 space-y-3 text-[11px]"><div><dt className="text-[#647b70]">缺失数据</dt><dd className="mt-1 text-[#dce8e2]">{document.dataQuality.missingData.join("、") || "无"}</dd></div><div><dt className="text-[#647b70]">过期 Evidence</dt><dd className="mt-1 break-all text-[#dce8e2]">{document.dataQuality.staleEvidenceIds.join("、") || "无"}</dd></div><div><dt className="text-[#647b70]">来源冲突</dt><dd className="mt-1 text-[#dce8e2]">{document.dataQuality.sourceConflicts.join("、") || "无"}</dd></div></dl>
             {document.dataQuality.limitations.length > 0 ? <ul className="mt-4 list-disc space-y-2 pl-4 text-[11px] leading-5 text-amber-100/70">{document.dataQuality.limitations.map((item) => <li key={item}>{item}</li>)}</ul> : null}
           </section>
           <section className="rounded-xl border border-[#20342b] bg-[#0c1713] p-5">
