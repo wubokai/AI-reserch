@@ -465,10 +465,11 @@ Market 和 Fundamental Provider 尚未选择。选择前必须完成：
 
 ## 16. 当前下一步
 
-Phase 0–6 与 Gate G0–G6 已完成。下一步进入 Phase 7：
+Phase 0–6 与 Gate G0–G6 已完成。Phase 7 已完成 SEC EDGAR、FRED、SEC
+Companyfacts/XBRL 和统一 Provider Runtime 工程检查点。Gate G7 的下一步固定为：
 
-1. 先接 SEC EDGAR，建立真实 Filing/Chunk/快照的 Contract Test 与来源归属；
-2. 再接 FRED，验证 vintage、有效日期、限流和缓存；
-3. 在书面许可矩阵通过后选择并接入 Market Provider；
-4. 最后接入 Fundamental Provider，并建立 XBRL/标准概念人工黄金样例；
-5. 每个 REAL Adapter 独立通过数据模式隔离、失败降级、缓存、重试、许可和旧报告复现 Gate，不允许静默混入 Mock。
+1. 取得覆盖持久化、外部展示、报告导出和再分发的 Market Provider 书面权利；
+2. 许可通过后接入 Market Adapter；未通过时保持禁用；
+3. 完成全 REAL Worker 编排和旧报告复现验证，不允许静默混入 Mock；
+4. 验证 FRED/SEC/Market 在 UI、Markdown、HTML 与 PDF 中的来源归属；
+5. 通过最终 Web、Analytics、API/Testcontainers、secret scan 与 Compose 终验后关闭 Gate G7。

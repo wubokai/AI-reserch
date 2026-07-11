@@ -1,11 +1,12 @@
 # Phase 7 真实数据源与 Gate G7 测试矩阵
 
-最后更新：2026-07-10
+最后更新：2026-07-11
 
 ## 1. 当前范围
 
-Phase 7 按 SEC → FRED → Market → Fundamental 分段交付。本文件记录 SEC EDGAR 与
-FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 REAL 用户闭环。
+Phase 7 按 SEC → FRED → Market → Fundamental 分段交付。本文件记录 SEC EDGAR、
+FRED、SEC Companyfacts/XBRL 与统一 Provider Runtime 检查点；它们尚不代表 Gate G7
+完成，也不启用完整 REAL 用户闭环。
 
 已实现：
 
@@ -71,13 +72,12 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 
 ## 6. 尚未关闭的 Gate G7 项
 
-- SEC/FRED Redis 缓存、熔断器、Provider 状态/指标和完整 REAL Worker 编排；
+- 完整 REAL Worker 编排；
 - FRED UI/PDF 归属展示；
-- Market/Fundamental 功能、质量、成本以及存储/展示/导出/再分发许可决策；
-- 所选 Market/Fundamental Adapter、全 REAL 报告、UI 归属和导出验证；
-- 最终 Web、Analytics、API/Testcontainers、secret scan 与 Compose 全绿。
+- Market 功能、质量、成本以及存储/展示/导出/再分发书面许可；
+- 经许可的 Market Adapter、全 REAL 报告、UI 归属和导出验证。
 
-因此当前状态为“Phase 7 进行中 / SEC 与 FRED 分段检查点已终验”，不是 Gate G7 通过。
+因此当前状态为“Phase 7 进行中 / SEC、FRED、SEC XBRL 与 Provider Runtime 检查点已终验”，不是 Gate G7 通过。
 
 ## 7. Market/Fundamental 许可决策检查点
 
@@ -115,17 +115,21 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 Web/Playwright、Analytics、185 个 Surefire、47 个 Failsafe/Testcontainers、secret scan
 与 Compose 全部通过。
 
-## 9. Provider Runtime 本地检查点
+## 9. Provider Runtime 终验检查点
 
 | 要求 | 自动化证据 | 结果 |
 | --- | --- | --- |
 | Cache key | subject 只以 SHA-256 出现在 key，不含原始 subject | 通过 |
 | Cache hit | 第二次请求不执行 loader | 通过 |
-| TTL | Testcontainers Redis 验证 6 小时以内的正 TTL | 已编译，等待 CI |
+| TTL | Testcontainers Redis 验证 6 小时以内的正 TTL | 通过 |
 | Entry boundary | 超过 5 MB 配置上限时跳过缓存，不阻断 Provider | 通过 |
 | Cache degradation | Redis 读取异常按 miss 继续并记录 error metric | 通过 |
 | Circuit predicate | 两次可重试故障可打开测试电路 | 通过 |
 | Permanent errors | 多次永久 Schema 错误后电路仍为 CLOSED | 通过 |
 | Metrics | requests/cache/retries 仅使用受控低基数 tags | 通过 |
 | Adapter integration | SEC Filing、SEC XBRL、FRED 均通过统一 Runtime | 通过 |
-| 全量回归 | API 191 个 Surefire，0 失败；48 个 Failsafe 已编译 | 通过 |
+| 全量回归 | API 191 个 Surefire、48 个 Failsafe/Testcontainers，0 失败 | 通过 |
+
+全仓终验 [run `29142394155`](https://github.com/wubokai/AI-reserch/actions/runs/29142394155)：
+Web/Playwright、Analytics、191 个 Surefire、48 个 Failsafe/Testcontainers、secret scan
+与五服务 Compose 全部通过。
