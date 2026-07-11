@@ -26,9 +26,12 @@ fi
 [[ -r "${BACKUP_PASSPHRASE_FILE}" ]] || { echo "Passphrase file is unreadable" >&2; exit 1; }
 
 (cd "$(dirname "${BACKUP_FILE}")" && sha256sum --check "$(basename "${BACKUP_FILE}.sha256")")
+temporary=$(mktemp)
+trap 'rm -f "${temporary}"' EXIT
 "${OPENSSL_BIN}" enc -d -aes-256-cbc -pbkdf2 \
   -pass "file:${BACKUP_PASSPHRASE_FILE}" \
   -in "${BACKUP_FILE}" \
-  | docker run --rm -i postgres:17-alpine pg_restore --list >/dev/null
+  -out "${temporary}"
+docker run --rm -i postgres:17-alpine pg_restore --list < "${temporary}" >/dev/null
 
 echo "Backup checksum, decryption, and pg_restore catalog verification passed."
