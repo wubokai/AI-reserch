@@ -109,6 +109,8 @@ function EvidenceDrawer({ evidence, onClose }: { evidence: Evidence; onClose: ()
           <dt className="text-[#647b70]">新鲜度</dt><dd className="text-[#dce8e2]">{evidence.freshnessStatus}</dd>
           <dt className="text-[#647b70]">质量分</dt><dd className="text-[#dce8e2]">{percent(evidence.qualityScore)}</dd>
           <dt className="text-[#647b70]">主来源</dt><dd className="text-[#dce8e2]">{evidence.isPrimarySource ? "是" : "否"}</dd>
+          {evidence.attribution ? <><dt className="text-[#647b70]">来源归属</dt><dd className="text-[#dce8e2]">{evidence.attribution}</dd></> : null}
+          {evidence.licensePolicyVersion ? <><dt className="text-[#647b70]">许可策略</dt><dd className="break-all text-[#dce8e2]">{evidence.licensePolicyVersion}</dd></> : null}
           <dt className="text-[#647b70]">快照 Schema</dt><dd className="break-all text-[#dce8e2]">{evidence.sourceSchemaVersion ?? "内部计算"}</dd>
           <dt className="text-[#647b70]">关联 Claim</dt><dd className="break-all text-[#dce8e2]">{evidence.relatedClaimIds.join(", ") || "暂无"}</dd>
         </dl>
@@ -116,7 +118,7 @@ function EvidenceDrawer({ evidence, onClose }: { evidence: Evidence; onClose: ()
         {evidence.value !== undefined ? <pre className="mt-6 overflow-x-auto rounded-lg border border-[#20342b] bg-[#07100d] p-4 text-[11px] leading-5 text-[#a6b8af]">{JSON.stringify(evidence.value, null, 2)}</pre> : null}
         <p className="mt-6 break-all font-mono text-[9px] leading-4 text-[#53695f]">SHA-256 {evidence.rawDataHash}</p>
         {evidence.normalizedDataHash ? <p className="mt-2 break-all font-mono text-[9px] leading-4 text-[#53695f]">Normalized SHA-256 {evidence.normalizedDataHash}</p> : null}
-        <p className="mt-6 rounded border border-amber-300/15 bg-amber-300/[0.04] p-3 text-[11px] text-amber-100/70">{DEMO_DATA_NOTICE}</p>
+        {evidence.isDemoData ? <p className="mt-6 rounded border border-amber-300/15 bg-amber-300/[0.04] p-3 text-[11px] text-amber-100/70">{DEMO_DATA_NOTICE}</p> : null}
       </aside>
     </div>
   );
@@ -137,6 +139,22 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
     () => new Map(evidence.data?.items.map((item) => [item.evidenceId, item]) ?? []),
     [evidence.data],
   );
+  const sourceAttributions = useMemo(() => {
+    const unique = new Map<string, Evidence>();
+    for (const item of evidence.data?.items ?? []) {
+      if (!item.sourceSnapshotId || (!item.attribution && !item.licensePolicyVersion)) continue;
+      const key = [
+        item.sourceName,
+        item.sourceUrl ?? "",
+        item.attribution ?? "",
+        item.licensePolicyVersion ?? "",
+      ].join("\u0000");
+      if (!unique.has(key)) unique.set(key, item);
+    }
+    return [...unique.values()].sort((left, right) =>
+      left.sourceName.localeCompare(right.sourceName),
+    );
+  }, [evidence.data]);
   const filingSearch = useQuery({
     queryKey: ["research", researchId, "evidence-search", evidenceQuery.trim()],
     queryFn: () => fetchApi(
@@ -185,7 +203,7 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
             ))}
           </div>
         </div>
-        <p className="mt-6 rounded-lg border border-amber-300/20 bg-amber-300/[0.05] px-4 py-3 text-xs font-semibold tracking-[0.06em] text-amber-100">{DEMO_DATA_NOTICE}</p>
+        {document.dataMode !== "REAL" ? <p className="mt-6 rounded-lg border border-amber-300/20 bg-amber-300/[0.05] px-4 py-3 text-xs font-semibold tracking-[0.06em] text-amber-100">{DEMO_DATA_NOTICE}</p> : null}
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -229,6 +247,22 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
         </div>
 
         <aside className="space-y-5">
+          {sourceAttributions.length > 0 ? (
+            <section className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.035] p-5">
+              <h2 className="text-sm font-semibold text-emerald-100">数据来源与归属</h2>
+              <div className="mt-4 space-y-4">
+                {sourceAttributions.map((item) => (
+                  <article className="border-t border-emerald-300/10 pt-4 first:border-t-0 first:pt-0" key={[item.sourceName, item.sourceUrl, item.attribution].join("|")}>
+                    <p className="text-xs font-semibold text-[#dce8e2]">{item.sourceName}</p>
+                    <p className="mt-1 text-[10px] text-[#71887d]">{item.sourceType}</p>
+                    {item.attribution ? <p className="mt-2 text-[11px] leading-5 text-[#a6b8af]">{item.attribution}</p> : null}
+                    {item.licensePolicyVersion ? <p className="mt-2 break-all font-mono text-[9px] text-[#647b70]">Policy {item.licensePolicyVersion}</p> : null}
+                    {item.sourceUrl ? <a className="mt-2 inline-block text-[10px] text-emerald-200 underline" href={item.sourceUrl} rel="noreferrer" target="_blank">打开官方来源</a> : null}
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
           <section className="rounded-xl border border-[#20342b] bg-[#0c1713] p-5">
             <h2 className="text-sm font-semibold text-white">Data Quality</h2>
             <p className="mt-4 text-3xl font-semibold text-emerald-100">{percent(document.dataQuality.score)}</p>

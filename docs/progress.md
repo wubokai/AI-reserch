@@ -11,7 +11,7 @@
 | Phase 4：完整量化服务 | 完成 | 73 个有序 Metric、确定性 Trend、黄金数据集、完整数值/语义边界、Java/Python 契约和原有 Mock 闭环回归均通过；Gate G4 通过 |
 | Phase 5：Evidence 与 SEC 检索基础 | 完成 | Source Snapshot、日期/数值引用、确定性 Freshness/Confidence/Data Quality、一次安全修复、Filing 清洗/Chunk/GIN 检索、Evidence Drawer 与快照复现均通过；Gate G5 通过 |
 | Phase 6：真实 LLM 安全接入 | 完成 | `ResearchLanguageModel` Mock/Real 双实现、Responses API、6 个严格 Schema、三工具 allowlist、预算预留/结算、调用/失败审计和安全回退已通过；Gate G6 通过 |
-| Phase 7：真实数据源 | 进行中 | SEC/FRED/XBRL 与统一 Provider Runtime 已通过全仓 CI；Market 许可失败关闭；全 REAL 编排和 UI/PDF 归属仍受合规 Market 数据源阻塞，Gate G7 尚未关闭 |
+| Phase 7：真实数据源 | 进行中 | SEC/FRED/XBRL 与统一 Provider Runtime 已通过全仓 CI；SEC/FRED 多格式归属已完成本地检查点；Market 许可失败关闭，全 REAL 编排仍受合规 Market 数据源阻塞 |
 | Phase 8-9 | 未开始 | 完整前端产品与发布硬化将在 Gate G7 后推进 |
 
 ## 已验证
@@ -19,8 +19,8 @@
 - 原始 DOCX 需求已全文读取并完成结构/页面核对；
 - OpenAPI 3.1 YAML 可解析，本地引用与必需操作完整；
 - LLM/Analytics JSON Schema 是合法 JSON；
-- Web：ESLint、TypeScript、20 个 Vitest、Next.js production build 与 4 个 Playwright 用例通过；闭环 E2E 覆盖创建 → 进度 → 报告/Evidence → Bull/Base/Bear → 三种导出 → 历史重开；
-- API：Java 21 / Spring Boot 3.5，Provider Runtime 检查点 191 个 Surefire 与 48 个 Failsafe/Testcontainers 通过；新增缓存命中/TTL/体积、Redis 降级、熔断 predicate 和 Prometheus metric 覆盖；
+- Web：ESLint、TypeScript、21 个 Vitest、Next.js production build 与 4 个 Playwright 用例通过；新增 REAL 来源归属与 Demo 标识隔离测试；
+- API：Java 21 / Spring Boot 3.5，193 个 Surefire 本地通过；Provider Runtime 的 48 个 Failsafe/Testcontainers 已通过上一检查点；新增不可变归属查询、三格式导出、PDF 文本和模板缓存版本覆盖；
 - PostgreSQL 17：Flyway V1–V8；V8 的 `llm_budget_reservations`、provider/pricing/request 元数据、真实 HTTP 调用计数、原子预留、幂等、超支阻断、结算、失败审计和不可变约束均通过 Testcontainers；
 - Analytics：Ruff、strict mypy、41 个 pytest 通过，branch coverage 93.92%；完整覆盖收益、风险、技术/Trend、基本面、估值与情景；
 - 本地真实服务链路：MU、NVDA、RKLB 完整研究均形成已验证报告；关闭基本面叙事时安全部分完成，关闭宏观时完整完成；所有保留的重要 Claim 都关联同任务 Evidence；
@@ -44,5 +44,5 @@
 - 普通用户闭环只允许 `dataMode=MOCK`；目标只支持 MU/NVDA/RKLB，基准只支持 SPY/QQQ，深度固定 `STANDARD`，周期固定 `5y`，技术分析必须启用。
 - 基本面开关只控制可选叙事分析步骤；情景计算所需的规范化基本面数据仍会获取。宏观开关关闭时跳过宏观取数。
 - SEC Filing、SEC XBRL 与 FRED Adapter 已接入但默认关闭；缓存、熔断和 Provider 指标已完成，完整 REAL 编排仍受 Market 许可阻塞，不能描述为可发布的真实研究闭环。
-- FRED UI/PDF 归属验证仍待完成。Fundamental 已选择 SEC Companyfacts/XBRL；真实 Market 在取得覆盖持久化、外部展示和报告导出的书面权利前保持未选择。
+- SEC/FRED 页面与 Markdown/HTML/PDF 归属已完成本地验证。Fundamental 已选择 SEC Companyfacts/XBRL；真实 Market 在取得覆盖持久化、外部展示和报告导出的书面权利前保持未选择。
 - 真实 OpenAI Adapter 已接入但未配置生产模型、Key 或价格；当前默认仍只发布确定性 Mock 报告，测试不访问真实外部模型。

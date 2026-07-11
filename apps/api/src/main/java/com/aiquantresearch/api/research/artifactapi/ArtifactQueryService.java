@@ -226,6 +226,14 @@ public class ArtifactQueryService {
                        e.is_demo_data, ss.id as source_snapshot_id,
                        ss.schema_version as source_schema_version,
                        ss.normalized_data_hash,
+                       case
+                           when nullif(ss.payload_json ->> 'attribution', '') is not null
+                               then ss.payload_json ->> 'attribution'
+                           when ss.provider like 'SEC_EDGAR%'
+                               then 'Data sourced from the U.S. Securities and Exchange Commission (SEC) EDGAR system.'
+                           else null
+                       end as attribution,
+                       ss.metadata_json ->> 'licensePolicyVersion' as license_policy_version,
                        coalesce((
                            select jsonb_agg(distinct c.public_id order by c.public_id)
                              from claim_evidence_links cel
@@ -432,7 +440,9 @@ public class ArtifactQueryService {
                 stringList(text(row, "related_claim_ids_json")),
                 nullableUuid(row, "source_snapshot_id"),
                 nullableText(row, "source_schema_version"),
-                nullableText(row, "normalized_data_hash")
+                nullableText(row, "normalized_data_hash"),
+                nullableText(row, "attribution"),
+                nullableText(row, "license_policy_version")
         );
     }
 

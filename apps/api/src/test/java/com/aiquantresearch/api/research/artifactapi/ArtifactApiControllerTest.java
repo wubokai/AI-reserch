@@ -114,6 +114,10 @@ class ArtifactApiControllerTest {
                 .andExpect(jsonPath("$.items[0].evidenceId").value("ev_MU_return-01"))
                 .andExpect(jsonPath("$.items[0].relatedClaimIds[0]")
                         .value("cl_MU-return_01"))
+                .andExpect(jsonPath("$.items[0].attribution")
+                        .value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.items[0].licensePolicyVersion")
+                        .value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.dataMode").value("MOCK"))
                 .andExpect(jsonPath("$.page.totalElements").value(11));
 

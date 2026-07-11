@@ -1431,6 +1431,8 @@ components:
         - sourceSnapshotId
         - sourceSchemaVersion
         - normalizedDataHash
+        - attribution
+        - licensePolicyVersion
       properties:
         evidenceId:
           type: string
@@ -1490,6 +1492,12 @@ components:
         normalizedDataHash:
           type: [string, 'null']
           pattern: '^[a-f0-9]{64}$'
+        attribution:
+          type: [string, 'null']
+          description: Provider-required attribution statement captured with the immutable source snapshot
+        licensePolicyVersion:
+          type: [string, 'null']
+          description: Versioned provider access or license review policy applied to the source snapshot
 
     EvidencePage:
       type: object

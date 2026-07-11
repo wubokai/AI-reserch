@@ -5,6 +5,8 @@ import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -98,10 +100,27 @@ class ReportExportStore {
         return jdbc.queryForList("""
                 select distinct e.id, e.public_id, e.evidence_type, e.title, e.summary,
                        e.value_json::text as value_json, e.unit,
-                       e.source_snapshot_id, e.quant_result_id
+                       e.source_snapshot_id, e.quant_result_id, e.quality_score,
+                       e.is_demo_data,
+                       coalesce(ss.is_primary_source, true) as is_primary_source,
+                       coalesce(ss.freshness_status, 'FRESH') as freshness_status,
+                       coalesce(ss.effective_date, qr.input_data_end) as effective_date,
+                       coalesce(ss.provider, 'Internal Analytics') as source_name,
+                       ss.source_url,
+                       coalesce(ss.source_type, 'INTERNAL_CALCULATION') as source_type,
+                       case
+                           when nullif(ss.payload_json ->> 'attribution', '') is not null
+                               then ss.payload_json ->> 'attribution'
+                           when ss.provider like 'SEC_EDGAR%'
+                               then 'Data sourced from the U.S. Securities and Exchange Commission (SEC) EDGAR system.'
+                           else null
+                       end as attribution,
+                       ss.metadata_json ->> 'licensePolicyVersion' as license_policy_version
                   from claims c
                   join claim_evidence_links cel on cel.claim_id = c.id
                   join evidence_items e on e.id = cel.evidence_id
+                  left join source_snapshots ss on ss.id = e.source_snapshot_id
+                  left join quant_results qr on qr.id = e.quant_result_id
                  where c.report_version_id = ?
                    and c.research_job_id = ?
                    and e.research_job_id = ?
@@ -117,7 +136,17 @@ class ReportExportStore {
                         json(text(row, "value_json")),
                         nullableText(row, "unit"),
                         nullableUuid(row, "source_snapshot_id"),
-                        nullableUuid(row, "quant_result_id")
+                        nullableUuid(row, "quant_result_id"),
+                        decimal(row, "quality_score"),
+                        bool(row, "is_primary_source"),
+                        text(row, "freshness_status"),
+                        nullableDate(row, "effective_date"),
+                        bool(row, "is_demo_data"),
+                        text(row, "source_name"),
+                        nullableText(row, "source_url"),
+                        text(row, "source_type"),
+                        nullableText(row, "attribution"),
+                        nullableText(row, "license_policy_version")
                 ))
                 .toList();
     }
@@ -215,6 +244,33 @@ class ReportExportStore {
 
     private static int integer(Map<String, Object> row, String key) {
         return number(row, key).intValue();
+    }
+
+    private static BigDecimal decimal(Map<String, Object> row, String key) {
+        Object value = row.get(key);
+        if (value instanceof BigDecimal decimal) {
+            return decimal;
+        }
+        if (value instanceof Number number) {
+            return new BigDecimal(number.toString());
+        }
+        throw new IllegalStateException("Required database decimal is invalid: " + key);
+    }
+
+    private static boolean bool(Map<String, Object> row, String key) {
+        Object value = row.get(key);
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        throw new IllegalStateException("Required database boolean is invalid: " + key);
+    }
+
+    private static LocalDate nullableDate(Map<String, Object> row, String key) {
+        Object value = row.get(key);
+        if (value == null) {
+            return null;
+        }
+        return value instanceof LocalDate date ? date : LocalDate.parse(value.toString());
     }
 
     private static Number number(Map<String, Object> row, String key) {

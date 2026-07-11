@@ -81,6 +81,8 @@ class ArtifactQueryServiceTest {
             assertThat(item.evidenceId()).isEqualTo("ev_MU_return-01");
             assertThat(item.relatedClaimIds()).containsExactly("cl_MU-return_01");
             assertThat(item.value().decimalValue()).isEqualByComparingTo("0.42");
+            assertThat(item.attribution()).isEqualTo("Provider attribution statement");
+            assertThat(item.licensePolicyVersion()).isEqualTo("provider_policy_v1");
         });
         verify(jdbc).queryForObject(
                 contains("r.user_id = ?"),
@@ -222,6 +224,8 @@ class ArtifactQueryServiceTest {
         row.put("raw_data_hash", "a".repeat(64));
         row.put("is_demo_data", true);
         row.put("related_claim_ids_json", "[\"cl_MU-return_01\"]");
+        row.put("attribution", "Provider attribution statement");
+        row.put("license_policy_version", "provider_policy_v1");
         return row;
     }
 

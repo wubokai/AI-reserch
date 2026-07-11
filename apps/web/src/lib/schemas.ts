@@ -416,6 +416,8 @@ export const evidenceSchema = z.object({
   sourceSnapshotId: z.uuid().nullable(),
   sourceSchemaVersion: z.string().nullable(),
   normalizedDataHash: z.string().regex(/^[a-f0-9]{64}$/).nullable(),
+  attribution: z.string().nullable(),
+  licensePolicyVersion: z.string().nullable(),
 });
 
 export const evidencePageSchema = z.object({

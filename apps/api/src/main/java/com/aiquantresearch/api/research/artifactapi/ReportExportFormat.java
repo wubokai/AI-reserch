@@ -6,9 +6,9 @@ import java.util.Locale;
 import org.springframework.http.MediaType;
 
 enum ReportExportFormat {
-    MARKDOWN("md", MediaType.parseMediaType("text/markdown;charset=UTF-8"), "markdown-v1"),
-    HTML("html", MediaType.parseMediaType("text/html;charset=UTF-8"), "html-v2"),
-    PDF("pdf", MediaType.APPLICATION_PDF, "pdf-v2");
+    MARKDOWN("md", MediaType.parseMediaType("text/markdown;charset=UTF-8"), "markdown-v2"),
+    HTML("html", MediaType.parseMediaType("text/html;charset=UTF-8"), "html-v3"),
+    PDF("pdf", MediaType.APPLICATION_PDF, "pdf-v3");
 
     private final String extension;
     private final MediaType mediaType;

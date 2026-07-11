@@ -78,7 +78,7 @@ class ReportExportServiceTest {
     void repeatedRequestReturnsTheExactCachedBytesWithoutRenderingAgain() throws Exception {
         byte[] cachedBytes = "cached markdown".getBytes(StandardCharsets.UTF_8);
         when(store.findReport(OWNER_ID, RESEARCH_ID, 2)).thenReturn(Optional.of(source));
-        when(store.cached(REPORT_ID, ReportExportFormat.MARKDOWN, "markdown-v1"))
+        when(store.cached(REPORT_ID, ReportExportFormat.MARKDOWN, "markdown-v2"))
                 .thenReturn(Optional.of(new CachedReportExport(cachedBytes, hash(cachedBytes))));
 
         ReportExportArtifact result = service.export(
@@ -110,14 +110,14 @@ class ReportExportServiceTest {
         ));
         byte[] rendered = "# MU report".getBytes(StandardCharsets.UTF_8);
         when(store.findReport(OWNER_ID, RESEARCH_ID, null)).thenReturn(Optional.of(source));
-        when(store.cached(REPORT_ID, ReportExportFormat.MARKDOWN, "markdown-v1"))
+        when(store.cached(REPORT_ID, ReportExportFormat.MARKDOWN, "markdown-v2"))
                 .thenReturn(Optional.empty());
         when(store.evidence(REPORT_ID, RESEARCH_ID)).thenReturn(evidence);
         when(markdownRenderer.render(source.report(), evidence)).thenReturn("# MU report");
         when(store.cache(
                 eq(source),
                 eq(ReportExportFormat.MARKDOWN),
-                eq("markdown-v1"),
+                eq("markdown-v2"),
                 eq(rendered),
                 anyString()
         )).thenAnswer(invocation -> new CachedReportExport(
@@ -141,7 +141,7 @@ class ReportExportServiceTest {
     @Test
     void pdfFailureReturnsASafeErrorAndNeverWritesACacheEntry() {
         when(store.findReport(OWNER_ID, RESEARCH_ID, 2)).thenReturn(Optional.of(source));
-        when(store.cached(REPORT_ID, ReportExportFormat.PDF, "pdf-v2"))
+        when(store.cached(REPORT_ID, ReportExportFormat.PDF, "pdf-v3"))
                 .thenReturn(Optional.empty());
         when(store.evidence(REPORT_ID, RESEARCH_ID)).thenReturn(List.of());
         when(pdfRenderer.render(source.report(), List.of()))

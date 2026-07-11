@@ -124,24 +124,29 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
     @Override
     public List<StoredEvidence> evidence(UUID researchId) {
         return jdbcTemplate.query("""
-                select id, public_id, evidence_type, title, summary,
-                       value_json::text as value_json, unit,
-                       source_snapshot_id, quant_result_id, quality_score,
-                       is_demo_data,
-                       coalesce((select is_primary_source from source_snapshots
-                                  where id = evidence_items.source_snapshot_id), true)
-                           as is_primary_source,
-                       coalesce((select freshness_status from source_snapshots
-                                  where id = evidence_items.source_snapshot_id), 'FRESH')
-                           as freshness_status,
-                       coalesce((select effective_date from source_snapshots
-                                  where id = evidence_items.source_snapshot_id),
-                                (select input_data_end from quant_results
-                                  where id = evidence_items.quant_result_id))
-                           as effective_date
-                  from evidence_items
-                 where research_job_id = ?
-                 order by public_id
+                select e.id, e.public_id, e.evidence_type, e.title, e.summary,
+                       e.value_json::text as value_json, e.unit,
+                       e.source_snapshot_id, e.quant_result_id, e.quality_score,
+                       e.is_demo_data,
+                       coalesce(ss.is_primary_source, true) as is_primary_source,
+                       coalesce(ss.freshness_status, 'FRESH') as freshness_status,
+                       coalesce(ss.effective_date, qr.input_data_end) as effective_date,
+                       coalesce(ss.provider, 'Internal Analytics') as source_name,
+                       ss.source_url,
+                       coalesce(ss.source_type, 'INTERNAL_CALCULATION') as source_type,
+                       case
+                           when nullif(ss.payload_json ->> 'attribution', '') is not null
+                               then ss.payload_json ->> 'attribution'
+                           when ss.provider like 'SEC_EDGAR%'
+                               then 'Data sourced from the U.S. Securities and Exchange Commission (SEC) EDGAR system.'
+                           else null
+                       end as attribution,
+                       ss.metadata_json ->> 'licensePolicyVersion' as license_policy_version
+                  from evidence_items e
+                  left join source_snapshots ss on ss.id = e.source_snapshot_id
+                  left join quant_results qr on qr.id = e.quant_result_id
+                 where e.research_job_id = ?
+                 order by e.public_id
                 """, (row, ignored) -> new StoredEvidence(
                 row.getObject("id", UUID.class),
                 row.getString("public_id"),
@@ -156,7 +161,12 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                 row.getBoolean("is_primary_source"),
                 row.getString("freshness_status"),
                 row.getObject("effective_date", LocalDate.class),
-                row.getBoolean("is_demo_data")
+                row.getBoolean("is_demo_data"),
+                row.getString("source_name"),
+                row.getString("source_url"),
+                row.getString("source_type"),
+                row.getString("attribution"),
+                row.getString("license_policy_version")
         ), researchId);
     }
 

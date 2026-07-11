@@ -95,7 +95,7 @@ SEC XBRL 的标准 concept、期间选择、修订去重、派生公式与 NOT_A
 - 原始 metadata/observation 字节形成 SHA-256，规范化 Payload 另存哈希；Source Snapshot 保存 vintage、effective date、freshness、许可复核版本和官方要求的归属文本；
 - 契约依据：[FRED Series Observations](https://fred.stlouisfed.org/docs/api/fred/series_observations.html)、[FRED API Terms](https://fred.stlouisfed.org/docs/api/terms_of_use.html) 与 [FRED Legal Terms](https://fred.stlouisfed.org/legal/terms/)。
 
-当前限制：FRED Redis 缓存、熔断器、Provider 指标及 UI/PDF 归属展示仍属于本阶段后续 Gate。
+FRED 缓存、熔断、Provider 指标及页面/Markdown/HTML/PDF 归属展示均已完成；归属文本和许可策略版本来自不可变 Source Snapshot，导出模板版本变化会强制生成新缓存。完整 REAL 闭环仍受 Market 书面权利阻塞。
 
 ## 5. SourceSnapshot
 

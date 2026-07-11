@@ -17,6 +17,8 @@ public class ReportHtmlRenderer {
         List<StoredEvidence> orderedEvidence = evidence.stream()
                 .sorted(Comparator.comparing(StoredEvidence::publicId))
                 .toList();
+        List<ReportSourceAttribution> attributions = ReportRenderSupport.attributions(evidence);
+        boolean demo = ReportRenderSupport.isDemo(report);
         StringBuilder html = new StringBuilder(16_384);
         html.append("<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"")
                 .append(escape(report.path("locale").asText("en-US")))
@@ -25,9 +27,13 @@ public class ReportHtmlRenderer {
                 .append("</title><style>")
                 .append(styles())
                 .append("</style></head><body>");
-        html.append("<header><div class=\"watermark\">")
-                .append(escape(DeterministicMockReportGenerator.DEMO_WATERMARK))
-                .append("</div><h1>")
+        html.append("<header>");
+        if (demo) {
+            html.append("<div class=\"watermark\">")
+                    .append(escape(DeterministicMockReportGenerator.DEMO_WATERMARK))
+                    .append("</div>");
+        }
+        html.append("<h1>")
                 .append(escape(report.path("title").asText("Research report")))
                 .append("</h1><div class=\"metadata\">")
                 .append(meta("Symbol", report.path("symbol").asText()))
@@ -82,6 +88,29 @@ public class ReportHtmlRenderer {
         html.append("</section>");
         appendNamedClaims(html, "Conclusion", report.path("conclusion"));
 
+        if (!attributions.isEmpty()) {
+            html.append("<section class=\"attributions\"><h2>Data source attribution</h2><ul>");
+            for (ReportSourceAttribution attribution : attributions) {
+                html.append("<li><strong>")
+                        .append(escape(attribution.sourceName()))
+                        .append("</strong><span class=\"source-type\">")
+                        .append(escape(attribution.sourceType()))
+                        .append("</span><p>")
+                        .append(escape(attribution.statement()))
+                        .append("</p>");
+                if (!attribution.sourceUrl().isBlank()) {
+                    html.append("<p class=\"source-url\">Source URL: ")
+                            .append(escape(attribution.sourceUrl())).append("</p>");
+                }
+                if (!attribution.licensePolicyVersion().isBlank()) {
+                    html.append("<p class=\"source-policy\">Policy: ")
+                            .append(escape(attribution.licensePolicyVersion())).append("</p>");
+                }
+                html.append("</li>");
+            }
+            html.append("</ul></section>");
+        }
+
         html.append("<section class=\"sources\"><h2>Sources</h2><ol>");
         for (StoredEvidence item : orderedEvidence) {
             html.append("<li><span class=\"source-id\">")
@@ -90,15 +119,22 @@ public class ReportHtmlRenderer {
                     .append(escape(item.title()))
                     .append("</strong><p>")
                     .append(escape(item.summary()))
+                    .append("</p><p class=\"source-provider\">Source: ")
+                    .append(escape(item.sourceName()))
+                    .append(" (").append(escape(item.sourceType())).append(")")
                     .append("</p></li>");
         }
         html.append("</ol></section></main><footer><h2>Disclaimer</h2><p>")
                 .append(disclaimerHtml(report.path("disclaimer").asText(
                         DeterministicMockReportGenerator.DISCLAIMER
                 )))
-                .append("</p><div class=\"footer-watermark\">")
-                .append(escape(DeterministicMockReportGenerator.DEMO_WATERMARK))
-                .append("</div></footer></body></html>");
+                .append("</p>");
+        if (demo) {
+            html.append("<div class=\"footer-watermark\">")
+                    .append(escape(DeterministicMockReportGenerator.DEMO_WATERMARK))
+                    .append("</div>");
+        }
+        html.append("</footer></body></html>");
         return html.toString();
     }
 
@@ -189,6 +225,14 @@ public class ReportHtmlRenderer {
                 th:first-child, td:first-child { text-align: left; }
                 .weighted { background: #edf4ea; border-left: 4px solid #538347;
                     font-weight: bold; padding: 7px 9px; }
+                .attributions { border: 1px solid #b9c6d4; margin-top: 16px; padding: 0 12px 8px; }
+                .attributions ul { list-style: none; margin: 0; padding: 0; }
+                .attributions li { border-top: 1px solid #d7e0e8; padding: 7px 0; }
+                .attributions li:first-child { border-top: 0; }
+                .attributions p { margin: 2px 0; }
+                .source-type { color: #65758b; font-size: 8pt; margin-left: 8px; }
+                .source-url, .source-policy, .source-provider { color: #65758b;
+                    font-size: 8pt; word-wrap: break-word; }
                 .sources { font-size: 9pt; line-height: 1.3; margin-top: 16px; }
                 .sources ol { padding-left: 20px; }
                 .sources li { margin-bottom: 4px; page-break-inside: avoid; }

@@ -20,8 +20,39 @@ public record StoredEvidence(
         boolean primarySource,
         String freshnessStatus,
         LocalDate effectiveDate,
-        boolean demoData
+        boolean demoData,
+        String sourceName,
+        String sourceUrl,
+        String sourceType,
+        String attribution,
+        String licensePolicyVersion
 ) {
+
+    public StoredEvidence(
+            UUID id,
+            String publicId,
+            String evidenceType,
+            String title,
+            String summary,
+            JsonNode value,
+            String unit,
+            UUID sourceSnapshotId,
+            UUID quantResultId,
+            BigDecimal qualityScore,
+            boolean primarySource,
+            String freshnessStatus,
+            LocalDate effectiveDate,
+            boolean demoData
+    ) {
+        this(id, publicId, evidenceType, title, summary, value, unit,
+                sourceSnapshotId, quantResultId, qualityScore, primarySource,
+                freshnessStatus, effectiveDate, demoData,
+                sourceSnapshotId == null ? "Internal Analytics" : "Source snapshot",
+                null,
+                sourceSnapshotId == null ? "INTERNAL_CALCULATION" : "OTHER",
+                null,
+                null);
+    }
 
     public StoredEvidence(
             UUID id,

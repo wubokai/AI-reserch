@@ -17,10 +17,13 @@ public class ReportMarkdownRenderer {
         List<StoredEvidence> orderedEvidence = evidence.stream()
                 .sorted(Comparator.comparing(StoredEvidence::publicId))
                 .toList();
+        List<ReportSourceAttribution> attributions = ReportRenderSupport.attributions(evidence);
         StringBuilder output = new StringBuilder();
         output.append("# ").append(md(report.path("title").asText("Research report"))).append("\n\n");
-        output.append("> **").append(md(DeterministicMockReportGenerator.DEMO_WATERMARK))
-                .append("**\n\n");
+        if (ReportRenderSupport.isDemo(report)) {
+            output.append("> **").append(md(DeterministicMockReportGenerator.DEMO_WATERMARK))
+                    .append("**\n\n");
+        }
         output.append("- **Symbol:** ").append(md(report.path("symbol").asText())).append('\n');
         output.append("- **Security type:** ").append(md(report.path("securityType").asText())).append('\n');
         output.append("- **As of:** ").append(md(report.path("asOfDate").asText())).append('\n');
@@ -64,11 +67,31 @@ public class ReportMarkdownRenderer {
         }
         appendNamedClaims(output, "Conclusion", report.path("conclusion"));
 
+        if (!attributions.isEmpty()) {
+            output.append("## Data source attribution\n\n");
+            for (ReportSourceAttribution attribution : attributions) {
+                output.append("- **").append(md(attribution.sourceName())).append("**")
+                        .append(" (`").append(md(attribution.sourceType())).append("`): ")
+                        .append(md(attribution.statement()));
+                if (!attribution.sourceUrl().isBlank()) {
+                    output.append(" Source URL: ").append(md(attribution.sourceUrl())).append('.');
+                }
+                if (!attribution.licensePolicyVersion().isBlank()) {
+                    output.append(" Policy: `")
+                            .append(md(attribution.licensePolicyVersion())).append("`.");
+                }
+                output.append('\n');
+            }
+            output.append('\n');
+        }
+
         output.append("## Sources\n\n");
         for (StoredEvidence item : orderedEvidence) {
             output.append("- **").append(md(item.publicId())).append(" — ")
                     .append(md(item.title())).append("**: ")
-                    .append(md(item.summary())).append('\n');
+                    .append(md(item.summary()))
+                    .append(" Source: ").append(md(item.sourceName()))
+                    .append(" (`").append(md(item.sourceType())).append("`).\n");
         }
         output.append("\n## Disclaimer\n\n");
         output.append(md(report.path("disclaimer").asText(

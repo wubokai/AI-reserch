@@ -105,7 +105,9 @@ public final class ArtifactApiResponses {
             List<String> relatedClaimIds,
             @JsonInclude(JsonInclude.Include.ALWAYS) UUID sourceSnapshotId,
             @JsonInclude(JsonInclude.Include.ALWAYS) String sourceSchemaVersion,
-            @JsonInclude(JsonInclude.Include.ALWAYS) String normalizedDataHash
+            @JsonInclude(JsonInclude.Include.ALWAYS) String normalizedDataHash,
+            @JsonInclude(JsonInclude.Include.ALWAYS) String attribution,
+            @JsonInclude(JsonInclude.Include.ALWAYS) String licensePolicyVersion
     ) {
         public EvidenceItem(
                 String evidenceId,
@@ -131,7 +133,8 @@ public final class ArtifactApiResponses {
                     evidenceId, evidenceType, title, summary, value, unit,
                     sourceName, sourceUrl, sourceType, publishedAt, retrievedAt,
                     effectiveDate, isPrimarySource, freshnessStatus, qualityScore,
-                    rawDataHash, isDemoData, relatedClaimIds, null, null, null
+                    rawDataHash, isDemoData, relatedClaimIds, null, null, null,
+                    null, null
             );
         }
     }

@@ -7,6 +7,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -74,6 +77,49 @@ class ReportExportStoreTest {
                 eq(RESEARCH_ID),
                 eq(OWNER_ID),
                 eq(3)
+        );
+    }
+
+    @Test
+    void exportEvidenceRetainsImmutableProviderAttribution() {
+        var row = new HashMap<String, Object>();
+        row.put("id", UUID.fromString("33333333-3333-4333-8333-333333333333"));
+        row.put("public_id", "ev_fred_macro");
+        row.put("evidence_type", "MACRO_OBSERVATION");
+        row.put("title", "FRED macro snapshot");
+        row.put("summary", "Immutable provider evidence.");
+        row.put("value_json", "{\"asOfDate\":\"2026-07-10\"}");
+        row.put("source_snapshot_id", UUID.fromString(
+                "44444444-4444-4444-8444-444444444444"
+        ));
+        row.put("quality_score", new BigDecimal("0.9900"));
+        row.put("is_demo_data", false);
+        row.put("is_primary_source", true);
+        row.put("freshness_status", "FRESH");
+        row.put("effective_date", LocalDate.parse("2026-07-10"));
+        row.put("source_name", "FRED");
+        row.put("source_url", "https://fred.stlouisfed.org/fred/");
+        row.put("source_type", "GOVERNMENT_DATA");
+        row.put("attribution", "Provider attribution statement");
+        row.put("license_policy_version", "fred_api_terms_2025-02-18");
+        when(jdbc.queryForList(anyString(), eq(REPORT_ID), eq(RESEARCH_ID), eq(RESEARCH_ID)))
+                .thenReturn(List.of(row));
+
+        var evidence = store.evidence(REPORT_ID, RESEARCH_ID);
+
+        assertThat(evidence).singleElement().satisfies(item -> {
+            assertThat(item.sourceName()).isEqualTo("FRED");
+            assertThat(item.attribution()).isEqualTo("Provider attribution statement");
+            assertThat(item.licensePolicyVersion()).isEqualTo("fred_api_terms_2025-02-18");
+            assertThat(item.demoData()).isFalse();
+        });
+        verify(jdbc).queryForList(
+                org.mockito.ArgumentMatchers.argThat(sql ->
+                        sql.contains("payload_json ->> 'attribution'")
+                                && sql.contains("metadata_json ->> 'licensePolicyVersion'")),
+                eq(REPORT_ID),
+                eq(RESEARCH_ID),
+                eq(RESEARCH_ID)
         );
     }
 

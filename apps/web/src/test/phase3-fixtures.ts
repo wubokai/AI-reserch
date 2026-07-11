@@ -102,6 +102,8 @@ export const phase3EvidencePage = {
       sourceSnapshotId: null,
       sourceSchemaVersion: null,
       normalizedDataHash: null,
+      attribution: null,
+      licensePolicyVersion: null,
     },
     {
       evidenceId: phase3FilingEvidenceId,
@@ -125,6 +127,8 @@ export const phase3EvidencePage = {
       sourceSnapshotId: "22222222-2222-4222-8222-222222222222",
       sourceSchemaVersion: "mock_filings_v1",
       normalizedDataHash: "e".repeat(64),
+      attribution: null,
+      licensePolicyVersion: "mock_fixture_license_v1",
     },
   ],
   page: { number: 0, size: 100, totalElements: 2, totalPages: 1, first: true, last: true },

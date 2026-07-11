@@ -471,5 +471,5 @@ Companyfacts/XBRL 和统一 Provider Runtime 工程检查点。Gate G7 的下一
 1. 取得覆盖持久化、外部展示、报告导出和再分发的 Market Provider 书面权利；
 2. 许可通过后接入 Market Adapter；未通过时保持禁用；
 3. 完成全 REAL Worker 编排和旧报告复现验证，不允许静默混入 Mock；
-4. 验证 FRED/SEC/Market 在 UI、Markdown、HTML 与 PDF 中的来源归属；
+4. SEC/FRED 的 UI、Markdown、HTML 与 PDF 来源归属已完成；Market 归属随许可后的 Adapter 一并验证；
 5. 通过最终 Web、Analytics、API/Testcontainers、secret scan 与 Compose 终验后关闭 Gate G7。
