@@ -11,6 +11,7 @@ import com.aiquantresearch.api.research.persistence.ResearchJobRepository;
 import com.aiquantresearch.api.research.persistence.ResearchStepEntity;
 import com.aiquantresearch.api.research.persistence.ResearchStepRepository;
 import com.aiquantresearch.api.shared.config.ApplicationProperties;
+import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
@@ -96,7 +97,7 @@ public class ResearchCommandService {
             return replay(reservation, ResearchAcceptedView.class);
         }
         securityPrecheckService.validate(command.symbol(), command.companyName());
-        validatePhase3MvpBoundary(command);
+        validateResearchBoundary(command, applicationProperties.dataMode());
 
         UUID researchId = UUID.randomUUID();
         ResearchJobEntity research = ResearchJobEntity.create(
@@ -570,35 +571,40 @@ public class ResearchCommandService {
     }
 
     static String implementationVersion(StepType type) {
-        return "phase3-mock-" + type.name().toLowerCase(java.util.Locale.ROOT) + "-v1";
+        return "phase7-provider-neutral-"
+                + type.name().toLowerCase(java.util.Locale.ROOT) + "-v1";
     }
 
-    private static void validatePhase3MvpBoundary(CreateResearchCommand command) {
-        if (!PHASE3_MOCK_TARGETS.contains(command.symbol())) {
+    private static void validateResearchBoundary(
+            CreateResearchCommand command,
+            DataMode dataMode
+    ) {
+        if (dataMode == DataMode.MOCK
+                && !PHASE3_MOCK_TARGETS.contains(command.symbol())) {
             throw new InvalidResearchRequestException(
                     "Phase 3 Mock research supports only MU, NVDA, or RKLB as the target"
             );
         }
         if (command.reportDepth() != ReportDepth.STANDARD) {
             throw new InvalidResearchRequestException(
-                    "Phase 3 supports only reportDepth STANDARD"
+                    "The current research workflow supports only reportDepth STANDARD"
             );
         }
         if (command.period() != ResearchPeriod.FIVE_YEARS
                 || command.startDate() != null
                 || command.endDate() != null) {
             throw new InvalidResearchRequestException(
-                    "Phase 3 supports only the fixed 5y research period"
+                    "The current research workflow supports only the fixed 5y period"
             );
         }
         if (!java.util.Set.of("SPY", "QQQ").contains(command.benchmark())) {
             throw new InvalidResearchRequestException(
-                    "Phase 3 supports only SPY or QQQ as the benchmark"
+                    "The current research workflow supports only SPY or QQQ as the benchmark"
             );
         }
         if (!command.includeTechnicalAnalysis()) {
             throw new InvalidResearchRequestException(
-                    "Phase 3 requires technical analysis because full-analysis is the fixed quant contract"
+                    "The current research workflow requires technical analysis"
             );
         }
     }

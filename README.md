@@ -87,6 +87,8 @@ Provider Runtime 检查点当前为 191 个 Surefire 与 48 个 Failsafe/Testcon
 
 来源归属检查点将快照中的 Provider、官方 URL、归属声明和许可策略版本贯通到 Evidence API、报告页面及 Markdown/HTML/PDF；REAL 输出不显示 Demo 标识，Mock 输出仍强制保留。193 个 Surefire、48 个 Failsafe/Testcontainers、21 个 Vitest、Playwright 与 Compose 已通过全仓终验，见 [GitHub Actions run 29143064626](https://github.com/wubokai/AI-reserch/actions/runs/29143064626)。
 
+Provider-neutral REAL 编排边界已移除创建、验证和发布路径中的 Mock 硬编码：REAL 可接受格式合法的目标证券，但必须在非 Demo security master 中唯一解析；缺失时明确失败，不回退 Mock。报告发布要求任务、报告、Source 与 Evidence 模式完全一致，`MIXED_TEST` 禁止发布，REAL 缺失基本面时只传递显式空输入。
+
 当前已接入真实 SEC Filing、SEC Companyfacts/XBRL 基本面与 FRED 宏观 Provider，但尚未接入获准外部展示和报告导出的真实 Market Provider，也未在测试或 CI 中发送真实 OpenAI 请求。Phase 6 的真实 Adapter 由本地 HTTP mock 验证；部署只有同时提供 API Key、模型、HMAC secret 和带生效日期的价格版本时才会启用。成功终态仍必须与通过验证的不可变报告和运行 manifest 同事务发布。
 
 ## 数据与模型配置
@@ -119,7 +121,7 @@ FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`
 
 ## 下一步
 
-Phase 7 的 SEC、FRED、SEC XBRL、Provider Runtime 与 SEC/FRED 多格式来源归属工程检查点已完成。下一步关闭 Gate G7 剩余项：取得真实 Market 的书面展示/导出/再分发权利后完成 Adapter、Market 归属与全 REAL 编排；在此之前 Market 保持禁用，REAL 任务不得静默混入 Mock 数据。
+Phase 7 的 Provider、Runtime、来源归属与 provider-neutral REAL 发布边界已完成。下一步取得真实 Market 的书面展示/导出/再分发权利，接入 Market Adapter 和真实 security master 注册链路，再执行完整 REAL 研究终验；在此之前 Market 保持禁用。
 
 ## 免责声明
 

@@ -20,10 +20,13 @@ import com.aiquantresearch.api.research.report.ReportValidator;
 import com.aiquantresearch.api.research.report.ReportRepairService;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.aiquantresearch.api.research.worker.StepExecutionException;
+import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.sql.Timestamp;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -158,6 +161,9 @@ public class Phase3StepExecutor {
 
     private StepExecutionResult resolveSecurity(ResearchExecutionContext context) {
         String symbol = context.request().path("symbol").asText(context.symbol());
+        if (context.dataMode() == DataMode.REAL) {
+            return resolveRealSecurity(symbol);
+        }
         var fixture = fixtureCatalog.security(symbol);
         UUID securityId = jdbcTemplate.queryForObject(
                 "select id from securities where symbol = ? and active and is_demo_data",
@@ -182,6 +188,43 @@ public class Phase3StepExecutor {
         output.put("currency", fixture.currency());
         output.put("watermark", fixtureCatalog.manifest().watermark());
         return StepExecutionResult.complete(output);
+    }
+
+    StepExecutionResult resolveRealSecurity(String symbol) {
+        var matches = jdbcTemplate.query("""
+                select id, symbol, company_name, exchange, security_type, currency,
+                       updated_at, statement_timestamp() as retrieved_at
+                  from securities
+                 where upper(symbol) = upper(?) and active and not is_demo_data
+                 order by id
+                """, (row, ignored) -> {
+            ObjectNode output = objectMapper.createObjectNode();
+            output.put("provider", "LOCAL_SECURITY_MASTER");
+            output.put("schemaVersion", "security_master_v1");
+            output.put("securityId", row.getObject("id", UUID.class).toString());
+            output.put("symbol", row.getString("symbol"));
+            output.put("companyName", row.getString("company_name"));
+            output.put("exchange", row.getString("exchange"));
+            output.put("securityType", row.getString("security_type"));
+            output.put("currency", row.getString("currency"));
+            output.put("asOfDate", row.getTimestamp("updated_at").toInstant()
+                    .atZone(ZoneOffset.UTC).toLocalDate().toString());
+            output.put("retrievedAt", row.getObject("retrieved_at", Timestamp.class)
+                    .toInstant().toString());
+            output.put("freshnessStatus", "FRESH");
+            output.put("demoData", false);
+            return output;
+        }, symbol);
+        if (matches.size() != 1) {
+            throw new StepExecutionException(
+                    matches.isEmpty() ? "REAL_SECURITY_MASTER_MISSING" : "SECURITY_AMBIGUOUS",
+                    matches.isEmpty()
+                            ? "The requested security is not registered in the real security master"
+                            : "The requested symbol resolves to multiple active real securities",
+                    false
+            );
+        }
+        return StepExecutionResult.complete(matches.getFirst());
     }
 
     private StepExecutionResult fetchMarketData(ResearchExecutionContext context) {
@@ -225,7 +268,7 @@ public class Phase3StepExecutor {
                 || (macroRequested && artifactStore.source(context.researchId(), "MACRO").isEmpty())
                 || artifactStore.source(context.researchId(), "FILING").isEmpty();
         List<String> warnings = partial
-                ? List.of("One or more optional Mock modules are unavailable")
+                ? List.of("One or more optional research modules are unavailable")
                 : List.of();
         ObjectNode output = objectMapper.createObjectNode();
         output.put("status", partial ? "VALID_WITH_WARNINGS" : "VALID");
@@ -233,7 +276,9 @@ public class Phase3StepExecutor {
         output.put("benchmarkSampleSize", reference.prices().size());
         output.put("periodStart", target.periodStart().toString());
         output.put("periodEnd", target.periodEnd().toString());
-        output.put("watermark", MockFixtureCatalog.EXPECTED_WATERMARK);
+        if (context.dataMode() == DataMode.MOCK) {
+            output.put("watermark", MockFixtureCatalog.EXPECTED_WATERMARK);
+        }
         return new StepExecutionResult(output, partial, warnings);
     }
 
@@ -247,14 +292,7 @@ public class Phase3StepExecutor {
                 "FUNDAMENTALS"
         ).orElse(null);
         FundamentalDataSnapshot fundamentals = fundamentalSource == null
-                ? new FundamentalDataSnapshot(
-                        fixtureCatalog.manifest().fixtureVersion(),
-                        context.symbol(),
-                        fixtureCatalog.manifest().asOfDate(),
-                        List.of(),
-                        List.of(),
-                        fixtureCatalog.manifest().watermark()
-                )
+                ? emptyFundamentals(context, target)
                 : tree(fundamentalSource.payload(), FundamentalDataSnapshot.class);
         String fundamentalId = fundamentalSource == null
                 ? targetSource.id().toString()
@@ -287,6 +325,39 @@ public class Phase3StepExecutor {
                     exception
             );
         }
+    }
+
+    private FundamentalDataSnapshot emptyFundamentals(
+            ResearchExecutionContext context,
+            MarketDataSnapshot target
+    ) {
+        if (context.dataMode() == DataMode.MOCK) {
+            return new FundamentalDataSnapshot(
+                    fixtureCatalog.manifest().fixtureVersion(),
+                    context.symbol(),
+                    fixtureCatalog.manifest().asOfDate(),
+                    List.of(),
+                    List.of(),
+                    fixtureCatalog.manifest().watermark()
+            );
+        }
+        return new FundamentalDataSnapshot(
+                null,
+                null,
+                null,
+                context.symbol(),
+                target.periodEnd(),
+                null,
+                null,
+                null,
+                List.of(),
+                List.of(),
+                List.of("FUNDAMENTALS_NOT_AVAILABLE"),
+                null,
+                false,
+                "UNKNOWN",
+                null
+        );
     }
 
     static boolean hasUnavailableRequiredReportMetric(JsonNode response) {

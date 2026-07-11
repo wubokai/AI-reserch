@@ -71,8 +71,12 @@ class ResearchCommandServiceTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().findAndRegisterModules();
+        service = service(DataMode.MOCK);
+    }
+
+    private ResearchCommandService service(DataMode mode) {
         var hashService = new CanonicalHashService(objectMapper);
-        service = new ResearchCommandService(
+        return new ResearchCommandService(
                 researchJobRepository,
                 researchStepRepository,
                 ownerProvisioningService,
@@ -81,7 +85,7 @@ class ResearchCommandServiceTest {
                 hashService,
                 eventJournal,
                 researchQueryService,
-                new ApplicationProperties("api", "test", DataMode.MOCK),
+                new ApplicationProperties("api", "test", mode),
                 objectMapper,
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
@@ -135,6 +139,40 @@ class ResearchCommandServiceTest {
                 eq(result.value().researchId()),
                 eq(NOW)
         );
+    }
+
+    @Test
+    void realModeAcceptsAWellFormedTargetOutsideTheMockFixtureCatalog() {
+        service = service(DataMode.REAL);
+        UUID reservationId = UUID.randomUUID();
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(reservationId));
+        CreateResearchCommand realCommand = new CreateResearchCommand(
+                "Analyze Apple growth drivers and the principal investment risks",
+                "AAPL",
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.FIVE_YEARS,
+                null,
+                null,
+                ReportDepth.STANDARD,
+                true,
+                true,
+                true
+        );
+
+        CommandResult<ResearchAcceptedView> result = service.create(
+                UUID.randomUUID(),
+                "real-user",
+                "real-user@example.com",
+                "idem-real-aapl",
+                realCommand
+        );
+
+        assertThat(result.value().dataMode()).isEqualTo(DataMode.REAL);
+        verify(securityPrecheckService).validate("AAPL", null);
+        verify(researchStepRepository).saveAll(any());
     }
 
     @Test

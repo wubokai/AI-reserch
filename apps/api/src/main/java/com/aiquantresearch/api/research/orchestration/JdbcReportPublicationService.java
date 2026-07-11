@@ -5,6 +5,7 @@ import com.aiquantresearch.api.research.report.ReportMarkdownRenderer;
 import com.aiquantresearch.api.research.worker.DurableQueueClient;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.aiquantresearch.api.research.worker.StepExecutionException;
+import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -69,16 +70,11 @@ public class JdbcReportPublicationService implements ReportPublicationService {
                     false
             );
         }
-        if (!"MOCK".equals(job.dataMode())) {
-            throw new StepExecutionException(
-                    "REPORT_DATA_MODE_BLOCKED",
-                    "Phase 3 publishes only deterministic Mock reports",
-                    false
-            );
-        }
-
+        DataMode dataMode = DataMode.valueOf(job.dataMode());
         JsonNode report = result.payload();
+        List<StoredSource> sources = artifactStore.sources(claim.researchJobId());
         List<StoredEvidence> evidence = artifactStore.evidence(claim.researchJobId());
+        ReportPublicationPolicy.validate(dataMode, report, sources, evidence);
         String markdown = markdownRenderer.render(report, evidence);
         String contentHash = hashService.hash(report);
         int version = artifactStore.nextReportVersion(claim.researchJobId());
@@ -94,7 +90,7 @@ public class JdbcReportPublicationService implements ReportPublicationService {
                     report_json, report_markdown, validation_status, content_hash,
                     data_mode, data_as_of_date, generation_llm_call_id, generated_at
                 ) values (?, ?, ?, 'research_report_v1', ?::jsonb, ?, ?, ?,
-                          'MOCK', ?, ?, statement_timestamp())
+                          ?, ?, ?, statement_timestamp())
                 """,
                 reportVersionId,
                 claim.researchJobId(),
@@ -103,6 +99,7 @@ public class JdbcReportPublicationService implements ReportPublicationService {
                 markdown,
                 validationStatus,
                 contentHash,
+                dataMode.name(),
                 LocalDate.parse(report.path("asOfDate").asText()),
                 llmCallId
         );
@@ -127,6 +124,7 @@ public class JdbcReportPublicationService implements ReportPublicationService {
         runManifest.put("reportVersion", version);
         runManifest.put("reportContentHash", contentHash);
         runManifest.put("validateStepOutputHash", outputHash);
+        runManifest.put("dataMode", dataMode.name());
         runManifest.put("partial", result.partial());
         runManifest.set("warnings", objectMapper.valueToTree(result.warnings()));
         runManifest.set(
@@ -149,17 +147,18 @@ public class JdbcReportPublicationService implements ReportPublicationService {
         jdbcTemplate.update("""
                 insert into research_run_manifests (
                     id, research_job_id, execution_cycle, report_version_id,
-                    manifest_json, content_hash, completion_policy_version,
+                manifest_json, content_hash, completion_policy_version,
                     data_mode, status
-                ) values (?, ?, ?, ?, ?::jsonb, ?, 'phase3_completion_policy_v1',
-                          'MOCK', 'PUBLISHED')
+                ) values (?, ?, ?, ?, ?::jsonb, ?, 'phase7_completion_policy_v1',
+                          ?, 'PUBLISHED')
                 """,
                 runManifestId,
                 claim.researchJobId(),
                 version,
                 reportVersionId,
                 jsonText(runManifest),
-                runManifestHash
+                runManifestHash,
+                dataMode.name()
         );
 
         outputManifest.put("reportVersionId", reportVersionId.toString());
