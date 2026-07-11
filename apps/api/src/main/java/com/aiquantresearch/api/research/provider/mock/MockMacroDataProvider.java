@@ -4,9 +4,11 @@ import com.aiquantresearch.api.research.provider.MacroDataProvider;
 import com.aiquantresearch.api.research.provider.MacroDataSnapshot;
 import com.aiquantresearch.api.research.provider.MacroObservation;
 import com.aiquantresearch.api.research.provider.MacroSeries;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "app.providers.macro", havingValue = "mock", matchIfMissing = true)
 public class MockMacroDataProvider implements MacroDataProvider {
 
     private final MockFixtureCatalog catalog;

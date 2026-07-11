@@ -55,6 +55,18 @@ class RuntimeBoundaryValidatorTest {
                 .hasMessageContaining("real filing provider");
     }
 
+    @Test
+    void mockModeRejectsRealMacroProvider() {
+        var environment = new MockEnvironment();
+        environment.setActiveProfiles("development");
+        environment.setProperty("app.providers.macro", "fred");
+        var validator = new RuntimeBoundaryValidator(properties(DataMode.MOCK), environment);
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("real macro provider");
+    }
+
     private ApplicationProperties properties(DataMode dataMode) {
         return new ApplicationProperties("ai-quant-research-api", "test", dataMode);
     }

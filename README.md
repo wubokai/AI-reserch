@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0–6 与 Gate G6 已完成，Phase 7 正在进行。SEC EDGAR Filing Adapter、合规请求边界、原始字节哈希和真实来源落库已完成首个检查点；FRED、真实行情与基本面尚未接入，因此默认业务闭环仍使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 0–6 与 Gate G6 已完成，Phase 7 正在进行。SEC EDGAR 已通过首检查点；FRED observation/vintage Adapter、归属和真实来源落库已完成本地检查点并等待 CI。真实行情与基本面尚未接入，因此默认业务闭环仍使用固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -89,6 +89,8 @@ pnpm dev:web
 缺少 `OPENAI_API_KEY` 与 `OPENAI_REPORT_MODEL` 时，报告由确定性 Mock 生成器完成；只配置其中一个会失败关闭。真实模式采用 Responses API、严格 JSON Schema、`store=false`、`parallel_tool_calls=false`、HMAC `safety_identifier`、输入/输出/工具轮次上限和数据库预算预留。价格未知时不允许真实调用，不会伪造成本。
 
 SEC Adapter 默认关闭。启用时必须同时显式设置 `FILING_DATA_PROVIDER=sec`、`DATA_MODE=REAL` 和包含应用名称及受监控联系邮箱的 `SEC_USER_AGENT`。请求只允许官方 SEC 主机（测试仅允许 loopback），全局速率上限不超过 10 次/秒，并有超时、响应体大小、内容类型、重试次数和文档路径边界。Phase 7 完成前，其他 Provider 仍为 Mock，因此这不是可发布的完整 REAL 研究闭环。
+
+FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`DATA_MODE=REAL` 与注册的 `FRED_API_KEY`；默认读取 DFF 与 CPIAUCSL，并以任务抓取日作为 realtime vintage 边界。API key 不进入快照、来源 URL或安全异常，报告数据保留 FRED 要求的归属声明。
 
 ## 文档入口
 

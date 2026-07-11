@@ -39,6 +39,14 @@ public class RuntimeBoundaryValidator {
                     "MOCK data mode cannot enable a real filing provider"
             );
         }
+        String macroProvider = environment.getProperty("app.providers.macro");
+        macroProvider = macroProvider == null ? "mock" : macroProvider;
+        if (applicationProperties.dataMode() == DataMode.MOCK
+                && !"mock".equalsIgnoreCase(macroProvider)) {
+            throw new IllegalStateException(
+                    "MOCK data mode cannot enable a real macro provider"
+            );
+        }
     }
 
     private boolean hasProfile(String profile) {

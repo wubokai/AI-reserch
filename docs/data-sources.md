@@ -62,7 +62,7 @@ Adapter 负责认证、分页、速率限制、字段映射、响应校验和来
 | --- | --- | --- | --- |
 | 证券、行情、基本面、Filing、宏观 | 确定性 Mock Provider | 可替换真实 Adapter | Mock 固定种子与固定 `asOfDate` |
 | SEC Filing | Mock 文档 | SEC EDGAR（Phase 7 首检查点已接入，默认关闭） | 主要来源；合规 User-Agent、限流、HTML 清理、原始哈希与来源 URL 已实现 |
-| 宏观 | Mock 序列 | FRED | 每个序列保留频率、单位、修订信息与 effective date |
+| 宏观 | Mock 序列 | FRED（Phase 7 本地检查点已接入） | 保留频率、单位、realtime vintage、修订边界、effective date 与归属声明 |
 | 行情 | Mock adjusted OHLCV | 供应商待 Phase 7 许可评审 | 必须支持历史保存、展示和导出的合同权利 |
 | 基本面 | Mock 报表 | 供应商待 Phase 7 许可评审 | 必须说明原始/标准化口径与公司行动处理 |
 | 新闻 | 不启用 | 可选 | 不作为报告完成的硬依赖，不抓取付费墙 |
@@ -80,6 +80,16 @@ Adapter 负责认证、分页、速率限制、字段映射、响应校验和来
 - 官方契约依据：[SEC EDGAR API](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)、[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions) 与 [SEC Rate Control Notice](https://www.sec.gov/filergroup/announcements-old/new-rate-control-limits)。
 
 当前限制：尚未实现 SEC Redis 缓存、熔断器、Provider 状态指标与完整 REAL 研究编排，因此本检查点不关闭 Gate G7。
+
+### 4.2 FRED Adapter v1
+
+- 每个配置序列先读取 `/fred/series` 元数据，再读取 `/fred/series/observations`；请求固定 `realtime_start=realtime_end=vintageDate`，避免把未来修订混入历史快照；
+- 保存 frequency、units、seasonal adjustment、last updated，以及每个 observation 的 realtime start/end；官方缺失值 `.` 明确跳过，截断、空序列和非法数字快速失败；
+- API key 只来自环境变量和请求参数，不进入 Source Snapshot、source URL、异常 message/cause 或日志；正式地址只允许 `https://api.stlouisfed.org`；
+- 原始 metadata/observation 字节形成 SHA-256，规范化 Payload 另存哈希；Source Snapshot 保存 vintage、effective date、freshness、许可复核版本和官方要求的归属文本；
+- 契约依据：[FRED Series Observations](https://fred.stlouisfed.org/docs/api/fred/series_observations.html)、[FRED API Terms](https://fred.stlouisfed.org/docs/api/terms_of_use.html) 与 [FRED Legal Terms](https://fred.stlouisfed.org/legal/terms/)。
+
+当前限制：FRED Redis 缓存、熔断器、Provider 指标及 UI/PDF 归属展示仍属于本阶段后续 Gate。
 
 ## 5. SourceSnapshot
 

@@ -139,4 +139,51 @@ class Phase7ProviderLineageIT extends PostgresRedisIntegrationTestSupport {
                 "https://www.sec.gov/Archives/edgar/data/123/000000012325000001/report.htm"
         );
     }
+
+    @Test
+    void persistsFredVintageAttributionAndRawLineage() throws Exception {
+        JsonNode snapshot = objectMapper.readTree("""
+                {"provider":"FRED","schemaVersion":"fred_macro_v1",
+                 "asOfDate":"2026-07-09","vintageDate":"2026-07-10",
+                 "retrievedAt":"2026-07-10T12:00:00Z",
+                 "sourceUrl":"https://api.stlouisfed.org/fred/",
+                 "rawDataHash":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                 "attribution":"This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.",
+                 "demoData":false,"freshnessStatus":"FRESH",
+                 "licensePolicyVersion":"fred_api_terms_reviewed_2026_07_10",
+                 "series":[{"seriesId":"DFF","frequencyShort":"D","observations":[
+                   {"date":"2026-07-09","value":5.33,"realtimeStart":"2026-07-10","realtimeEnd":"2026-07-10"}]}]}
+                """);
+        SourceRegistration registration = new SourceRegistration(
+                "FRED", "GOVERNMENT_DATA", "fred_macro_v1", "MACRO", "US_MACRO",
+                "https://api.stlouisfed.org/fred/",
+                Instant.parse("2026-07-10T12:00:00Z"),
+                LocalDate.parse("2026-07-09"),
+                "f".repeat(64), true, "FRESH", false,
+                "fred_api_terms_reviewed_2026_07_10"
+        );
+        QueueClaim claim = new QueueClaim(
+                researchId, null, null, 1, null, null,
+                StepType.FETCH_MACRO_DATA, "a".repeat(64), "fred-v1", 1,
+                objectMapper.createObjectNode()
+        );
+
+        var source = artifactStore.persistSource(claim, registration, snapshot);
+
+        assertThat(jdbc.queryForMap("""
+                select provider, source_type, source_url, raw_data_hash,
+                       is_demo_data,
+                       metadata_json ->> 'licensePolicyVersion' as license_policy_version
+                  from source_snapshots where id = ?
+                """, source.id()))
+                .containsEntry("provider", "FRED")
+                .containsEntry("source_type", "GOVERNMENT_DATA")
+                .containsEntry("source_url", "https://api.stlouisfed.org/fred/")
+                .containsEntry("raw_data_hash", "f".repeat(64))
+                .containsEntry("is_demo_data", false)
+                .containsEntry("license_policy_version",
+                        "fred_api_terms_reviewed_2026_07_10");
+        assertThat(source.payload().path("attribution").asText()).contains("FRED® API");
+        assertThat(source.payload().toString()).doesNotContain("api_key");
+    }
 }
