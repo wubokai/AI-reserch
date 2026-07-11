@@ -273,7 +273,29 @@ PY
     COMPLETED)
       break
       ;;
-    PARTIALLY_COMPLETED | FAILED | CANCELLED)
+    PARTIALLY_COMPLETED)
+      docker compose exec -T postgres \
+        psql \
+          --username "${POSTGRES_USER:-quant_user}" \
+          --dbname "${POSTGRES_DB:-quant_research}" \
+          --tuples-only \
+          --no-align \
+          --command "select jsonb_build_object(
+            'validationStatus', rv.validation_status,
+            'missingData', rv.report_json #> '{dataQuality,missingData}',
+            'warnings', rm.manifest_json -> 'warnings'
+          )
+          from report_versions rv
+          left join research_run_manifests rm
+            on rm.report_version_id = rv.id
+          where rv.research_job_id = '$RESEARCH_ID'
+          order by rv.version desc
+          limit 1" >&2 || true
+      printf 'Research reached an unexpected terminal state: %s\n' "$STATUS" >&2
+      sed -n '1,200p' "$TMP_DIR/status.json" >&2
+      exit 1
+      ;;
+    FAILED | CANCELLED)
       printf 'Research reached an unexpected terminal state: %s\n' "$STATUS" >&2
       sed -n '1,200p' "$TMP_DIR/status.json" >&2
       exit 1
