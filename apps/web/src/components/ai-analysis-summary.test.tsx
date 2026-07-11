@@ -12,7 +12,10 @@ describe("buildReportSummary", () => {
     expect(summary.trendLabel).toBe("更可能震荡");
     expect(summary.weightedChange).toBeCloseTo(-0.0175, 6);
     expect(summary.futureView).toContain("基准情景的权重最高");
-    expect(summary.currentSituation).toContain("五年累计收益");
+    expect(summary.currentSituation).toContain("数据可靠度为 92%");
+    expect(summary.currentSituation).toContain("US$105.75");
+    expect(summary.opportunity).toContain("乐观情况下参考值");
+    expect(summary.risk).toContain("谨慎情况下参考值");
   });
 
   it("在加权上涨空间明显时标记为偏积极", () => {

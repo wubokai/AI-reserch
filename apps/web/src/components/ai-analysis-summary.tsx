@@ -14,6 +14,13 @@ function formatPercent(value: number) {
   }).format(value);
 }
 
+function formatUnsignedPercent(value: number) {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "percent",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 function formatMoney(value: number, currency: string) {
   return new Intl.NumberFormat("zh-CN", {
     style: "currency",
@@ -53,13 +60,20 @@ export function buildReportSummary(report: CanonicalResearchReport) {
     : direction === "BEARISH"
       ? "存在下跌压力"
       : "更可能震荡";
-  const currentSituation = report.conclusion[0]?.statement
-    ?? report.sections.flatMap((section) => section.claims)[0]?.statement
-    ?? "当前证据不足，暂时无法形成可靠判断。";
   const currency = report.scenarioAnalysis.currency ?? "USD";
+  const weightedImpliedPrice = Number(report.scenarioAnalysis.weightedImpliedPrice);
+  const currentSituation = `数据可靠度为 ${formatUnsignedPercent(report.dataQuality.score)}。综合三种情景后的参考值为 ${formatMoney(weightedImpliedPrice, currency)}，加权潜在变动为 ${formatPercent(weightedChange)}，因此当前前景判断为“${directionLabel}”。`;
   const futureView = dominantScenario
-    ? `${scenarioNames[dominantScenario.name]}情景的权重最高（${formatPercent(Number(dominantScenario.probability))}）。该情景对应 ${formatMoney(Number(dominantScenario.impliedPrice), currency)}，相对情景变动为 ${formatPercent(Number(dominantScenario.upsideDownside))}。`
+    ? `${scenarioNames[dominantScenario.name]}情景的权重最高（${formatUnsignedPercent(Number(dominantScenario.probability))}）。该情景对应 ${formatMoney(Number(dominantScenario.impliedPrice), currency)}，相对情景变动为 ${formatPercent(Number(dominantScenario.upsideDownside))}。`
     : "情景数据不足，暂时无法判断未来方向。";
+  const bullScenario = scenarios.find((scenario) => scenario.name === "BULL");
+  const bearScenario = scenarios.find((scenario) => scenario.name === "BEAR");
+  const opportunity = bullScenario
+    ? `乐观情况下参考值为 ${formatMoney(Number(bullScenario.impliedPrice), currency)}，可能变动 ${formatPercent(Number(bullScenario.upsideDownside))}；关键假设是收入增长 ${formatUnsignedPercent(Number(bullScenario.revenueGrowth))}、经营利润率达到 ${formatUnsignedPercent(Number(bullScenario.targetEbitdaMargin))}。`
+    : "暂未识别出有足够证据支持的主要机会。";
+  const risk = bearScenario
+    ? `谨慎情况下参考值为 ${formatMoney(Number(bearScenario.impliedPrice), currency)}，可能变动 ${formatPercent(Number(bearScenario.upsideDownside))}；若收入增长和利润率走弱，下行风险会明显增加。`
+    : "暂未识别出有足够证据支持的主要风险。";
 
   return {
     direction,
@@ -68,10 +82,8 @@ export function buildReportSummary(report: CanonicalResearchReport) {
     weightedChange,
     currentSituation,
     futureView,
-    opportunity: report.bullCase[0]?.statement ?? "暂未识别出有足够证据支持的主要机会。",
-    risk: report.bearCase[0]?.statement
-      ?? report.risks[0]?.claim.statement
-      ?? "暂未识别出有足够证据支持的主要风险。",
+    opportunity,
+    risk,
   };
 }
 
