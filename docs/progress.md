@@ -31,11 +31,12 @@
 - GitHub Actions：Gate G4 的 Web/Playwright、Analytics、API/Testcontainers、secret scan 与 Compose 全部通过（[run `29111976669`](https://github.com/wubokai/AI-reserch/actions/runs/29111976669)）。Compose 在扩展 73 个 Metric 后仍于 3 次轮询到达 `COMPLETED`，并验证 Evidence、报告 v1、历史、三种导出与 Web BFF；
 - GitHub Actions：Gate G5 的 Web/Playwright、Analytics、156+40 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29115859586`](https://github.com/wubokai/AI-reserch/actions/runs/29115859586)）；新增 PostgreSQL 测试覆盖 V7、GIN 检索、Filing/Chunk 不可变和历史 Snapshot 复现；
 - GitHub Actions：Gate G6 的 Web/Playwright、Analytics、167+44 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29118462224`](https://github.com/wubokai/AI-reserch/actions/runs/29118462224)）；新增覆盖 V8、预算/调用数原子 ledger、成功/失败脱敏审计、Responses HTTP mock、结构化输出和安全回退；
+- GitHub Actions：Phase 7 SEC 首检查点的 Web/Playwright、Analytics、175+45 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29134112081`](https://github.com/wubokai/AI-reserch/actions/runs/29134112081)）；真实 SEC Source Snapshot、raw/normalized hash 分离与 Filing 官方 URL 落库已完成容器验证；
 - Phase 3–7 详细证据见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)、[`phase4-test-matrix.md`](./phase4-test-matrix.md)、[`phase5-test-matrix.md`](./phase5-test-matrix.md)、[`phase6-test-matrix.md`](./phase6-test-matrix.md) 和 [`phase7-test-matrix.md`](./phase7-test-matrix.md)。
 
 ## 当前限制
 
-- 本机没有 Docker；Gate G3–G6 的容器、Testcontainers 和 Compose 终验均由 GitHub Actions Linux runner 完成。
+- 本机没有 Docker；Gate G3–G6 与 Phase 7 SEC 检查点的容器、Testcontainers 和 Compose 终验均由 GitHub Actions Linux runner 完成。
 - 普通用户闭环只允许 `dataMode=MOCK`；目标只支持 MU/NVDA/RKLB，基准只支持 SPY/QQQ，深度固定 `STANDARD`，周期固定 `5y`，技术分析必须启用。
 - 基本面开关只控制可选叙事分析步骤；情景计算所需的规范化基本面数据仍会获取。宏观开关关闭时跳过宏观取数。
 - SEC Adapter 已接入但默认关闭；缓存、熔断、状态指标和完整 REAL 编排尚未完成，不能把单一 SEC Adapter 描述为可发布的真实研究闭环。

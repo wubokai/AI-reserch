@@ -74,7 +74,7 @@ pnpm e2e:web
 pnpm dev:web
 ```
 
-当前本地验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API Phase 7 首检查点为 175 个 Surefire 测试通过，45 个 Failsafe/Testcontainers 测试已编译并等待 GitHub Actions 容器终验；Analytics 的 Ruff、strict mypy 与 41 个 pytest 继续通过。详见 [Phase 6 Gate 测试矩阵](docs/phase6-test-matrix.md) 与 [Phase 7 测试矩阵](docs/phase7-test-matrix.md)。
+当前验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API Phase 7 首检查点为 175 个 Surefire 与 45 个 Failsafe/Testcontainers 测试通过；Analytics 的 Ruff、strict mypy 与 41 个 pytest 继续通过。SEC 检查点的全仓终验见 [GitHub Actions run 29134112081](https://github.com/wubokai/AI-reserch/actions/runs/29134112081)，详细边界见 [Phase 7 测试矩阵](docs/phase7-test-matrix.md)。
 
 当前尚未接入真实市场/基本面 Provider，也未在测试或 CI 中发送真实 OpenAI 请求。Phase 6 的真实 Adapter 由本地 HTTP mock 验证；部署只有同时提供 API Key、模型、HMAC secret 和带生效日期的价格版本时才会启用。成功终态仍必须与通过验证的不可变报告和运行 manifest 同事务发布。
 
