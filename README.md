@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 0–6 与 Gate G6 已完成，Phase 7 正在进行。SEC EDGAR 已通过首检查点；FRED observation/vintage Adapter、归属和真实来源落库已完成本地检查点并等待 CI。真实行情与基本面尚未接入，因此默认业务闭环仍使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 0–6 与 Gate G6 已完成，Phase 7 正在进行。SEC EDGAR 与 FRED observation/vintage Adapter、归属及真实来源落库均已通过分段 CI 检查点。真实行情与基本面尚未接入，因此默认业务闭环仍使用固定演示数据，不产生真实或当前市场结论。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -75,6 +75,8 @@ pnpm dev:web
 ```
 
 当前验证基线：Web 的 ESLint、TypeScript、20 个 Vitest、production build 与 4 个 Playwright 用例通过；API Phase 7 首检查点为 175 个 Surefire 与 45 个 Failsafe/Testcontainers 测试通过；Analytics 的 Ruff、strict mypy 与 41 个 pytest 继续通过。SEC 检查点的全仓终验见 [GitHub Actions run 29134112081](https://github.com/wubokai/AI-reserch/actions/runs/29134112081)，详细边界见 [Phase 7 测试矩阵](docs/phase7-test-matrix.md)。
+
+FRED 检查点将 API 基线提升到 179 个 Surefire 与 46 个 Failsafe/Testcontainers；全仓终验见 [GitHub Actions run 29134411188](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)。
 
 当前尚未接入真实市场/基本面 Provider，也未在测试或 CI 中发送真实 OpenAI 请求。Phase 6 的真实 Adapter 由本地 HTTP mock 验证；部署只有同时提供 API Key、模型、HMAC secret 和带生效日期的价格版本时才会启用。成功终态仍必须与通过验证的不可变报告和运行 manifest 同事务发布。
 

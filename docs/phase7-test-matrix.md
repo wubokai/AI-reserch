@@ -44,7 +44,7 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 | Retry | 429 首次失败、第二次成功，最大尝试次数有界 | 通过 |
 | 归属与许可 | 快照包含 FRED 要求的 attribution 和条款复核版本 | 通过 |
 | 数据模式隔离 | Runtime Validator 拒绝 `MOCK + macro=fred` | 通过 |
-| 持久化来源 | Testcontainers 验证 FRED government source、raw hash、policy、attribution 且无 api_key | 已编译，等待 CI |
+| 持久化来源 | Testcontainers 验证 FRED government source、raw hash、policy、attribution 且无 api_key | 通过 |
 
 ## 4. 本地验证
 
@@ -64,13 +64,17 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 - 最终检查点 [run `29134112081`](https://github.com/wubokai/AI-reserch/actions/runs/29134112081)：
   Web/Playwright、Analytics、175 个 Surefire、45 个 Failsafe/Testcontainers、secret scan
   与五服务 Compose 全部通过；SEC 真实来源持久化测试和原有 Mock 闭环均在最终 head 验证。
+- FRED 检查点 [run `29134411188`](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)：
+  Web/Playwright、Analytics、179 个 Surefire、46 个 Failsafe/Testcontainers、secret scan
+  与五服务 Compose 全部通过；FRED vintage/attribution/Key 脱敏、真实来源落库与默认 Mock
+  无 Key 启动路径均在同一 head 验证。
 
 ## 6. 尚未关闭的 Gate G7 项
 
 - SEC/FRED Redis 缓存、熔断器、Provider 状态/指标和完整 REAL Worker 编排；
-- FRED UI/PDF 归属展示与 CI 容器终验；
+- FRED UI/PDF 归属展示；
 - Market/Fundamental 功能、质量、成本以及存储/展示/导出/再分发许可决策；
 - 所选 Market/Fundamental Adapter、全 REAL 报告、UI 归属和导出验证；
 - 最终 Web、Analytics、API/Testcontainers、secret scan 与 Compose 全绿。
 
-因此当前状态为“Phase 7 进行中 / SEC 已终验 / FRED 本地检查点”，不是 Gate G7 通过。
+因此当前状态为“Phase 7 进行中 / SEC 与 FRED 分段检查点已终验”，不是 Gate G7 通过。
