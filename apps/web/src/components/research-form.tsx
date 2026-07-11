@@ -91,9 +91,9 @@ export function ResearchForm() {
     },
   });
   const securities = useQuery({
-    queryKey: ["securities", values.symbol],
-    queryFn: () => fetchApi(`/api/securities/search?q=${encodeURIComponent(values.symbol)}&limit=6`, securitySearchResponseSchema),
-    enabled: showSecurityMatches && values.symbol.length >= 1,
+    queryKey: ["securities", values.symbol ?? ""],
+    queryFn: () => fetchApi(`/api/securities/search?q=${encodeURIComponent(values.symbol ?? "")}&limit=6`, securitySearchResponseSchema),
+    enabled: showSecurityMatches && (values.symbol?.length ?? 0) >= 1,
     staleTime: 60_000,
   });
 
@@ -152,10 +152,10 @@ export function ResearchForm() {
               onChange={(event) =>
                 { setShowSecurityMatches(true); updateValues((current) => ({
                     ...current,
-                    symbol: event.target.value.toUpperCase(),
+                    symbol: event.target.value.toUpperCase() || undefined,
                   })); }
               }
-              value={values.symbol}
+              value={values.symbol ?? ""}
             />
           </div>
           {errors.symbol ? <p className="mt-2 text-xs text-rose-300" id="symbol-error">{errors.symbol}</p> : null}
@@ -223,14 +223,18 @@ export function ResearchForm() {
           </label>
           <label className="block">
             <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">研究周期</span>
-            <select aria-label="研究周期" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" disabled value={values.period}>
-              <option value="5y">5 年 · MVP</option>
+            <select aria-label="研究周期" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" onChange={(event) => updateValues((current) => ({ ...current, period: event.target.value as ResearchRequest["period"] }))} value={values.period}>
+              <option value="1y">1 年</option>
+              <option value="3y">3 年</option>
+              <option value="5y">5 年</option>
             </select>
           </label>
           <label className="block">
             <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">研究深度</span>
-            <select aria-label="研究深度" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" disabled value={values.reportDepth}>
-              <option value="STANDARD">标准 · MVP</option>
+            <select aria-label="研究深度" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" onChange={(event) => updateValues((current) => ({ ...current, reportDepth: event.target.value as ResearchRequest["reportDepth"] }))} value={values.reportDepth}>
+              <option value="QUICK">快速 · 精简证据</option>
+              <option value="STANDARD">标准 · 平衡</option>
+              <option value="DEEP">深度 · 完整证据</option>
             </select>
           </label>
         </div>

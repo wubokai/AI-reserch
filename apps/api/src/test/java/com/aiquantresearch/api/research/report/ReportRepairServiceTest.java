@@ -39,7 +39,8 @@ class ReportRepairServiceTest {
 
         assertThat(initial.valid()).isFalse();
         assertThat(repaired.prunedClaimIds()).containsExactly(unsafeId);
-        assertThat(repaired.report().path("bullCase")).isEmpty();
+        assertThat(repaired.report().path("bullCase").findValuesAsText("id"))
+                .doesNotContain(unsafeId);
         assertThat(finalValidation.valid()).as(finalValidation.warnings().toString()).isTrue();
         assertThat(fixture.evidence().stream().map(item -> item.publicId()).sorted().toList())
                 .isEqualTo(beforeEvidence);

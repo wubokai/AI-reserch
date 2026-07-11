@@ -19,7 +19,7 @@ MVP 先证明一条完整纵向路径，不追求所有指标和真实来源：
 - 单 demo 用户但保留严格 ownership；
 - Docker Compose、核心单测、集成测试、Playwright 演示 E2E 和 smoke test。
 
-MVP 默认只真正实现 `STANDARD` 深度；其他枚举可出现在契约中，但返回明确 `NOT_IMPLEMENTED_FOR_DEPTH`，不伪装为不同分析质量。
+MVP Gate G3 最初只实现 `STANDARD/5y`。Phase 9 需求审计已补齐 `QUICK/STANDARD/DEEP`、`1y/3y/5y` 和最长五年的显式日期范围；各深度具有可测试的 Filing、Evidence、Calculation 与 LLM 工具轮次预算。
 
 ## 完整 v1
 

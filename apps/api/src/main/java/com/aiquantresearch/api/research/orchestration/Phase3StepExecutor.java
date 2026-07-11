@@ -4,6 +4,8 @@ import com.aiquantresearch.api.research.analytics.AnalyticsClient;
 import com.aiquantresearch.api.research.analytics.AnalyticsRequestFactory;
 import com.aiquantresearch.api.research.analytics.AnalyticsServiceException;
 import com.aiquantresearch.api.research.domain.StepType;
+import com.aiquantresearch.api.research.domain.ReportDepth;
+import com.aiquantresearch.api.research.domain.ResearchPeriod;
 import com.aiquantresearch.api.research.llm.OpenAiResponseException;
 import com.aiquantresearch.api.research.llm.ResearchLanguageModelRequest;
 import com.aiquantresearch.api.research.llm.ResearchLanguageModelRouter;
@@ -26,6 +28,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
@@ -130,7 +133,9 @@ public class Phase3StepExecutor {
                         objectMapper.valueToTree(fundamentalDataProvider.fetch(context.symbol()))
                 );
                 case FETCH_FILINGS -> StepExecutionResult.complete(
-                        objectMapper.valueToTree(filingProvider.fetch(context.symbol()))
+                        objectMapper.valueToTree(filingProvider.fetch(context.symbol()).limitedTo(
+                                reportDepth(context).maxFilings()
+                        ))
                 );
                 case FETCH_MACRO_DATA -> StepExecutionResult.complete(
                         objectMapper.valueToTree(macroDataProvider.fetch())
@@ -229,13 +234,13 @@ public class Phase3StepExecutor {
 
     private StepExecutionResult fetchMarketData(ResearchExecutionContext context) {
         String benchmark = context.request().path("benchmark").asText("SPY");
+        MarketDataSnapshot target = marketDataProvider.fetchFiveYearDaily(context.symbol());
+        MarketDataSnapshot reference = marketDataProvider.fetchFiveYearDaily(benchmark);
+        LocalDate end = requestedEnd(context, target.periodEnd());
+        LocalDate start = requestedStart(context, target.periodStart(), end);
         ObjectNode output = objectMapper.createObjectNode();
-        output.set("target", objectMapper.valueToTree(
-                marketDataProvider.fetchFiveYearDaily(context.symbol())
-        ));
-        output.set("benchmark", objectMapper.valueToTree(
-                marketDataProvider.fetchFiveYearDaily(benchmark)
-        ));
+        output.set("target", objectMapper.valueToTree(target.within(start, end)));
+        output.set("benchmark", objectMapper.valueToTree(reference.within(start, end)));
         return StepExecutionResult.complete(output);
     }
 
@@ -244,10 +249,12 @@ public class Phase3StepExecutor {
         StoredSource benchmark = requireSource(context.researchId(), "BENCHMARK_DATA");
         MarketDataSnapshot target = tree(market.payload(), MarketDataSnapshot.class);
         MarketDataSnapshot reference = tree(benchmark.payload(), MarketDataSnapshot.class);
-        if (target.prices().size() < 1_290 || reference.prices().size() < 1_290) {
+        int minimumObservations = minimumMarketObservations(context);
+        if (target.prices().size() < minimumObservations
+                || reference.prices().size() < minimumObservations) {
             throw new StepExecutionException(
                     "MARKET_DATA_INCOMPLETE",
-                    "The fixed five-year market series is incomplete",
+                    "The requested market series is incomplete for deterministic analysis",
                     false
             );
         }
@@ -280,6 +287,59 @@ public class Phase3StepExecutor {
             output.put("watermark", MockFixtureCatalog.EXPECTED_WATERMARK);
         }
         return new StepExecutionResult(output, partial, warnings);
+    }
+
+    private static ReportDepth reportDepth(ResearchExecutionContext context) {
+        return ReportDepth.fromRequestValue(
+                context.request().path("reportDepth").asText(ReportDepth.STANDARD.name())
+        );
+    }
+
+    private static LocalDate requestedEnd(
+            ResearchExecutionContext context,
+            LocalDate availableEnd
+    ) {
+        String explicit = context.request().path("endDate").asText();
+        return explicit.isBlank() ? availableEnd : LocalDate.parse(explicit);
+    }
+
+    private static LocalDate requestedStart(
+            ResearchExecutionContext context,
+            LocalDate availableStart,
+            LocalDate end
+    ) {
+        String explicit = context.request().path("startDate").asText();
+        if (!explicit.isBlank()) {
+            return LocalDate.parse(explicit);
+        }
+        ResearchPeriod period = ResearchPeriod.fromValue(
+                context.request().path("period").asText("5y")
+        );
+        return switch (period) {
+            case ONE_YEAR -> end.minusYears(1).plusDays(1);
+            case THREE_YEARS -> end.minusYears(3).plusDays(1);
+            case FIVE_YEARS -> availableStart;
+            case TEN_YEARS, MAX -> throw new StepExecutionException(
+                    "RESEARCH_PERIOD_UNSUPPORTED",
+                    "The requested research period is outside the supported boundary",
+                    false
+            );
+        };
+    }
+
+    private static int minimumMarketObservations(ResearchExecutionContext context) {
+        if (!context.request().path("startDate").asText().isBlank()) {
+            return 200;
+        }
+        ResearchPeriod period = ResearchPeriod.fromValue(
+                context.request().path("period").asText("5y")
+        );
+        return switch (period) {
+            case ONE_YEAR -> 240;
+            case THREE_YEARS -> 740;
+            case FIVE_YEARS -> 1_290;
+            case TEN_YEARS, MAX -> Integer.MAX_VALUE;
+        };
     }
 
     private StepExecutionResult runQuantAnalysis(ResearchExecutionContext context) {

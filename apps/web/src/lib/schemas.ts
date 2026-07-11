@@ -46,6 +46,7 @@ export const stepStatusSchema = z.enum([
   "CANCELLED",
 ]);
 export const reportDepthSchema = z.enum(["QUICK", "STANDARD", "DEEP"]);
+export const researchPeriodSchema = z.enum(["1y", "3y", "5y"]);
 export const claimTypeSchema = z.enum([
   "FACT",
   "CALCULATION",
@@ -145,12 +146,13 @@ export const providerStatusResponseSchema = z.object({
 
 export type ProviderStatusResponse = z.infer<typeof providerStatusResponseSchema>;
 
-export const researchRequestSchema = z.object({
+const researchRequestObjectSchema = z.object({
   symbol: z
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z][A-Z0-9.-]{0,9}$/, "请输入有效的美股代码"),
+    .regex(/^[A-Z][A-Z0-9.-]{0,9}$/, "请输入有效的美股代码")
+    .optional(),
   query: z
     .string()
     .trim()
@@ -159,11 +161,21 @@ export const researchRequestSchema = z.object({
   companyName: z.string().trim().min(1).max(200).optional(),
   locale: z.enum(["zh-CN", "en-US"]).optional(),
   benchmark: z.enum(["SPY", "QQQ"]),
-  period: z.literal("5y"),
-  reportDepth: z.literal("STANDARD"),
+  period: researchPeriodSchema,
+  reportDepth: reportDepthSchema,
   includeTechnicalAnalysis: z.boolean(),
   includeFundamentalAnalysis: z.boolean(),
   includeMacroAnalysis: z.boolean(),
+});
+
+const hasResearchTarget = (request: {
+  symbol?: string | null | undefined;
+  companyName?: string | null | undefined;
+}) => Boolean(request.symbol || request.companyName);
+
+export const researchRequestSchema = researchRequestObjectSchema.refine(hasResearchTarget, {
+  message: "证券代码或公司名称至少填写一项",
+  path: ["symbol"],
 });
 
 export type ResearchRequest = z.infer<typeof researchRequestSchema>;
@@ -263,11 +275,14 @@ export const researchStatusResponseSchema = z.object({
 });
 
 export const researchDetailSchema = researchItemSchema.extend({
-  request: researchRequestSchema.extend({
+  request: researchRequestObjectSchema.extend({
     locale: z.enum(["zh-CN", "en-US"]).optional(),
     companyName: z.string().nullable().optional(),
     startDate: z.iso.date().nullable().optional(),
     endDate: z.iso.date().nullable().optional(),
+  }).refine(hasResearchTarget, {
+    message: "证券代码或公司名称至少填写一项",
+    path: ["symbol"],
   }),
   currentStep: stepTypeSchema.nullable().optional(),
   startedAt: nullableDateTimeSchema.optional(),

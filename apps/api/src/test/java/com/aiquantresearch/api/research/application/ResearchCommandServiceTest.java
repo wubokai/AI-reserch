@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -71,6 +72,12 @@ class ResearchCommandServiceTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().findAndRegisterModules();
+        lenient().when(securityPrecheckService.resolve(any(), any())).thenAnswer(invocation ->
+                new SecurityPrecheckService.ResolvedSecurityInput(
+                        invocation.getArgument(0),
+                        invocation.getArgument(1)
+                )
+        );
         service = service(DataMode.MOCK);
     }
 
@@ -109,7 +116,7 @@ class ResearchCommandServiceTest {
         assertThat(result.idempotencyReplayed()).isFalse();
         assertThat(result.value().status()).isEqualTo(ResearchStatus.QUEUED);
         assertThat(result.value().dataMode()).isEqualTo(DataMode.MOCK);
-        verify(securityPrecheckService).validate("MU", null);
+        verify(securityPrecheckService).resolve("MU", null);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Iterable<ResearchStepEntity>> stepsCaptor = ArgumentCaptor.forClass(Iterable.class);
@@ -139,6 +146,168 @@ class ResearchCommandServiceTest {
                 eq(result.value().researchId()),
                 eq(NOW)
         );
+    }
+
+    @ParameterizedTest
+    @EnumSource(ReportDepth.class)
+    void creationAcceptsEverySupportedResearchDepth(ReportDepth depth) {
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(UUID.randomUUID()));
+
+        CreateResearchCommand requested = new CreateResearchCommand(
+                "Analyze MU growth drivers and principal risks by depth",
+                "MU",
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.FIVE_YEARS,
+                null,
+                null,
+                depth,
+                true,
+                true,
+                true
+        );
+
+        assertThat(service.create(
+                UUID.randomUUID(),
+                "demo-user",
+                "demo-user@local.invalid",
+                "idem-depth-" + depth,
+                requested
+        ).value().status()).isEqualTo(ResearchStatus.QUEUED);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = ResearchPeriod.class,
+            names = {"ONE_YEAR", "THREE_YEARS", "FIVE_YEARS"}
+    )
+    void creationAcceptsEverySupportedResearchPeriod(ResearchPeriod period) {
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(UUID.randomUUID()));
+
+        CreateResearchCommand requested = new CreateResearchCommand(
+                "Analyze MU growth drivers over the selected research period",
+                "MU",
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                period,
+                null,
+                null,
+                ReportDepth.STANDARD,
+                true,
+                true,
+                true
+        );
+
+        assertThat(service.create(
+                UUID.randomUUID(),
+                "demo-user",
+                "demo-user@local.invalid",
+                "idem-period-" + period,
+                requested
+        ).value().status()).isEqualTo(ResearchStatus.QUEUED);
+    }
+
+    @Test
+    void creationAcceptsAnExplicitDateRangeWithinFiveYears() {
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(UUID.randomUUID()));
+        CreateResearchCommand requested = new CreateResearchCommand(
+                "Analyze MU over a bounded explicit historical date range",
+                "MU",
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.FIVE_YEARS,
+                java.time.LocalDate.parse("2022-01-03"),
+                java.time.LocalDate.parse("2023-12-29"),
+                ReportDepth.STANDARD,
+                true,
+                true,
+                true
+        );
+
+        assertThat(service.create(
+                UUID.randomUUID(),
+                "demo-user",
+                "demo-user@local.invalid",
+                "idem-explicit-range",
+                requested
+        ).value().status()).isEqualTo(ResearchStatus.QUEUED);
+    }
+
+    @Test
+    void creationCanonicalizesAUniqueCompanyOnlyInputBeforePersistingThePlan() {
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(UUID.randomUUID()));
+        when(securityPrecheckService.resolve(null, "Micron Technology, Inc."))
+                .thenReturn(new SecurityPrecheckService.ResolvedSecurityInput(
+                        "MU",
+                        "Micron Technology, Inc."
+                ));
+        CreateResearchCommand companyOnly = new CreateResearchCommand(
+                "Analyze Micron growth drivers and principal cyclical risks",
+                null,
+                "Micron Technology, Inc.",
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.THREE_YEARS,
+                null,
+                null,
+                ReportDepth.STANDARD,
+                true,
+                true,
+                true
+        );
+
+        service.create(
+                UUID.randomUUID(),
+                "demo-user",
+                "demo-user@local.invalid",
+                "idem-company-only",
+                companyOnly
+        );
+
+        ArgumentCaptor<ResearchJobEntity> research = ArgumentCaptor.forClass(
+                ResearchJobEntity.class
+        );
+        verify(researchJobRepository).save(research.capture());
+        assertThat(research.getValue().getSymbolInput()).isEqualTo("MU");
+        assertThat(research.getValue().getRequestJson())
+                .contains("\"symbol\":\"MU\"")
+                .contains("\"companyName\":\"Micron Technology, Inc.\"");
+    }
+
+    @Test
+    void creationRejectsAnExplicitDateRangeLongerThanFiveYears() {
+        when(idempotencyBoundary.reserve(any(), eq(NOW)))
+                .thenReturn(IdempotencyReservation.acquired(UUID.randomUUID()));
+        CreateResearchCommand requested = new CreateResearchCommand(
+                "Analyze MU over an unsupported historical date range",
+                "MU",
+                null,
+                ResearchLocale.EN_US,
+                "SPY",
+                ResearchPeriod.FIVE_YEARS,
+                java.time.LocalDate.parse("2018-01-01"),
+                java.time.LocalDate.parse("2023-12-29"),
+                ReportDepth.STANDARD,
+                true,
+                true,
+                true
+        );
+
+        assertThatThrownBy(() -> service.create(
+                UUID.randomUUID(),
+                "demo-user",
+                "demo-user@local.invalid",
+                "idem-long-range",
+                requested
+        )).isInstanceOf(InvalidResearchRequestException.class)
+                .hasMessageContaining("cannot exceed five years");
     }
 
     @Test
@@ -171,7 +340,7 @@ class ResearchCommandServiceTest {
         );
 
         assertThat(result.value().dataMode()).isEqualTo(DataMode.REAL);
-        verify(securityPrecheckService).validate("AAPL", null);
+        verify(securityPrecheckService).resolve("AAPL", null);
         verify(researchStepRepository).saveAll(any());
     }
 

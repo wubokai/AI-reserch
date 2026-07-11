@@ -24,12 +24,13 @@ public class SecurityPrecheckService {
     }
 
     @Transactional(readOnly = true)
-    public void validate(String symbol, String companyName) {
+    public ResolvedSecurityInput resolve(String symbol, String companyName) {
         if (symbol != null) {
             List<SecurityReferenceEntity> symbolMatches =
                     repository.findAllBySymbolIgnoreCase(symbol);
+            List<SecurityReferenceEntity> usableSymbols = usable(symbolMatches);
             if (!symbolMatches.isEmpty()) {
-                if (usable(symbolMatches).isEmpty()) {
+                if (usableSymbols.isEmpty()) {
                     throw invalidSymbol();
                 }
             }
@@ -41,22 +42,42 @@ public class SecurityPrecheckService {
                 if (!companyMatches.isEmpty() && usableCompanies.isEmpty()) {
                     throw invalidSymbol();
                 }
-                if (!symbolMatches.isEmpty()
-                        && !usableCompanies.isEmpty()
-                        && disjointUsableIds(symbolMatches, usableCompanies)) {
+                if (!usableCompanies.isEmpty()
+                        && (usableSymbols.isEmpty()
+                        || disjointUsableIds(usableSymbols, usableCompanies))) {
                     throw mismatch();
                 }
             }
-            // A valid alias or an unknown ticker is not a provable contradiction.
-            // Defer it to the durable provider-backed resolver.
-            return;
+            // A valid unresolved alias is not a provable contradiction. Defer it
+            // to the durable provider-backed resolver when no known company conflicts.
+            return new ResolvedSecurityInput(symbol, companyName);
         }
 
         List<SecurityReferenceEntity> companyMatches =
                 repository.findAllByCompanyNameIgnoreCase(companyName);
-        if (!companyMatches.isEmpty() && usable(companyMatches).isEmpty()) {
+        List<SecurityReferenceEntity> usableCompanies = usable(companyMatches);
+        if (!companyMatches.isEmpty() && usableCompanies.isEmpty()) {
             throw invalidSymbol();
         }
+        List<SecurityReferenceEntity> distinct = usableCompanies.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        SecurityReferenceEntity::getId,
+                        value -> value,
+                        (first, ignored) -> first
+                ))
+                .values().stream().toList();
+        if (distinct.isEmpty()) {
+            throw new InvalidSymbolException(
+                    "The company name could not be resolved in the local security master"
+            );
+        }
+        if (distinct.size() != 1) {
+            throw new InvalidSymbolException(
+                    "The company name resolves to multiple active securities"
+            );
+        }
+        SecurityReferenceEntity resolved = distinct.getFirst();
+        return new ResolvedSecurityInput(resolved.getSymbol(), resolved.getCompanyName());
     }
 
     private static List<SecurityReferenceEntity> usable(
@@ -90,5 +111,8 @@ public class SecurityPrecheckService {
         return new SecurityMismatchException(
                 "The supplied symbol and companyName resolve to different securities"
         );
+    }
+
+    public record ResolvedSecurityInput(String symbol, String companyName) {
     }
 }

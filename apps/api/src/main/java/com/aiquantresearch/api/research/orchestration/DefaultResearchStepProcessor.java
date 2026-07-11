@@ -16,26 +16,32 @@ public class DefaultResearchStepProcessor implements ResearchStepProcessor {
     private final Phase3StepExecutor stepExecutor;
     private final StepCommitService commitService;
     private final ActiveLeaseRegistry activeLeases;
+    private final ResearchExecutionBudgetGuard executionBudget;
 
     public DefaultResearchStepProcessor(
             ResearchWorkflowService workflowService,
             Phase3StepExecutor stepExecutor,
             StepCommitService commitService,
-            ActiveLeaseRegistry activeLeases
+            ActiveLeaseRegistry activeLeases,
+            ResearchExecutionBudgetGuard executionBudget
     ) {
         this.workflowService = workflowService;
         this.stepExecutor = stepExecutor;
         this.commitService = commitService;
         this.activeLeases = activeLeases;
+        this.executionBudget = executionBudget;
     }
 
     @Override
     public void process(QueueClaim claim) {
         assertLeaseUsable(claim);
+        executionBudget.assertWithinBudget(claim.researchJobId());
         workflowService.projectStage(claim.researchJobId(), claim.stepType());
         assertLeaseUsable(claim);
+        executionBudget.assertWithinBudget(claim.researchJobId());
         StepExecutionResult result = stepExecutor.execute(claim);
         assertLeaseUsable(claim);
+        executionBudget.assertWithinBudget(claim.researchJobId());
         commitService.commit(claim, result);
     }
 

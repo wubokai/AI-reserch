@@ -888,13 +888,16 @@ components:
       type: string
       enum: [QUICK, STANDARD, DEEP]
       default: STANDARD
-      description: Phase 3 accepts STANDARD only; QUICK/DEEP return INVALID_REQUEST.
+      description: |
+        Controls bounded retrieval and model effort. QUICK uses at most 1 Filing,
+        40 Evidence items, 80 calculations and no tool round; STANDARD uses
+        2/80/140/1; DEEP uses 6/120/180 and the configured tool-round ceiling.
 
     ResearchPeriod:
       type: string
-      enum: [1y, 3y, 5y, 10y, max]
+      enum: [1y, 3y, 5y]
       default: 5y
-      description: Phase 3 accepts the deterministic 5y Mock fixture only; other values return INVALID_REQUEST.
+      description: Selects a deterministic 1, 3 or 5 year daily-history window.
 
     Locale:
       type: string
@@ -966,7 +969,9 @@ components:
       additionalProperties: false
       required:
         - query
-        - symbol
+      anyOf:
+        - required: [symbol]
+        - required: [companyName]
       properties:
         query:
           type: string
@@ -975,12 +980,12 @@ components:
         symbol:
           type: string
           pattern: '^[A-Za-z][A-Za-z0-9.-]{0,9}$'
-          description: Phase 3 target; case-insensitive MU, NVDA, or RKLB only.
+          description: Mock target; case-insensitive MU, NVDA, or RKLB. May be omitted when companyName uniquely resolves in the local security master.
         companyName:
           type: string
           minLength: 1
           maxLength: 200
-          description: Optional cross-check; when supplied it must resolve to the target symbol.
+          description: Company-name input or optional symbol cross-check; a company-only request must resolve uniquely before enqueueing.
         locale:
           allOf:
             - $ref: '#/components/schemas/Locale'
@@ -993,19 +998,19 @@ components:
         period:
           allOf:
             - $ref: '#/components/schemas/ResearchPeriod'
-          description: Must be 5y in Phase 3.
+          description: Selects a 1y, 3y or 5y history window; default is 5y.
         startDate:
           type: string
           format: date
-          description: Reserved for a later phase; any explicit date range is rejected in Phase 3.
+          description: Optional explicit start; must be supplied with endDate and span at most five years.
         endDate:
           type: string
           format: date
-          description: Reserved for a later phase; any explicit date range is rejected in Phase 3.
+          description: Optional explicit end; must be supplied with startDate.
         reportDepth:
           allOf:
             - $ref: '#/components/schemas/ReportDepth'
-          description: Must be STANDARD in Phase 3.
+          description: Bounded QUICK, STANDARD or DEEP retrieval/model effort.
         includeTechnicalAnalysis:
           type: boolean
           const: true
@@ -1023,10 +1028,10 @@ components:
           default: true
           description: False skips FETCH_MACRO_DATA; a complete safe report may still be COMPLETED/PASSED.
       description: |
-        Phase 3 deterministic Mock boundary: MU/NVDA/RKLB target, SPY/QQQ benchmark,
-        STANDARD depth, fixed 5y period, and mandatory technical analysis. Requests
-        outside this boundary fail before Research creation. dataMode is server-owned
-        and fixed to MOCK for ordinary Phase 3 flows.
+        Deterministic Mock boundary: MU/NVDA/RKLB target, SPY/QQQ benchmark,
+        1y/3y/5y or an explicit date range up to five years, QUICK/STANDARD/DEEP,
+        and mandatory technical analysis. Requests outside this boundary fail before
+        Research creation. dataMode is server-owned and fixed to MOCK for ordinary flows.
 
     RetryResearchRequest:
       type: object

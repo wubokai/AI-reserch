@@ -1,5 +1,7 @@
 # Phase 3 Gate 测试矩阵
 
+> 本文件保留 G3 当时的固定 `5y/STANDARD` 历史验收边界；Phase 9 需求审计已扩展为 `1y/3y/5y`、显式日期范围和 `QUICK/STANDARD/DEEP`，最新口径见 [`phase9-test-matrix.md`](./phase9-test-matrix.md)。
+
 状态：Gate G3 已通过
 
 日期：2026-07-10

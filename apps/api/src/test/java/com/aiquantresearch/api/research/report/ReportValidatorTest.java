@@ -32,8 +32,8 @@ class ReportValidatorTest {
     @Test
     void rejectsNumericValuesThatDoNotResolveToCalculation() {
         ObjectNode report = fixture.report().deepCopy();
-        ObjectNode reference = (ObjectNode) report.path("sections").get(1)
-                .path("claims").get(0).path("numericReferences").get(0);
+        ObjectNode reference = (ObjectNode) report.path("sections").get(0)
+                .path("claims").get(1).path("numericReferences").get(0);
         reference.put("normalizedValue", "999");
 
         ReportValidationResult result = validator.validate(

@@ -7,7 +7,7 @@
 | 能力 | 实现 | 结果 |
 | --- | --- | --- |
 | Dashboard | 任务总数、执行中、已发布、完成/部分完成与最近研究 | 通过 |
-| Research Form | ticker 搜索、公司核对、语言、基准、固定契约和分析模块 | 通过 |
+| Research Form | ticker 搜索、公司核对、语言、基准、1y/3y/5y、QUICK/STANDARD/DEEP 和分析模块 | 通过 |
 | 任务控制 | 2 秒轮询、步骤耗时图、错误、warnings、取消、选择起点重试 | 通过 |
 | 报告图表 | 情景隐含价格、Data Quality 环形图与步骤耗时 | 通过 |
 | Claim/Evidence | Claim 类型/支持度、Evidence Drawer、Filing Chunk 搜索 | 通过 |
@@ -45,7 +45,7 @@
 ## 4. 当前限制
 
 - 默认普通用户流程仍为 MOCK，并持续显示 `DEMO DATA — NOT REAL MARKET DATA`；
-- QUICK/DEEP、1y/3y 和真实 Market 由后端能力/许可门控制，前端不伪装为可用；
+- 1y/3y/5y 与 QUICK/STANDARD/DEEP 已在需求审计检查点开放；真实 Market 仍由许可门控制，前端不伪装为可用；
 - Gate G8 只验收前端产品完整性，不替代仍受 Market 许可阻塞的 Gate G7。
 
 ## 5. 远端终验

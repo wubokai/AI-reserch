@@ -13,16 +13,16 @@
 | Phase 6：真实 LLM 安全接入 | 完成 | `ResearchLanguageModel` Mock/Real 双实现、Responses API、6 个严格 Schema、三工具 allowlist、预算预留/结算、调用/失败审计和安全回退已通过；Gate G6 通过 |
 | Phase 7：真实数据源 | 进行中 | SEC/FRED/XBRL、Runtime 与多格式归属已通过 CI；provider-neutral REAL 创建/解析/发布边界已完成本地检查点；Market 许可和 Adapter 仍阻塞完整 REAL 终验 |
 | Phase 8：完整前端产品 | 完成 | Dashboard、完整表单、进度控制、报告图表、Evidence/Data Quality、版本/历史、Provider 状态、导出反馈、响应校验、移动端均完成；Gate G8 通过 |
-| Phase 9：发布硬化 | 完成 | JSON 日志、Prometheus/SLO、输入/SSRF/XSS/IDOR/PDF、供应链、最小权限容器、运行/扩展/保留文档和远端 G9 工程 Gate 均完成 |
+| Phase 9：发布硬化 | 完成 | JSON 日志、Prometheus/SLO、输入/SSRF/XSS/IDOR/PDF、全局执行截止时间、供应链、最小权限容器、运行/扩展/保留文档和远端 G9 工程 Gate 均完成 |
 
 ## 已验证
 
 - 原始 DOCX 需求已全文读取并完成结构/页面核对；
 - OpenAPI 3.1 YAML 可解析，本地引用与必需操作完整；
 - LLM/Analytics JSON Schema 是合法 JSON；
-- Web：ESLint、TypeScript、30 个 Vitest、Next.js production build 与 5 个 Playwright 用例通过；Phase 8 状态、操作、版本、筛选、导出、Zod、Provider 和移动端矩阵已覆盖；
-- API：Java 21 / Spring Boot 3.5，208 个 Surefire 本地通过，上一检查点 48 个 Failsafe/Testcontainers 通过；新增 Phase 9 日志/指标、JSON/PDF 边界、SSRF 和安全头覆盖；
-- PostgreSQL 17：Flyway V1–V8；V8 的 `llm_budget_reservations`、provider/pricing/request 元数据、真实 HTTP 调用计数、原子预留、幂等、超支阻断、结算、失败审计和不可变约束均通过 Testcontainers；
+- Web：ESLint、TypeScript、32 个 Vitest、Next.js production build 与 5 个 Playwright 用例通过；Phase 8 状态、操作、版本、筛选、导出、Zod、company-only、周期/深度、Provider 和移动端矩阵已覆盖；
+- API：Java 21 / Spring Boot 3.5，231 个 Surefire 本地通过，49 个 Failsafe/Testcontainers 已定义（新增 V9/FTS/血缘覆盖待本提交远端执行）；新增 Phase 9 日志/指标、JSON/PDF 边界、SSRF、安全头、company-only、1y/3y/5y、QUICK/STANDARD/DEEP、完整安全报告章节、Research 全局执行截止时间、outbox relay 与 LLM Filing FTS 覆盖；
+- PostgreSQL 17：Flyway V1–V9；V8 提供 LLM 原子预算/审计，V9 提供带 Research/Source 血缘、唯一约束和不可变触发器的 `market_price_bars`、`financial_metrics`、`macro_series` 规范化事实投影；
 - Analytics：Ruff、strict mypy、41 个 pytest 通过，branch coverage 93.92%；完整覆盖收益、风险、技术/Trend、基本面、估值与情景；
 - 供应链：`pnpm audit` 与 Python `pip-audit --local` 均为 0 已知漏洞；PostCSS 已提升到修复版本，Dependabot 覆盖 npm/pip/Maven/Actions；
 - 本地真实服务链路：MU、NVDA、RKLB 完整研究均形成已验证报告；关闭基本面叙事时安全部分完成，关闭宏观时完整完成；所有保留的重要 Claim 都关联同任务 Evidence；
@@ -46,7 +46,7 @@
 ## 当前限制
 
 - 本机没有 Docker；Gate G3–G6、Phase 7 各检查点、G8 与 G9 的容器、Testcontainers 和 Compose 终验均由 GitHub Actions Linux runner 完成。
-- 普通用户闭环只允许 `dataMode=MOCK`；目标只支持 MU/NVDA/RKLB，基准只支持 SPY/QQQ，深度固定 `STANDARD`，周期固定 `5y`，技术分析必须启用。
+- 普通用户闭环只允许 `dataMode=MOCK`；目标支持 MU/NVDA/RKLB，基准支持 SPY/QQQ，周期支持 1y/3y/5y 或最长五年的显式范围，深度支持 QUICK/STANDARD/DEEP；核心量化所需技术分析必须启用。
 - 基本面开关只控制可选叙事分析步骤；情景计算所需的规范化基本面数据仍会获取。宏观开关关闭时跳过宏观取数。
 - SEC Filing、SEC XBRL 与 FRED Adapter 已接入但默认关闭；缓存、熔断和 Provider 指标已完成，完整 REAL 编排仍受 Market 许可阻塞，不能描述为可发布的真实研究闭环。
 - SEC/FRED 页面与 Markdown/HTML/PDF 归属已完成本地验证。Fundamental 已选择 SEC Companyfacts/XBRL；真实 Market 在取得覆盖持久化、外部展示和报告导出的书面权利前保持未选择。

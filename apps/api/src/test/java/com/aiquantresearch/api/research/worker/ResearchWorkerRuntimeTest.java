@@ -183,6 +183,7 @@ class ResearchWorkerRuntimeTest {
                 Duration.ofSeconds(10),
                 Duration.ofSeconds(15),
                 Duration.ofSeconds(60),
+                Duration.ofMinutes(15),
                 1,
                 30
         );

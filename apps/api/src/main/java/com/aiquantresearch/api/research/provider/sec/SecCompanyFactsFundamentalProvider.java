@@ -77,7 +77,14 @@ public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvid
             SecEdgarProperties properties,
             Clock clock
     ) {
-        this(builder, objectMapper, properties, clock, ProviderRuntime.direct());
+        this(
+                builder,
+                objectMapper,
+                properties,
+                clock,
+                ProviderRuntime.direct(),
+                new SecRequestGovernor(properties.maxRequestsPerSecond())
+        );
     }
 
     @Autowired
@@ -86,7 +93,8 @@ public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvid
             ObjectMapper objectMapper,
             SecEdgarProperties properties,
             Clock clock,
-            ProviderRuntime runtime
+            ProviderRuntime runtime,
+            SecRequestGovernor governor
     ) {
         properties.requireConfiguredIdentity();
         validateEndpoint(properties.dataBaseUrl(), "data.sec.gov");
@@ -97,7 +105,7 @@ public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvid
                 .build();
         this.objectMapper = objectMapper;
         this.properties = properties;
-        governor = new SecRequestGovernor(properties.maxRequestsPerSecond());
+        this.governor = governor;
         this.clock = clock;
         this.runtime = runtime;
     }

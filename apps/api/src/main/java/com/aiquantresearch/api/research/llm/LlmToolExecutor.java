@@ -1,6 +1,7 @@
 package com.aiquantresearch.api.research.llm;
 
 import com.aiquantresearch.api.research.application.CanonicalHashService;
+import com.aiquantresearch.api.research.filing.FilingChunkSearchService;
 import com.aiquantresearch.api.research.orchestration.StoredEvidence;
 import com.aiquantresearch.api.research.orchestration.StoredQuantResult;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -8,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Locale;
+import java.util.Set;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,10 +18,16 @@ public class LlmToolExecutor {
 
     private final ObjectMapper objectMapper;
     private final CanonicalHashService hashService;
+    private final FilingChunkSearchService filingSearch;
 
-    public LlmToolExecutor(ObjectMapper objectMapper, CanonicalHashService hashService) {
+    public LlmToolExecutor(
+            ObjectMapper objectMapper,
+            CanonicalHashService hashService,
+            FilingChunkSearchService filingSearch
+    ) {
         this.objectMapper = objectMapper;
         this.hashService = hashService;
+        this.filingSearch = filingSearch;
     }
 
     public String execute(
@@ -45,15 +54,51 @@ public class LlmToolExecutor {
             throw invalidArguments();
         }
         ArrayNode items = objectMapper.createArrayNode();
+        Set<String> allowedEvidenceIds = request.evidence().stream()
+                .map(StoredEvidence::publicId)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        try {
+            java.util.Optional.ofNullable(filingSearch.search(
+                    request.context().researchId(), query, limit * 3
+            )).orElseGet(java.util.List::of).stream()
+                    .filter(match -> allowedEvidenceIds.contains(match.evidenceId()))
+                    .limit(limit)
+                    .forEach(match -> items.add(filingChunk(match)));
+        } catch (DataAccessException exception) {
+            throw new OpenAiResponseException(
+                    "LLM_TOOL_SEARCH_UNAVAILABLE",
+                    "The research-scoped filing search is temporarily unavailable",
+                    true,
+                    exception
+            );
+        }
         request.evidence().stream()
                 .filter(item -> searchable(item).contains(query))
-                .limit(limit)
+                .filter(item -> items.findValuesAsText("evidenceId").stream()
+                        .noneMatch(item.publicId()::equals))
+                .limit(Math.max(0, limit - items.size()))
                 .forEach(item -> items.add(evidence(item)));
         ObjectNode output = objectMapper.createObjectNode();
         output.put("schemaVersion", "llm_tool_result_v1");
         output.put("researchId", request.context().researchId().toString());
         output.set("items", items);
         return hashService.canonicalJson(output);
+    }
+
+    private ObjectNode filingChunk(FilingChunkSearchService.FilingChunkMatch match) {
+        ObjectNode output = objectMapper.createObjectNode();
+        output.put("schemaVersion", "llm_tool_result_v1");
+        output.put("trustLevel", "UNTRUSTED_EXTERNAL_DATA");
+        output.put("evidenceId", match.evidenceId());
+        output.put("evidenceType", "SEC_FILING_CHUNK");
+        output.put("externalDocumentId", match.externalDocumentId());
+        output.put("formType", match.formType());
+        output.put("filingDate", match.filingDate().toString());
+        output.put("sectionName", match.sectionName());
+        output.put("chunkIndex", match.chunkIndex());
+        output.put("citationLocator", match.citationLocator());
+        output.put("excerpt", match.excerpt());
+        return output;
     }
 
     private String getEvidence(JsonNode arguments, ResearchLanguageModelRequest request) {

@@ -95,15 +95,20 @@ flowchart TD
 
 为满足工具调用需求且控制风险，模型只可使用只读本地工具：
 
-- `search_evidence(query, filters)`：在当前 research ID 的已注册 Evidence/SEC chunks 中检索；
+- `search_evidence(query, limit)`：先在当前 research ID 的 PostgreSQL FTS Filing chunks 中检索，再补充 Evidence 摘要；chunk 结果仍必须通过本次请求的 Evidence allowlist；
 - `get_evidence(evidenceId)`：读取当前任务允许列表内的证据；
 - `get_calculation(calculationId)`：读取确定性计算结果。
 
-工具不接受 URL、文件路径、SQL、代码或用户 ID；服务端强制 research ownership、结果上限和 allowlist。最终报告使用 Structured Outputs，而不是依赖工具返回自由文本。
+工具不接受 URL、文件路径、SQL、代码或用户 ID；服务端强制 Research scope、结果上限和 Evidence allowlist。Filing chunk 返回 section、字符区间与 citation locator，并持续标记为不可信外部数据。最终报告使用 Structured Outputs，而不是依赖工具返回自由文本。
 
 Phase 6 的工具循环额外设置 `parallel_tool_calls=false`，每轮最多接受一个调用，最多执行
 `OPENAI_MAX_TOOL_ROUNDS` 轮。每个工具响应仍标记为 `UNTRUSTED_EXTERNAL_DATA`；未知工具、
 越界 Evidence/Calculation、非法参数或超过轮次都会失败关闭。
+
+研究深度在全局边界内进一步收紧输入：`QUICK` 最多使用 1 份 Filing、40 条 Evidence、
+80 个 Calculation 且不允许工具往返；`STANDARD` 为 2/80/140/1；`DEEP` 为
+6/120/180，并最多使用部署配置的工具轮次。深度只能降低、不能突破
+`OPENAI_MAX_*`、任务费用或调用次数上限。
 
 ## 5. OpenAI Responses API Adapter
 

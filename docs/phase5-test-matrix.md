@@ -19,7 +19,7 @@ SEC 网络请求或真实 LLM：
 - Evidence API 与 Drawer 展示快照 Schema、双哈希、时间、Freshness、关联 Claim，
   并支持 Filing Chunk 检索；
 - 外部来源文本通过 `UNTRUSTED_EXTERNAL_DATA` 边界封装，工具白名单固定为三个
-  当前 Research 的只读工具。
+  当前 Research 的只读工具；Phase 9 审计已把 `search_evidence` 直接接到该 FTS，结果仍需通过本次 LLM 请求的 Evidence allowlist。
 
 ## 2. 验收矩阵
 

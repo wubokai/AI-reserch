@@ -26,6 +26,17 @@
 
 完整系统设计见[架构基线](docs/architecture.md)，机器可读接口见 [OpenAPI 3.1](docs/openapi.yaml)，分阶段 Gate 见[实施计划](docs/implementation-plan.md)。
 
+```mermaid
+flowchart LR
+    U["Browser / Next.js"] --> A["Java API + durable Worker"]
+    A --> P[("PostgreSQL\nauthoritative state")]
+    A --> R[("Redis\ncache only")]
+    A --> Q["Python Analytics\ndeterministic metrics"]
+    A --> D["Provider adapters\nMock / approved REAL"]
+    A --> L["OpenAI adapter\nstrict structured output"]
+    A --> E["Evidence validation\natomic report publication"]
+```
+
 ## 快速启动
 
 推荐使用 Docker Desktop 或其他兼容 Docker Compose 的运行时：
@@ -48,6 +59,7 @@ docker compose up --build
 ```bash
 make dev-up
 make dev-down
+make seed
 ```
 
 `make dev-up` 会在容器启动后自动执行 smoke。首次启动前请修改 `.env` 中的 demo 密码。本地 Compose 只把应用端口绑定到 `127.0.0.1`；dev-demo 用户只允许在 `development`/`test` profile 启用，不能作为生产认证方案。
@@ -76,7 +88,7 @@ pnpm dev:web
 
 当前验证基线：Web 的 ESLint、TypeScript、30 个 Vitest、production build 与 5 个 Playwright 用例通过；Phase 8 覆盖 Loading/Empty/Error/Partial/Completed、创建/取消/重试、Evidence、版本、历史筛选、导出成功/失败、Zod 拒绝、Provider 状态与移动视口。Web、API/Testcontainers、Analytics、secret scan 与 Compose 全仓终验见 [GitHub Actions run 29144269701](https://github.com/wubokai/AI-reserch/actions/runs/29144269701)，详细证据见 [Phase 8 测试矩阵](docs/phase8-test-matrix.md)。
 
-Phase 9 终验：Web 全 Gate、Analytics 41 个 pytest/93.92% branch coverage、API 208 个 Surefire、`pnpm audit` 与 `pip-audit` 0 已知漏洞、三应用镜像 Grype 扫描、最小权限 Compose 与五服务 smoke 均通过，见 [GitHub Actions run 29145630809](https://github.com/wubokai/AI-reserch/actions/runs/29145630809)。
+Phase 9 终验基线：Web 全 Gate、Analytics 41 个 pytest/93.92% branch coverage、API 208 个 Surefire、`pnpm audit` 与 `pip-audit` 0 已知漏洞、三应用镜像 Grype 扫描、最小权限 Compose 与五服务 smoke 均通过，见 [GitHub Actions run 29145630809](https://github.com/wubokai/AI-reserch/actions/runs/29145630809)。后续需求审计新增周期、深度和执行截止时间测试，最新数量以[进度文档](docs/progress.md)与当前 CI 为准。
 
 FRED 检查点将 API 基线提升到 179 个 Surefire 与 46 个 Failsafe/Testcontainers；全仓终验见 [GitHub Actions run 29134411188](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)。
 
@@ -101,7 +113,12 @@ Provider-neutral REAL 编排边界已移除创建、验证和发布路径中的 
 - `REAL`：只允许使用已批准的真实 Provider，不得静默混入 Mock；
 - `MIXED_TEST`：仅自动化集成测试使用，不得生成普通用户报告或导出。
 
-缺少 `OPENAI_API_KEY` 与 `OPENAI_REPORT_MODEL` 时，报告由确定性 Mock 生成器完成；只配置其中一个会失败关闭。真实模式采用 Responses API、严格 JSON Schema、`store=false`、`parallel_tool_calls=false`、HMAC `safety_identifier`、输入/输出/工具轮次上限和数据库预算预留。价格未知时不允许真实调用，不会伪造成本。
+缺少 `OPENAI_API_KEY` 与 `OPENAI_REPORT_MODEL`（或兼容回退 `OPENAI_MODEL`）时，报告由确定性 Mock 生成器完成；只配置 Key 或只配置模型会失败关闭。真实模式采用 Responses API、严格 JSON Schema、`store=false`、`parallel_tool_calls=false`、HMAC `safety_identifier`、输入/输出/工具轮次上限和数据库预算预留。价格未知时不允许真实调用，不会伪造成本。
+
+单次 Research 的执行时钟从首个活动阶段开始，默认最多 15 分钟；可用
+`RESEARCH_MAX_EXECUTION_MINUTES` 在 1–1440 分钟内调整。Worker 会在阶段投影、步骤执行和原子发布边界前检查该预算；到期任务以 `RESEARCH_EXECUTION_BUDGET_EXCEEDED` 失败，过期结果不会发布。
+
+研究周期支持 `1y`、`3y`、`5y`，也可通过 API 成对提供最长五年的 `startDate/endDate`。研究深度支持 `QUICK`、`STANDARD`、`DEEP`：它们依次扩大 Filing、Evidence、确定性计算输入和 LLM 工具轮次预算，但永远不能突破部署环境的全局安全/成本上限。
 
 SEC Adapter 默认关闭。启用时必须同时显式设置 `FILING_DATA_PROVIDER=sec`、`DATA_MODE=REAL` 和包含应用名称及受监控联系邮箱的 `SEC_USER_AGENT`。请求只允许官方 SEC 主机（测试仅允许 loopback），全局速率上限不超过 10 次/秒，并有超时、响应体大小、内容类型、重试次数和文档路径边界。Phase 7 完成前，其他 Provider 仍为 Mock，因此这不是可发布的完整 REAL 研究闭环。
 
@@ -122,10 +139,19 @@ FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`
 - [运行与发布手册](docs/operations-runbook.md)
 - [可观测性与告警](docs/observability.md)
 - [Provider 扩展指南](docs/provider-extension-guide.md)
+- [路线图与非目标](docs/roadmap.md)
 - [数据保留策略](docs/retention-policy.md)
 - [SEC Companyfacts/XBRL 映射与数据质量](docs/sec-xbrl-mapping.md)
 - [安全与风险登记](docs/security.md)
 - [实时进度](docs/progress.md)
+
+## 常见错误
+
+- `INVALID_REQUEST`：确认目标为 Mock 支持的 MU/NVDA/RKLB、基准为 SPY/QQQ、周期为 1y/3y/5y，且技术分析保持启用。
+- `MARKET_DATA_INCOMPLETE`：所选日期范围不足 200 个交易日，或 Provider 未覆盖完整目标/基准区间。
+- `RESEARCH_EXECUTION_BUDGET_EXCEEDED`：任务已超过全局执行截止时间；先排查慢 Provider、Analytics 或 LLM，再评审是否调整上限。
+- REAL 模式启动失败：这是许可、身份、模型、价格或认证配置缺失时的预期失败关闭；逐项核对[外部输入清单](docs/external-inputs.md)。
+- Compose 健康检查失败或导出异常：按[运行与故障处理手册](docs/operations-runbook.md)中的分诊表处理，禁止用关闭验证或混入 Mock 的方式绕过。
 
 ## 下一步
 

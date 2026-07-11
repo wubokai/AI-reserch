@@ -30,6 +30,31 @@ class DeterministicMockReportGeneratorTest {
         assertThat(first).isEqualTo(second);
         assertThat(first.path("schemaVersion").asText()).isEqualTo("research_report_v1");
         assertThat(first.path("sections")).hasSizeGreaterThanOrEqualTo(4);
+        assertThat(first.path("sections"))
+                .extracting(section -> section.path("id").asText())
+                .contains(
+                        "executive_summary",
+                        "company_overview",
+                        "financial_analysis",
+                        "performance",
+                        "risk",
+                        "technical_analysis",
+                        "valuation",
+                        "scenario"
+                );
+        assertThat(first.path("bullCase")).hasSize(3);
+        assertThat(first.path("bearCase")).hasSize(3);
+        assertThat(first.path("risks"))
+                .extracting(item -> item.path("category").asText())
+                .containsExactlyInAnyOrder(
+                        "BUSINESS",
+                        "FINANCIAL",
+                        "VALUATION",
+                        "MARKET",
+                        "REGULATORY",
+                        "EXECUTION",
+                        "DATA_QUALITY"
+                );
         assertThat(first.path("scenarioAnalysis").path("scenarios"))
                 .extracting(item -> item.path("name").asText())
                 .containsExactly("BULL", "BASE", "BEAR");
@@ -72,8 +97,16 @@ class DeterministicMockReportGeneratorTest {
 
         assertThat(report.path("sections"))
                 .extracting(section -> section.path("id").asText())
-                .containsExactly("overview", "performance", "risk", "scenario")
-                .doesNotContain("fundamentals");
+                .containsExactly(
+                        "executive_summary",
+                        "company_overview",
+                        "performance",
+                        "risk",
+                        "technical_analysis",
+                        "valuation",
+                        "scenario"
+                )
+                .doesNotContain("financial_analysis");
         assertThat(report.path("dataQuality").path("missingData"))
                 .extracting(JsonNode::asText)
                 .doesNotContain("fundamental_analysis: NOT_AVAILABLE (not requested)");

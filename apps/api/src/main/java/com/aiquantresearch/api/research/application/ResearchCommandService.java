@@ -87,17 +87,26 @@ public class ResearchCommandService {
         Objects.requireNonNull(command, "command");
         ownerProvisioningService.ensureOwner(ownerId, principalName, principalEmail);
         Instant now = clock.instant();
-        String requestJson = hashService.canonicalJson(command);
-        String requestHash = hashService.hashCanonicalJsonText(requestJson);
+        String incomingRequestJson = hashService.canonicalJson(command);
+        String incomingRequestHash = hashService.hashCanonicalJsonText(incomingRequestJson);
         IdempotencyReservation reservation = idempotencyBoundary.reserve(
-                new IdempotencyScope(ownerId, "POST", CREATE_PATH, idempotencyKey, requestHash),
+                new IdempotencyScope(
+                        ownerId,
+                        "POST",
+                        CREATE_PATH,
+                        idempotencyKey,
+                        incomingRequestHash
+                ),
                 now
         );
         if (reservation.replayed()) {
             return replay(reservation, ResearchAcceptedView.class);
         }
-        securityPrecheckService.validate(command.symbol(), command.companyName());
+        var resolved = securityPrecheckService.resolve(command.symbol(), command.companyName());
+        command = command.withResolvedSecurity(resolved.symbol(), resolved.companyName());
         validateResearchBoundary(command, applicationProperties.dataMode());
+        String requestJson = hashService.canonicalJson(command);
+        String requestHash = hashService.hashCanonicalJsonText(requestJson);
 
         UUID researchId = UUID.randomUUID();
         ResearchJobEntity research = ResearchJobEntity.create(
@@ -585,16 +594,19 @@ public class ResearchCommandService {
                     "Phase 3 Mock research supports only MU, NVDA, or RKLB as the target"
             );
         }
-        if (command.reportDepth() != ReportDepth.STANDARD) {
+        if (!java.util.Set.of(
+                ResearchPeriod.ONE_YEAR,
+                ResearchPeriod.THREE_YEARS,
+                ResearchPeriod.FIVE_YEARS
+        ).contains(command.period())) {
             throw new InvalidResearchRequestException(
-                    "The current research workflow supports only reportDepth STANDARD"
+                    "The current research workflow supports period 1y, 3y, or 5y"
             );
         }
-        if (command.period() != ResearchPeriod.FIVE_YEARS
-                || command.startDate() != null
-                || command.endDate() != null) {
+        if (command.startDate() != null
+                && command.startDate().isBefore(command.endDate().minusYears(5))) {
             throw new InvalidResearchRequestException(
-                    "The current research workflow supports only the fixed 5y period"
+                    "An explicit research date range cannot exceed five years"
             );
         }
         if (!java.util.Set.of("SPY", "QQQ").contains(command.benchmark())) {

@@ -1,5 +1,6 @@
 package com.aiquantresearch.api.research.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
@@ -43,7 +44,7 @@ class SecurityPrecheckServiceTest {
                 .thenReturn(List.of(micron));
 
         assertThatNoException().isThrownBy(() ->
-                service.validate("MU", "Micron Technology, Inc."));
+                service.resolve("MU", "Micron Technology, Inc."));
     }
 
     @Test
@@ -65,10 +66,10 @@ class SecurityPrecheckServiceTest {
         when(repository.findAllBySymbolIgnoreCase("BOND"))
                 .thenReturn(List.of(unsupported));
 
-        assertThatThrownBy(() -> service.validate("OLD", null))
+        assertThatThrownBy(() -> service.resolve("OLD", null))
                 .isInstanceOf(InvalidSymbolException.class)
                 .hasMessageContaining("inactive or unsupported");
-        assertThatThrownBy(() -> service.validate("BOND", null))
+        assertThatThrownBy(() -> service.resolve("BOND", null))
                 .isInstanceOf(InvalidSymbolException.class);
     }
 
@@ -91,13 +92,13 @@ class SecurityPrecheckServiceTest {
         when(repository.findAllByCompanyNameIgnoreCase("NVIDIA Corporation"))
                 .thenReturn(List.of(nvidia));
 
-        assertThatThrownBy(() -> service.validate("MU", "NVIDIA Corporation"))
+        assertThatThrownBy(() -> service.resolve("MU", "NVIDIA Corporation"))
                 .isInstanceOf(SecurityMismatchException.class)
                 .hasMessage("The supplied symbol and companyName resolve to different securities");
     }
 
     @Test
-    void unknownTickerPairedWithKnownCompanyDefersToDurableResolution() {
+    void unknownTickerPairedWithKnownCompanyIsRejectedAsAMismatch() {
         SecurityReferenceEntity nvidia = security(
                 "NVDA",
                 "NVIDIA Corporation",
@@ -108,8 +109,8 @@ class SecurityPrecheckServiceTest {
         when(repository.findAllByCompanyNameIgnoreCase("NVIDIA Corporation"))
                 .thenReturn(List.of(nvidia));
 
-        assertThatNoException().isThrownBy(() ->
-                service.validate("NVDAA", "NVIDIA Corporation"));
+        assertThatThrownBy(() -> service.resolve("NVDAA", "NVIDIA Corporation"))
+                .isInstanceOf(SecurityMismatchException.class);
     }
 
     @Test
@@ -123,7 +124,7 @@ class SecurityPrecheckServiceTest {
         when(repository.findAllBySymbolIgnoreCase("NVDA")).thenReturn(List.of(nvidia));
         when(repository.findAllByCompanyNameIgnoreCase("NVIDIA")).thenReturn(List.of());
 
-        assertThatNoException().isThrownBy(() -> service.validate("NVDA", "NVIDIA"));
+        assertThatNoException().isThrownBy(() -> service.resolve("NVDA", "NVIDIA"));
     }
 
     @Test
@@ -131,7 +132,7 @@ class SecurityPrecheckServiceTest {
         when(repository.findAllBySymbolIgnoreCase("NEWCO")).thenReturn(List.of());
         when(repository.findAllByCompanyNameIgnoreCase("New Company")).thenReturn(List.of());
 
-        assertThatNoException().isThrownBy(() -> service.validate("NEWCO", "New Company"));
+        assertThatNoException().isThrownBy(() -> service.resolve("NEWCO", "New Company"));
     }
 
     @Test
@@ -145,8 +146,35 @@ class SecurityPrecheckServiceTest {
         when(repository.findAllByCompanyNameIgnoreCase("Legacy Company"))
                 .thenReturn(List.of(legacy));
 
-        assertThatThrownBy(() -> service.validate(null, "Legacy Company"))
+        assertThatThrownBy(() -> service.resolve(null, "Legacy Company"))
                 .isInstanceOf(InvalidSymbolException.class);
+    }
+
+    @Test
+    void resolvesAUniqueCompanyOnlyInputToItsCanonicalSymbol() {
+        SecurityReferenceEntity micron = security(
+                "MU",
+                "Micron Technology, Inc.",
+                true,
+                "COMMON_STOCK"
+        );
+        when(repository.findAllByCompanyNameIgnoreCase("Micron Technology, Inc."))
+                .thenReturn(List.of(micron));
+
+        var resolved = service.resolve(null, "Micron Technology, Inc.");
+
+        assertThat(resolved.symbol()).isEqualTo("MU");
+        assertThat(resolved.companyName()).isEqualTo("Micron Technology, Inc.");
+    }
+
+    @Test
+    void rejectsAnUnknownCompanyOnlyInput() {
+        when(repository.findAllByCompanyNameIgnoreCase("Unknown Holdings"))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.resolve(null, "Unknown Holdings"))
+                .isInstanceOf(InvalidSymbolException.class)
+                .hasMessageContaining("could not be resolved");
     }
 
     private static SecurityReferenceEntity security(

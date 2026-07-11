@@ -11,6 +11,7 @@ DEMO_PASSWORD="${DEMO_PRINCIPAL_PASSWORD:-change_me_demo_only}"
 RESEARCH_POLL_ATTEMPTS="${RESEARCH_POLL_ATTEMPTS:-120}"
 RESEARCH_POLL_INTERVAL_SECONDS="${RESEARCH_POLL_INTERVAL_SECONDS:-2}"
 PHASE3_CLOSED_LOOP_SMOKE="${PHASE3_CLOSED_LOOP_SMOKE:-false}"
+VERIFY_NORMALIZED_STORAGE="${VERIFY_NORMALIZED_STORAGE:-false}"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -303,6 +304,51 @@ assert all(step.get("status") in {"SUCCEEDED", "SKIPPED"} for step in steps), st
 assert any(step.get("step") == "GENERATE_REPORT" and step.get("status") == "SUCCEEDED" for step in steps), steps
 assert any(step.get("step") == "VALIDATE_REPORT" and step.get("status") == "SUCCEEDED" for step in steps), steps
 PY
+
+if [[ "$VERIFY_NORMALIZED_STORAGE" == "true" ]]; then
+  NORMALIZED_COUNTS="$(docker compose exec -T postgres \
+    psql \
+      --username "${POSTGRES_USER:-quant_user}" \
+      --dbname "${POSTGRES_DB:-quant_research}" \
+      --tuples-only \
+      --no-align \
+      --field-separator=, \
+      --command "select
+        (select count(*) from market_price_bars where research_job_id = '$RESEARCH_ID'),
+        (select count(*) from financial_metrics where research_job_id = '$RESEARCH_ID'),
+        (select count(*) from macro_series where research_job_id = '$RESEARCH_ID')")"
+  python3 - "$NORMALIZED_COUNTS" <<'PY'
+import sys
+
+parts = sys.argv[1].strip().split(",")
+assert len(parts) == 3, parts
+market, financial, macro = map(int, parts)
+assert market > 2_500, (market, financial, macro)
+assert financial > 0, (market, financial, macro)
+assert macro > 0, (market, financial, macro)
+PY
+  printf 'Normalized market, financial, and macro observations verified: %s\n' "$NORMALIZED_COUNTS"
+
+  UNPUBLISHED_OUTBOX=""
+  for (( relay_attempt = 1; relay_attempt <= 10; relay_attempt += 1 )); do
+    UNPUBLISHED_OUTBOX="$(docker compose exec -T postgres \
+      psql \
+        --username "${POSTGRES_USER:-quant_user}" \
+        --dbname "${POSTGRES_DB:-quant_research}" \
+        --tuples-only \
+        --no-align \
+        --command "select count(*) from outbox_events where published_at is null")"
+    if [[ "${UNPUBLISHED_OUTBOX//[[:space:]]/}" == "0" ]]; then
+      break
+    fi
+    sleep 1
+  done
+  if [[ "${UNPUBLISHED_OUTBOX//[[:space:]]/}" != "0" ]]; then
+    printf 'Outbox relay did not drain pending events: %s\n' "$UNPUBLISHED_OUTBOX" >&2
+    exit 1
+  fi
+  printf 'Transactional outbox relay drained all pending events.\n'
+fi
 
 api_request \
   "Read evidence" \

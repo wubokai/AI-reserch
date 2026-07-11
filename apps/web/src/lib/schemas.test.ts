@@ -34,4 +34,37 @@ describe("Phase 3 Web contracts", () => {
     expect(parsed).not.toHaveProperty("dataMode");
     expect(() => researchRequestSchema.parse({ ...parsed, query: "123456789" })).toThrow();
   });
+
+  it("accepts supported period and depth combinations", () => {
+    const request = {
+      symbol: "MU",
+      query: "分析 MU 的增长动力、周期风险和财务质量",
+      benchmark: "QQQ",
+      period: "1y",
+      reportDepth: "QUICK",
+      includeTechnicalAnalysis: true,
+      includeFundamentalAnalysis: true,
+      includeMacroAnalysis: true,
+    };
+    expect(researchRequestSchema.safeParse(request).success).toBe(true);
+    expect(researchRequestSchema.safeParse({ ...request, period: "10y" }).success).toBe(false);
+    expect(researchRequestSchema.safeParse({ ...request, reportDepth: "UNBOUNDED" }).success)
+      .toBe(false);
+  });
+
+  it("accepts a company-only target and rejects a request with no target", () => {
+    const request = {
+      companyName: "Micron Technology, Inc.",
+      query: "分析 Micron 的增长动力、周期风险和财务质量",
+      benchmark: "SPY",
+      period: "3y",
+      reportDepth: "STANDARD",
+      includeTechnicalAnalysis: true,
+      includeFundamentalAnalysis: true,
+      includeMacroAnalysis: true,
+    };
+    expect(researchRequestSchema.safeParse(request).success).toBe(true);
+    expect(researchRequestSchema.safeParse({ ...request, companyName: undefined }).success)
+      .toBe(false);
+  });
 });

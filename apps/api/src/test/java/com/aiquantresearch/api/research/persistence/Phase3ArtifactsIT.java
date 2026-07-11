@@ -73,9 +73,10 @@ class Phase3ArtifactsIT extends PostgresRedisIntegrationTestSupport {
                    and table_name in (
                        'source_snapshots', 'research_source_links', 'quant_results',
                        'evidence_items', 'llm_calls', 'report_versions', 'claims',
-                       'claim_evidence_links', 'report_exports', 'research_run_manifests'
+                       'claim_evidence_links', 'report_exports', 'research_run_manifests',
+                       'market_price_bars', 'financial_metrics', 'macro_series'
                    )
-                """, Integer.class)).isEqualTo(10);
+                """, Integer.class)).isEqualTo(13);
     }
 
     @Test
@@ -323,6 +324,86 @@ class Phase3ArtifactsIT extends PostgresRedisIntegrationTestSupport {
                 update claim_evidence_links set relevance_score = 0.1
                  where claim_id = ? and evidence_id = ?
                 """, claimId, evidenceId);
+    }
+
+    @Test
+    void normalizedProviderFactsEnforceResearchLineageUniquenessAndImmutability() {
+        UUID jobId = createJob("MOCK", "QUEUED", 0, "RESOLVE_SECURITY");
+        UUID sourceId = createSource(jobId, true);
+        UUID marketId = UUID.randomUUID();
+        UUID financialId = UUID.randomUUID();
+        UUID macroId = UUID.randomUUID();
+
+        jdbc.update("""
+                insert into market_price_bars (
+                    id, research_job_id, source_snapshot_id, security_id,
+                    symbol, interval, observation_date, open, high, low,
+                    close, adjusted_close, volume, provider, retrieved_at
+                ) values (?, ?, ?, '00000000-0000-4000-8000-000000000001',
+                          'MU', '1d', date '2023-12-29', 100, 102, 99,
+                          101, 101, 1000000, 'MOCK_V1', statement_timestamp())
+                """, marketId, jobId, sourceId);
+        jdbc.update("""
+                insert into financial_metrics (
+                    id, research_job_id, source_snapshot_id, security_id,
+                    symbol, fiscal_period, fiscal_year, period_end_date,
+                    metric_name, metric_value, unit, provider, retrieved_at
+                ) values (?, ?, ?, '00000000-0000-4000-8000-000000000001',
+                          'MU', 'FY', 2023, date '2023-08-31',
+                          'revenue', 1000, 'USD', 'MOCK_V1', statement_timestamp())
+                """, financialId, jobId, sourceId);
+        jdbc.update("""
+                insert into macro_series (
+                    id, research_job_id, source_snapshot_id, series_id,
+                    series_name, observation_date, metric_value, unit,
+                    provider, retrieved_at
+                ) values (?, ?, ?, 'DFF', 'Federal Funds Rate', date '2023-12-29',
+                          5.33, 'Percent', 'MOCK_V1', statement_timestamp())
+                """, macroId, jobId, sourceId);
+
+        assertThat(jdbc.queryForObject(
+                "select count(*) from market_price_bars where research_job_id = ?",
+                Integer.class,
+                jobId
+        )).isOne();
+        assertThat(jdbc.queryForObject(
+                "select count(*) from financial_metrics where research_job_id = ?",
+                Integer.class,
+                jobId
+        )).isOne();
+        assertThat(jdbc.queryForObject(
+                "select count(*) from macro_series where research_job_id = ?",
+                Integer.class,
+                jobId
+        )).isOne();
+
+        assertThat(jdbc.update("""
+                insert into market_price_bars (
+                    research_job_id, source_snapshot_id, security_id,
+                    symbol, interval, observation_date, open, high, low,
+                    close, adjusted_close, volume, provider, retrieved_at
+                ) values (?, ?, '00000000-0000-4000-8000-000000000001',
+                          'MU', '1d', date '2023-12-29', 100, 102, 99,
+                          101, 101, 1000000, 'MOCK_V1', statement_timestamp())
+                on conflict (
+                    research_job_id, source_snapshot_id, symbol, interval, observation_date
+                ) do nothing
+                """, jobId, sourceId)).isZero();
+
+        UUID otherJob = createJob("MOCK", "QUEUED", 0, "RESOLVE_SECURITY");
+        assertThatThrownBy(() -> transactions.executeWithoutResult(status -> jdbc.update("""
+                insert into market_price_bars (
+                    research_job_id, source_snapshot_id, symbol, interval,
+                    observation_date, open, high, low, close, adjusted_close,
+                    volume, provider, retrieved_at
+                ) values (?, ?, 'MU', '1d', date '2023-12-28', 100, 102, 99,
+                          101, 101, 1000000, 'MOCK_V1', statement_timestamp())
+                """, otherJob, sourceId)))
+                .hasMessageContaining("source is not linked to this research job");
+
+        assertImmutable("update market_price_bars set close = 99 where id = ?", marketId);
+        assertImmutable("delete from financial_metrics where id = ?", financialId);
+        assertImmutable("update macro_series set metric_value = 4 where id = ?", macroId);
     }
 
     @Test

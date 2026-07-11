@@ -103,7 +103,7 @@ app:
     base-url: ${OPENAI_BASE_URL:https://api.openai.com}
     timeout: ${OPENAI_TIMEOUT:45s}
     api-key: ${OPENAI_API_KEY:}
-    report-model: ${OPENAI_REPORT_MODEL:}
+    report-model: ${OPENAI_REPORT_MODEL:${OPENAI_MODEL:}}
     validation-model: ${OPENAI_VALIDATION_MODEL:}
     reasoning-effort: ${OPENAI_REASONING_EFFORT:low}
     max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:12000}
@@ -134,8 +134,14 @@ app:
     heartbeat-delay: ${RESEARCH_WORKER_HEARTBEAT_DELAY:10s}
     reaper-delay: ${RESEARCH_WORKER_REAPER_DELAY:15s}
     lease-duration: ${RESEARCH_WORKER_LEASE_DURATION:60s}
+    max-execution-duration: ${RESEARCH_MAX_EXECUTION_MINUTES:15}
     retry-base-delay-seconds: ${RESEARCH_WORKER_RETRY_BASE_DELAY_SECONDS:1}
     retry-max-delay-seconds: ${RESEARCH_WORKER_RETRY_MAX_DELAY_SECONDS:30}
+  outbox:
+    enabled: ${OUTBOX_RELAY_ENABLED:true}
+    relay-delay: ${OUTBOX_RELAY_DELAY:1s}
+    initial-delay: ${OUTBOX_RELAY_INITIAL_DELAY:2s}
+    batch-size: ${OUTBOX_RELAY_BATCH_SIZE:100}
   security:
     demo-principal:
       enabled: false

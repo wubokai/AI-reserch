@@ -78,14 +78,14 @@ SEC XBRL 的标准 concept、期间选择、修订去重、派生公式与 NOT_A
 ### 4.1 SEC EDGAR Adapter v1
 
 - 证券代码先通过 SEC 官方 `company_tickers.json` 映射 CIK，再读取 `data.sec.gov/submissions/CIK##########.json`，只下载允许的 10-K、10-Q、8-K、20-F、40-F、6-K 及修订版主文档；
-- `SEC_USER_AGENT` 必须包含应用身份与受监控联系邮箱。实现上限为 1–10 次/秒，默认 8 次/秒，遵守 SEC 当前不超过 10 次/秒的自动访问政策；
+- `SEC_USER_AGENT` 必须包含应用身份与受监控联系邮箱。Filing 与 Companyfacts Adapter 共用同一个进程级 Governor，而非各自计数；聚合实现上限为 1–10 次/秒，默认 8 次/秒，遵守 SEC 当前不超过 10 次/秒的自动访问政策；
 - 生产 URL 只允许 `https://data.sec.gov` 与 `https://www.sec.gov`，拒绝 user-info、非 HTTPS 官方地址、路径穿越和非允许文档标识；Contract Test 可使用 loopback HTTP；
 - JSON/HTML 响应分别验证内容类型、空响应和字节上限。只对 429、502、503、网络错误和超时进行有界重试，不对 4xx、Schema、路径或内容类型错误重试；
 - `rawDataHash` 对 ticker 元数据、submissions JSON 和下载文档的原始字节按长度分隔后计算 SHA-256；规范化 Payload 另算 `normalizedDataHash`；
 - Source Snapshot 保存 provider、schema、retrieved/effective date、官方来源 URL、freshness、原始哈希和访问政策版本；每份 Filing 的官方 URL 保存为 `raw_text_uri`；
 - 官方契约依据：[SEC EDGAR API](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)、[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions) 与 [SEC Rate Control Notice](https://www.sec.gov/filergroup/announcements-old/new-rate-control-limits)。
 
-当前限制：尚未实现 SEC Redis 缓存、熔断器、Provider 状态指标与完整 REAL 研究编排，因此本检查点不关闭 Gate G7。
+后续检查点已补齐 SEC/FRED/XBRL 共用 Redis 缓存、熔断器、Provider 指标与 provider-neutral REAL 编排；完整 REAL Gate 仍只等待经许可的 Market Adapter 与外部终验输入。
 
 ### 4.2 FRED Adapter v1
 

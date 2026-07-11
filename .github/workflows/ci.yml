@@ -92,6 +92,7 @@ jobs:
         run: ./scripts/smoke-test.sh
         env:
           PHASE3_CLOSED_LOOP_SMOKE: "true"
+          VERIFY_NORMALIZED_STORAGE: "true"
       - if: always()
         run: docker compose logs --no-color
       - if: always()

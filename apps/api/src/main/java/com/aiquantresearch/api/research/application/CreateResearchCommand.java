@@ -80,4 +80,24 @@ public record CreateResearchCommand(
     private static String normalizeNullable(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
+
+    public CreateResearchCommand withResolvedSecurity(
+            String resolvedSymbol,
+            String resolvedCompanyName
+    ) {
+        return new CreateResearchCommand(
+                query,
+                resolvedSymbol,
+                resolvedCompanyName,
+                locale,
+                benchmark,
+                period,
+                startDate,
+                endDate,
+                reportDepth,
+                includeTechnicalAnalysis,
+                includeFundamentalAnalysis,
+                includeMacroAnalysis
+        );
+    }
 }

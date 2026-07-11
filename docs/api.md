@@ -160,11 +160,11 @@ Content-Type: application/json
 }
 ```
 
-Phase 3 创建边界是固定的：
+当前创建边界是：
 
-- `query` 和 `symbol` 必填；目标 `symbol` 只允许 `MU | NVDA | RKLB`，`companyName` 如果同时提供必须与 symbol 一致；
+- `query` 必填；`symbol` 与 `companyName` 至少一个必填。Mock 目标最终必须唯一解析为 `MU | NVDA | RKLB`；两者同时提供时必须一致；
 - `benchmark` 只允许 `SPY | QQQ`，默认 `SPY`；基准不能作为研究目标；
-- `period` 只允许 `5y`，不接受 `startDate/endDate`；`reportDepth` 只允许 `STANDARD`；
+- `period` 支持 `1y | 3y | 5y`；也可成对提供最长五年的 `startDate/endDate`；`reportDepth` 支持 `QUICK | STANDARD | DEEP`；
 - `includeTechnicalAnalysis` 默认且必须为 `true`，因为完整技术/量化分析是 Phase 3 固定契约；
 - `includeFundamentalAnalysis=false` 只跳过可选的 `ANALYZE_FUNDAMENTALS` 叙事步骤。Bull/Base/Bear 情景仍是必需结果，因此规范化基本面数据仍会获取；报告以 `PARTIALLY_COMPLETED` / `PASSED_WITH_WARNINGS` 明确标记该缺失模块；
 - `includeMacroAnalysis=false` 跳过 `FETCH_MACRO_DATA`，其他必需数据和安全报告完整时仍可 `COMPLETED` / `PASSED`；

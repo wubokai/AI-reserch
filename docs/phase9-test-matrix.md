@@ -13,6 +13,12 @@
 | SSRF | SEC/FRED official host；OpenAI official HTTPS；loopback 仅测试；PDF 禁远程资源 | 本地通过 |
 | XSS/浏览器 | HTML 全转义；Web/API CSP、nosniff、DENY、no-referrer、Permissions Policy | 本地通过 |
 | Prompt Injection | untrusted Evidence 边界、三工具 allowlist、严格 Schema、发布验证 | 回归覆盖 |
+| 周期与深度预算 | 1y/3y/5y/显式范围；QUICK/STANDARD/DEEP 约束 Filing/Evidence/Calculation/LLM 工具轮次 | 本地通过 |
+| 规范化金融事实 | Flyway V9；行情/财务/宏观关联不可变 Snapshot、去重、血缘触发器；Compose smoke 验证非空 | 待本提交远端容器终验 |
+| 公司名与 Filing RAG | company-only 唯一解析；`search_evidence` 连接 Research-scoped PostgreSQL FTS 并复核 Evidence allowlist | 本地通过；FTS SQL 待远端容器终验 |
+| Transactional outbox | `SKIP LOCKED` 有界 relay、event ID、失败码/重放；Compose 等待 backlog 清零 | 本地单测通过；待远端容器终验 |
+| 完整安全报告 | Executive/Company/Financial/Quant/Technical/Valuation/Scenario、3 条可用 Bull/Bear、7 类风险；缺客户/历史/同行估值显式限制 | 本地 Validator/Renderer 通过 |
+| 执行时间预算 | 持久化 `started_at` + 1–1440 分钟配置；边界前允许、边界时永久失败、发布前复查 | 本地通过 |
 | IDOR | Research/Report/Evidence/Export owner-scoped，跨用户统一 404 | 回归覆盖 |
 | PDF | 离线字体、无 URI/JS、25 MiB、200 页、字体 50 MiB、失败隔离 | 本地通过 |
 | 供应链 | pnpm lock/audit、Python 精确版本/pip-audit、Dependabot、secret scan、固定校验和 Grype 镜像扫描 | 应用依赖 0 已知漏洞；镜像 Critical 阻断，高风险显式评审 |
@@ -35,7 +41,7 @@
 ## 3. 本地命令
 
 - `pnpm audit`：0 已知漏洞；
-- API Surefire：208 个通过；
+- API Surefire：231 个通过；49 个 Failsafe/Testcontainers 已定义；
 - Python `pip-audit --local`：0 已知漏洞；
 - Web、Analytics、API/Testcontainers、三应用镜像 Grype、最小权限策略与 Compose smoke：
   [GitHub Actions run `29145630809`](https://github.com/wubokai/AI-reserch/actions/runs/29145630809) 全部通过；

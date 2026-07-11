@@ -167,19 +167,46 @@ public class DeterministicMockReportGenerator {
 
         ArrayNode sections = report.putArray("sections");
         sections.add(section(
-                "overview",
-                chinese ? "研究范围" : "Research scope",
+                "executive_summary",
+                chinese ? "执行摘要" : "Executive Summary",
+                List.of(
+                        claims.fact(
+                                "overview_snapshot",
+                                chinese
+                                        ? "本报告基于截至 " + asOfDate + " 的本地合成市场快照。"
+                                        : "This report uses a local synthetic market snapshot as of "
+                                                + asOfDate + ".",
+                                "MATERIAL",
+                                marketEvidence
+                        ),
+                        claims.calculation(
+                                "executive_total_return",
+                                metricLabel(chinese, "历史总回报", "Historical total return"),
+                                totalReturn
+                        ),
+                        claims.calculation(
+                                "executive_max_drawdown",
+                                metricLabel(chinese, "历史最大回撤", "Historical maximum drawdown"),
+                                maxDrawdown
+                        )
+                ),
+                chinese ? DEMO_WATERMARK + "；结论置信度由证据质量规则确定。"
+                        : DEMO_WATERMARK + "; confidence is derived from the evidence-quality policy."
+        ));
+        sections.add(section(
+                "company_overview",
+                chinese ? "公司概览" : "Company Overview",
                 List.of(claims.fact(
-                        "overview_snapshot",
+                        "company_registered_context",
                         chinese
-                                ? "本报告基于截至 " + asOfDate + " 的本地合成市场快照。"
-                                : "This report uses a local synthetic market snapshot as of "
-                                        + asOfDate + ".",
+                                ? "证券主数据、基本面和披露文件已作为本次研究的可追溯上下文注册。"
+                                : "Security-master, fundamental, and filing evidence are registered as traceable context for this research.",
                         "MATERIAL",
-                        marketEvidence
+                        contextualEvidence
                 )),
-                chinese ? DEMO_WATERMARK + "；所有输入均为固定演示数据。"
-                        : DEMO_WATERMARK + "; every input is a fixed demo fixture."
+                chinese
+                        ? "商业模式、收入驱动与竞争信息仅可来自注册披露；当前无可验证关键客户清单，因此不作断言。"
+                        : "Business model, revenue drivers, and competition may use only registered filings; no verified key-customer list is available, so none is asserted."
         ));
         sections.add(section(
                 "performance",
@@ -203,21 +230,81 @@ public class DeterministicMockReportGenerator {
                         : "The synthetic history does not predict future risk."
         ));
         if (fundamentalRequested) {
+            List<ObjectNode> financialClaims = calculationClaims(
+                    claims,
+                    quantByMetric,
+                    "financial",
+                    List.of(
+                            new MetricDisplay("revenue_growth_yoy", "收入同比增长", "Revenue growth YoY"),
+                            new MetricDisplay("gross_margin", "毛利率", "Gross margin"),
+                            new MetricDisplay("operating_margin", "营业利润率", "Operating margin"),
+                            new MetricDisplay("free_cash_flow_margin", "自由现金流率", "Free-cash-flow margin"),
+                            new MetricDisplay("net_debt", "净债务", "Net debt"),
+                            new MetricDisplay("share_dilution", "股本稀释", "Share dilution"),
+                            new MetricDisplay("capex_trend_slope", "资本开支趋势", "Capital-expenditure trend")
+                    )
+            );
+            financialClaims.addFirst(claims.fact(
+                    "fundamental_snapshot",
+                    chinese
+                            ? "财务分析仅使用已注册的规范化基本面快照和确定性计算。"
+                            : "Financial analysis uses only the registered normalized fundamental snapshot and deterministic calculations.",
+                    "MATERIAL",
+                    fundamentalEvidence
+            ));
             sections.add(section(
-                    "fundamentals",
-                    chinese ? "基本面输入" : "Fundamental inputs",
-                    List.of(claims.fact(
-                            "fundamental_snapshot",
-                            chinese
-                                    ? "情景估值使用本地合成基本面及三组固定假设。"
-                                    : "Scenario valuation uses local synthetic fundamentals and three fixed assumption sets.",
-                            "MATERIAL",
-                            fundamentalEvidence
-                    )),
-                    chinese ? "基本面仅用于演示计算链路。"
-                            : "Fundamentals are provided only to demonstrate the calculation chain."
+                    "financial_analysis",
+                    chinese ? "财务分析" : "Financial Analysis",
+                    financialClaims,
+                    chinese ? "收入、利润率、现金流、资产负债表、资本开支和稀释仅展示可计算项。"
+                            : "Revenue, margins, cash flow, balance sheet, capex, and dilution are shown only when calculable."
             ));
         }
+        sections.add(section(
+                "technical_analysis",
+                chinese ? "技术与市场结构" : "Technical and Market Structure",
+                calculationClaims(
+                        claims,
+                        quantByMetric,
+                        "technical",
+                        List.of(
+                                new MetricDisplay("rsi_14", "RSI 14", "RSI 14"),
+                                new MetricDisplay("macd", "MACD", "MACD"),
+                                new MetricDisplay("macd_signal", "MACD 信号线", "MACD signal"),
+                                new MetricDisplay("atr_14", "ATR 14", "ATR 14"),
+                                new MetricDisplay("distance_from_52_week_high", "距 52 周高点", "Distance from 52-week high"),
+                                new MetricDisplay("volume_moving_average_20", "20 日成交量均值", "20-day volume moving average"),
+                                new MetricDisplay("trend_score", "趋势评分", "Trend score")
+                        )
+                ),
+                chinese ? "趋势分类和成交量结论来自确定性规则；样本不足时留空并在限制中说明。"
+                        : "Trend and volume conclusions use deterministic rules; insufficient metrics remain omitted and disclosed."
+        ));
+        List<ObjectNode> valuationClaims = calculationClaims(
+                claims,
+                quantByMetric,
+                "valuation",
+                List.of(
+                        new MetricDisplay("market_capitalization", "市值", "Market capitalization"),
+                        new MetricDisplay("price_to_earnings", "市盈率", "Price to earnings"),
+                        new MetricDisplay("price_to_sales", "市销率", "Price to sales"),
+                        new MetricDisplay("price_to_book", "市净率", "Price to book"),
+                        new MetricDisplay("enterprise_value_to_ebitda", "EV/EBITDA", "EV to EBITDA"),
+                        new MetricDisplay("free_cash_flow_yield", "自由现金流收益率", "Free-cash-flow yield")
+                )
+        );
+        valuationClaims.add(claims.calculation(
+                "valuation_weighted_scenario",
+                metricLabel(chinese, "概率加权情景价值", "Probability-weighted scenario value"),
+                weightedPrice
+        ));
+        sections.add(section(
+                "valuation",
+                chinese ? "估值" : "Valuation",
+                valuationClaims,
+                chinese ? "历史估值与同行估值数据不可用；情景结果不是确定目标价。"
+                        : "Historical and peer valuation data are unavailable; scenario outputs are not deterministic price targets."
+        ));
         sections.add(section(
                 "scenario",
                 chinese ? "情景估值" : "Scenario valuation",
@@ -236,11 +323,35 @@ public class DeterministicMockReportGenerator {
                 metricLabel(chinese, "乐观情景隐含价格", "Bull-case implied price"),
                 bullPrice
         ));
+        if (cagr.value().signum() > 0) {
+            bullCase.add(claims.calculation(
+                    "bull_case_cagr",
+                    metricLabel(chinese, "正向历史 CAGR 证据", "Positive historical CAGR evidence"),
+                    cagr
+            ));
+        }
+        if (totalReturn.value().signum() > 0) {
+            bullCase.add(claims.calculation(
+                    "bull_case_total_return",
+                    metricLabel(chinese, "正向历史总回报证据", "Positive historical total-return evidence"),
+                    totalReturn
+            ));
+        }
         ArrayNode bearCase = report.putArray("bearCase");
         bearCase.add(claims.calculation(
                 "bear_case_price",
                 metricLabel(chinese, "悲观情景隐含价格", "Bear-case implied price"),
                 bearPrice
+        ));
+        bearCase.add(claims.calculation(
+                "bear_case_drawdown",
+                metricLabel(chinese, "历史最大回撤风险", "Historical maximum-drawdown risk"),
+                maxDrawdown
+        ));
+        bearCase.add(claims.calculation(
+                "bear_case_volatility",
+                metricLabel(chinese, "历史年化波动风险", "Historical annualized-volatility risk"),
+                volatility
         ));
         ArrayNode catalysts = report.putArray("catalysts");
         catalysts.add(claims.fact(
@@ -259,6 +370,58 @@ public class DeterministicMockReportGenerator {
                 metricLabel(chinese, "合成历史最大回撤", "Synthetic-history maximum drawdown"),
                 maxDrawdown
         ));
+        addEvidenceRisk(
+                risks,
+                "BUSINESS",
+                "risk_business_context",
+                chinese ? "业务风险结论受限于已注册披露文件。"
+                        : "Business-risk conclusions are bounded by the registered filing evidence.",
+                contextualEvidence,
+                claims
+        );
+        addEvidenceRisk(
+                risks,
+                "FINANCIAL",
+                "risk_financial_context",
+                chinese ? "财务风险结论仅使用规范化财务证据和确定性指标。"
+                        : "Financial-risk conclusions use only normalized financial evidence and deterministic metrics.",
+                fundamentalEvidence == null ? contextualEvidence : fundamentalEvidence,
+                claims
+        );
+        addEvidenceRisk(
+                risks,
+                "REGULATORY",
+                "risk_regulatory_context",
+                chinese ? "未注册的监管事件不进入本报告。"
+                        : "Regulatory events absent from registered evidence are not asserted.",
+                contextualEvidence,
+                claims
+        );
+        addEvidenceRisk(
+                risks,
+                "EXECUTION",
+                "risk_execution_context",
+                chinese ? "执行风险仅依据已注册公司披露进行定性限制。"
+                        : "Execution risk is qualitatively bounded to registered company disclosures.",
+                contextualEvidence,
+                claims
+        );
+        ObjectNode valuationRisk = risks.addObject();
+        valuationRisk.put("category", "VALUATION");
+        valuationRisk.set("claim", claims.calculation(
+                "risk_bear_valuation",
+                metricLabel(chinese, "悲观情景估值", "Bear-scenario valuation"),
+                bearPrice
+        ));
+        addEvidenceRisk(
+                risks,
+                "DATA_QUALITY",
+                "risk_data_quality",
+                chinese ? "固定演示数据不能代表当前真实市场。"
+                        : "Fixed demo data cannot represent current real-market conditions.",
+                marketEvidence,
+                claims
+        );
 
         report.set(
                 "scenarioAnalysis",
@@ -302,6 +465,12 @@ public class DeterministicMockReportGenerator {
                 .limit(28)
                 .map(name -> "Optional quant metric unavailable: " + name)
                 .forEach(limitations::add);
+        limitations.add(chinese
+                ? "缺少可验证的关键客户清单，不作客户集中度事实断言。"
+                : "No verified key-customer list is available; no customer-concentration fact is asserted.");
+        limitations.add(chinese
+                ? "缺少历史估值序列和同行估值数据。"
+                : "Historical valuation series and peer valuation data are unavailable.");
 
         report.putArray("conclusion").add(claims.calculation(
                 "conclusion_weighted_price",
@@ -385,6 +554,39 @@ public class DeterministicMockReportGenerator {
                 weightedPrice
         ));
         return analysis;
+    }
+
+    private List<ObjectNode> calculationClaims(
+            ClaimFactory claims,
+            Map<String, StoredQuantResult> quantByMetric,
+            String keyPrefix,
+            List<MetricDisplay> metrics
+    ) {
+        List<ObjectNode> result = new ArrayList<>();
+        for (MetricDisplay display : metrics) {
+            StoredQuantResult quant = quantByMetric.get(display.name());
+            if (quant != null) {
+                result.add(claims.calculation(
+                        keyPrefix + "_" + display.name(),
+                        metricLabel(claims.chinese(), display.zh(), display.en()),
+                        quant
+                ));
+            }
+        }
+        return result;
+    }
+
+    private void addEvidenceRisk(
+            ArrayNode risks,
+            String category,
+            String key,
+            String statement,
+            StoredEvidence evidence,
+            ClaimFactory claims
+    ) {
+        ObjectNode risk = risks.addObject();
+        risk.put("category", category);
+        risk.set("claim", claims.fact(key, statement, "MATERIAL", evidence));
     }
 
     private ObjectNode section(
@@ -518,6 +720,9 @@ public class DeterministicMockReportGenerator {
 
     private static String metricLabel(boolean chinese, String zh, String en) {
         return chinese ? zh : en;
+    }
+
+    private record MetricDisplay(String name, String zh, String en) {
     }
 
     private final class ClaimFactory {

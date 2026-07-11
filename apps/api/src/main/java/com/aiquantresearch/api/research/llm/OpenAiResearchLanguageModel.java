@@ -1,6 +1,7 @@
 package com.aiquantresearch.api.research.llm;
 
 import com.aiquantresearch.api.research.application.CanonicalHashService;
+import com.aiquantresearch.api.research.domain.ReportDepth;
 import com.aiquantresearch.api.research.report.DeterministicMockReportGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -69,7 +70,11 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                 request.reportVersion()
         );
         PreparedLlmRequest prepared = promptFactory.prepare(request, baseline);
-        int maximumNetworkCalls = properties.maxToolRounds() + 1;
+        ReportDepth depth = ReportDepth.fromRequestValue(
+                request.context().request().path("reportDepth").asText()
+        );
+        int allowedToolRounds = depth.maxToolRounds(properties.maxToolRounds());
+        int maximumNetworkCalls = allowedToolRounds + 1;
         int initialRequestBytes = requestBody(prepared, prepared.input())
                 .toString()
                 .getBytes(StandardCharsets.UTF_8)
@@ -95,7 +100,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
         long started = System.nanoTime();
 
         try {
-            for (int round = 0; round <= properties.maxToolRounds(); round++) {
+            for (int round = 0; round <= allowedToolRounds; round++) {
                 networkCallCount++;
                 JsonNode response = send(requestBody(prepared, conversation));
                 providerRequestId = nullableText(response, "id");
@@ -104,7 +109,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
 
                 List<JsonNode> calls = functionCalls(response);
                 if (!calls.isEmpty()) {
-                    if (round == properties.maxToolRounds()) {
+                    if (round == allowedToolRounds) {
                         throw new OpenAiResponseException(
                                 "LLM_TOOL_ROUND_LIMIT",
                                 "The model exceeded the allowed read-only tool rounds",

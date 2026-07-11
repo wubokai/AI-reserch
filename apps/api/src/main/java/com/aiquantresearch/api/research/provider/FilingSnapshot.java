@@ -22,4 +22,26 @@ public record FilingSnapshot(
     public FilingSnapshot {
         filings = List.copyOf(filings);
     }
+
+    public FilingSnapshot limitedTo(int maximum) {
+        if (maximum < 1) {
+            throw new IllegalArgumentException("maximum filings must be positive");
+        }
+        List<FilingDocument> selected = filings.stream().limit(maximum).toList();
+        return new FilingSnapshot(
+                provider,
+                schemaVersion,
+                fixtureVersion,
+                symbol,
+                asOfDate,
+                retrievedAt,
+                sourceUrl,
+                rawDataHash,
+                selected,
+                watermark,
+                demoData,
+                freshnessStatus,
+                licensePolicyVersion
+        );
+    }
 }

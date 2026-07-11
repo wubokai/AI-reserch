@@ -1,6 +1,7 @@
 package com.aiquantresearch.api.research.llm;
 
 import com.aiquantresearch.api.research.application.CanonicalHashService;
+import com.aiquantresearch.api.research.domain.ReportDepth;
 import com.aiquantresearch.api.research.orchestration.StoredEvidence;
 import com.aiquantresearch.api.research.orchestration.StoredQuantResult;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -65,10 +66,15 @@ public class ReportPromptFactory {
         research.put("reportVersion", request.reportVersion());
         research.set("request", request.context().request().deepCopy());
 
+        ReportDepth depth = ReportDepth.fromRequestValue(
+                request.context().request().path("reportDepth").asText()
+        );
         ArrayNode evidence = pack.putArray("untrustedEvidence");
-        request.evidence().stream().limit(120).forEach(item -> evidence.add(evidence(item)));
+        request.evidence().stream().limit(depth.maxEvidenceItems())
+                .forEach(item -> evidence.add(evidence(item)));
         ArrayNode calculations = pack.putArray("deterministicCalculations");
-        request.quantResults().stream().limit(180).forEach(item -> calculations.add(calculation(item)));
+        request.quantResults().stream().limit(depth.maxCalculations())
+                .forEach(item -> calculations.add(calculation(item)));
         pack.set("deterministicBaseline", deterministicBaseline.deepCopy());
 
         String canonicalPack = hashService.canonicalJson(pack);

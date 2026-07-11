@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.aiquantresearch.api.research.application.CanonicalHashService;
+import com.aiquantresearch.api.research.filing.FilingChunkSearchService;
 import com.aiquantresearch.api.research.report.DeterministicMockReportGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -195,7 +196,11 @@ class OpenAiResearchLanguageModelTest {
                 properties,
                 baseline,
                 promptFactory,
-                new LlmToolExecutor(objectMapper, hashService),
+                new LlmToolExecutor(
+                        objectMapper,
+                        hashService,
+                        mock(FilingChunkSearchService.class)
+                ),
                 new LlmPricingPolicy(properties),
                 budgetService,
                 failureAuditService,

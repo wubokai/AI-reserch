@@ -11,12 +11,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,17 +105,20 @@ public class StepCommitService {
         switch (claim.stepType()) {
             case RESOLVE_SECURITY -> persistSecurityResolution(claim, result.payload(), artifactIds);
             case FETCH_MARKET_DATA -> persistMarketData(claim, result.payload(), artifactIds);
-            case FETCH_FUNDAMENTALS -> persistSingleSource(
-                    claim,
-                    result.payload(),
-                    "MOCK_FUNDAMENTALS_V1",
-                    "mock_fundamentals_v1",
-                    "FUNDAMENTALS",
-                    result.payload().path("symbol").asText(),
-                    date(result.payload(), "asOfDate"),
-                    false,
-                    artifactIds
-            );
+            case FETCH_FUNDAMENTALS -> {
+                StoredSource source = persistSingleSource(
+                        claim,
+                        result.payload(),
+                        "MOCK_FUNDAMENTALS_V1",
+                        "mock_fundamentals_v1",
+                        "FUNDAMENTALS",
+                        result.payload().path("symbol").asText(),
+                        date(result.payload(), "asOfDate"),
+                        false,
+                        artifactIds
+                );
+                persistFinancialMetrics(claim, source, result.payload());
+            }
             case FETCH_FILINGS -> {
                 StoredSource source = persistSingleSource(
                         claim,
@@ -129,17 +133,20 @@ public class StepCommitService {
                 );
                 filingRegistry.register(source, result.payload());
             }
-            case FETCH_MACRO_DATA -> persistSingleSource(
-                    claim,
-                    result.payload(),
-                    "MOCK_MACRO_V1",
-                    "mock_macro_v1",
-                    "MACRO",
-                    "US_MACRO",
-                    date(result.payload(), "asOfDate"),
-                    true,
-                    artifactIds
-            );
+            case FETCH_MACRO_DATA -> {
+                StoredSource source = persistSingleSource(
+                        claim,
+                        result.payload(),
+                        "MOCK_MACRO_V1",
+                        "mock_macro_v1",
+                        "MACRO",
+                        "US_MACRO",
+                        date(result.payload(), "asOfDate"),
+                        true,
+                        artifactIds
+                );
+                persistMacroSeries(claim, source, result.payload());
+            }
             case RUN_QUANT_ANALYSIS -> artifactStore.persistQuantMetrics(claim, result.payload())
                     .forEach(value -> artifactIds.add(value.id().toString()));
             case BUILD_EVIDENCE -> {
@@ -212,7 +219,7 @@ public class StepCommitService {
     ) {
         JsonNode target = payload.path("target");
         JsonNode benchmark = payload.path("benchmark");
-        persistSingleSource(
+        StoredSource targetSource = persistSingleSource(
                 claim,
                 target,
                 "MOCK_MARKET_V1",
@@ -223,7 +230,7 @@ public class StepCommitService {
                 false,
                 artifactIds
         );
-        persistSingleSource(
+        StoredSource benchmarkSource = persistSingleSource(
                 claim,
                 benchmark,
                 "MOCK_MARKET_V1",
@@ -234,6 +241,144 @@ public class StepCommitService {
                 false,
                 artifactIds
         );
+        persistMarketPriceBars(claim, targetSource, target);
+        persistMarketPriceBars(claim, benchmarkSource, benchmark);
+    }
+
+    private void persistMarketPriceBars(
+            QueueClaim claim,
+            StoredSource source,
+            JsonNode payload
+    ) {
+        String symbol = payload.path("symbol").asText();
+        List<Object[]> rows = new java.util.ArrayList<>();
+        payload.path("prices").forEach(bar -> rows.add(new Object[]{
+                UUID.randomUUID(),
+                claim.researchJobId(),
+                symbol,
+                symbol,
+                date(bar, "date"),
+                decimal(bar, "open"),
+                decimal(bar, "high"),
+                decimal(bar, "low"),
+                decimal(bar, "close"),
+                decimal(bar, "adjustedClose"),
+                bar.path("volume").longValue(),
+                source.id()
+        }));
+        if (rows.isEmpty()) {
+            return;
+        }
+        jdbcTemplate.batchUpdate("""
+                insert into market_price_bars (
+                    id, research_job_id, source_snapshot_id, security_id,
+                    symbol, interval, observation_date, open, high, low,
+                    close, adjusted_close, volume, provider, retrieved_at
+                )
+                select ?, ?, source.id,
+                       (select id from securities where symbol = ? and active
+                         order by is_demo_data desc, id limit 1),
+                       ?, '1d', ?, ?, ?, ?, ?, ?, ?, source.provider, source.retrieved_at
+                  from source_snapshots source
+                 where source.id = ?
+                on conflict (
+                    research_job_id, source_snapshot_id, symbol, interval, observation_date
+                ) do nothing
+                """, rows);
+    }
+
+    private void persistFinancialMetrics(
+            QueueClaim claim,
+            StoredSource source,
+            JsonNode payload
+    ) {
+        String symbol = payload.path("symbol").asText();
+        List<Object[]> rows = new java.util.ArrayList<>();
+        payload.path("metrics").forEach(metric -> {
+            LocalDate periodEnd = date(metric, "periodEndDate");
+            LocalDate filedDate = optionalDate(metric, "filedDate");
+            rows.add(new Object[]{
+                    UUID.randomUUID(),
+                    claim.researchJobId(),
+                    symbol,
+                    symbol,
+                    text(metric, "periodType", "UNKNOWN"),
+                    periodEnd.getYear(),
+                    periodEnd,
+                    metric.path("name").asText(),
+                    decimal(metric, "value"),
+                    text(metric, "unit", "UNKNOWN"),
+                    filedDate == null ? null : Timestamp.valueOf(filedDate.atStartOfDay()),
+                    nullableText(metric, "taxonomy"),
+                    nullableText(metric, "concept"),
+                    nullableText(metric, "accessionNumber"),
+                    metric.path("derived").asBoolean(false),
+                    source.id()
+            });
+        });
+        if (rows.isEmpty()) {
+            return;
+        }
+        jdbcTemplate.batchUpdate("""
+                insert into financial_metrics (
+                    id, research_job_id, source_snapshot_id, security_id,
+                    symbol, fiscal_period, fiscal_year, period_end_date,
+                    metric_name, metric_value, unit, provider, source_url,
+                    published_at, retrieved_at, taxonomy, concept,
+                    accession_number, is_derived
+                )
+                select ?, ?, source.id,
+                       (select id from securities where symbol = ? and active
+                         order by is_demo_data desc, id limit 1),
+                       ?, ?, ?, ?, ?, ?, ?, source.provider, source.source_url,
+                       ?, source.retrieved_at, ?, ?, ?, ?
+                  from source_snapshots source
+                 where source.id = ?
+                on conflict (
+                    research_job_id, source_snapshot_id, metric_name,
+                    fiscal_period, period_end_date
+                ) do nothing
+                """, rows);
+    }
+
+    private void persistMacroSeries(
+            QueueClaim claim,
+            StoredSource source,
+            JsonNode payload
+    ) {
+        List<Object[]> rows = new java.util.ArrayList<>();
+        payload.path("series").forEach(series -> series.path("observations").forEach(
+                observation -> rows.add(new Object[]{
+                        UUID.randomUUID(),
+                        claim.researchJobId(),
+                        series.path("seriesId").asText(),
+                        text(series, "name", series.path("seriesId").asText()),
+                        date(observation, "date"),
+                        decimal(observation, "value"),
+                        text(series, "unit", "UNKNOWN"),
+                        nullableText(series, "frequency"),
+                        optionalDate(observation, "realtimeStart"),
+                        optionalDate(observation, "realtimeEnd"),
+                        source.id()
+                })
+        ));
+        if (rows.isEmpty()) {
+            return;
+        }
+        jdbcTemplate.batchUpdate("""
+                insert into macro_series (
+                    id, research_job_id, source_snapshot_id, series_id,
+                    series_name, observation_date, metric_value, unit,
+                    frequency, realtime_start, realtime_end, provider, retrieved_at
+                )
+                select ?, ?, source.id, ?, ?, ?, ?, ?, ?, ?, ?,
+                       source.provider, source.retrieved_at
+                  from source_snapshots source
+                 where source.id = ?
+                on conflict (
+                    research_job_id, source_snapshot_id, series_id, observation_date
+                ) do nothing
+                """, rows);
     }
 
     private StoredSource persistSingleSource(
@@ -310,5 +455,33 @@ public class StepCommitService {
             );
         }
         return LocalDate.parse(value);
+    }
+
+    private static LocalDate optionalDate(JsonNode payload, String field) {
+        String value = payload.path(field).asText();
+        return value.isBlank() ? null : LocalDate.parse(value);
+    }
+
+    private static java.math.BigDecimal decimal(JsonNode payload, String field) {
+        JsonNode value = payload.path(field);
+        if (!value.isNumber() && !value.isTextual()) {
+            throw new StepExecutionException(
+                    "NORMALIZED_OBSERVATION_INVALID",
+                    "A provider observation is missing a required numeric value",
+                    false
+            );
+        }
+        try {
+            return value.isNumber()
+                    ? value.decimalValue()
+                    : new java.math.BigDecimal(value.asText());
+        } catch (ArithmeticException | NumberFormatException exception) {
+            throw new StepExecutionException(
+                    "NORMALIZED_OBSERVATION_INVALID",
+                    "A provider observation contains an invalid numeric value",
+                    false,
+                    exception
+            );
+        }
     }
 }

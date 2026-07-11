@@ -7,6 +7,7 @@ import com.aiquantresearch.api.research.provider.ProviderDataNotFoundException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +45,36 @@ class MockProvidersTest {
                 assertThat(bar.volume()).isPositive();
             });
         }
+    }
+
+    @Test
+    void selectsDeterministicOneAndThreeYearWindowsFromTheFiveYearFixture() {
+        var full = new MockMarketDataProvider(catalog).fetchFiveYearDaily("MU");
+        var oneYear = full.within(
+                full.periodEnd().minusYears(1).plusDays(1),
+                full.periodEnd()
+        );
+        var threeYears = full.within(
+                full.periodEnd().minusYears(3).plusDays(1),
+                full.periodEnd()
+        );
+
+        assertThat(oneYear.periodStart()).isAfterOrEqualTo(LocalDate.parse("2022-12-30"));
+        assertThat(oneYear.prices()).hasSizeBetween(240, 270);
+        assertThat(threeYears.prices()).hasSizeBetween(740, 800);
+        assertThat(oneYear.prices()).isEqualTo(
+                full.prices().stream()
+                        .filter(bar -> !bar.date().isBefore(oneYear.periodStart()))
+                        .toList()
+        );
+    }
+
+    @Test
+    void limitsFilingVolumeWithoutMutatingTheProviderSnapshot() {
+        var filings = new MockFilingProvider(catalog).fetch("MU");
+
+        assertThat(filings.limitedTo(1).filings()).hasSize(1);
+        assertThat(filings.filings()).hasSize(2);
     }
 
     @Test

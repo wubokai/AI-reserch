@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.aiquantresearch.api.research.artifactapi.ArtifactQueryService;
 import com.aiquantresearch.api.research.filing.FilingRegistry;
+import com.aiquantresearch.api.research.filing.FilingChunkSearchService;
 import com.aiquantresearch.api.research.orchestration.StoredSource;
 import com.aiquantresearch.api.support.PostgresRedisIntegrationTestSupport;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,6 +33,9 @@ class Phase5EvidenceIT extends PostgresRedisIntegrationTestSupport {
 
     @Autowired
     private FilingRegistry filingRegistry;
+
+    @Autowired
+    private FilingChunkSearchService filingChunkSearch;
 
     @Autowired
     private ArtifactQueryService artifactQueryService;
@@ -137,6 +141,14 @@ class Phase5EvidenceIT extends PostgresRedisIntegrationTestSupport {
             assertThat(item.sectionName()).isEqualTo("ITEM_1A_RISK_FACTORS");
             assertThat(item.citationLocator()).contains("chunk=0:chars=");
         });
+        assertThat(filingChunkSearch.search(researchId, "supply inventory risk", 10))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.evidenceId()).isEqualTo("ev_phase5_filing_original");
+                    assertThat(item.sectionName()).isEqualTo("ITEM_1A_RISK_FACTORS");
+                    assertThat(item.excerpt()).contains("Supply concentration");
+                    assertThat(item.citationLocator()).contains("chunk=0:chars=");
+                });
 
         UUID reportId = publishReportBoundTo(sourceId, evidenceId);
         String originalContentHash = jdbc.queryForObject(

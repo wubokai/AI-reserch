@@ -27,6 +27,7 @@ Markdown/HTML/PDF 和 Web BFF 字节一致性。默认流程不访问 SEC、FRED
 - OpenAI 只允许官方 HTTPS endpoint，测试只允许 loopback；Key、模型、HMAC、价格版本和生效日
   缺一项都不会发起真实请求。
 - SEC/FRED 只允许各自官方 host，测试只允许 loopback。
+- `RESEARCH_MAX_EXECUTION_MINUTES` 默认 15，合法范围 1–1440；调大前必须同时评审 Provider/LLM 超时、Worker 容量与成本上限。
 
 所有 secret 由部署 Secret Store 或环境变量注入，不写入 `.env.example`、镜像、日志或指标。
 
@@ -46,10 +47,12 @@ Markdown/HTML/PDF 和 Web BFF 字节一致性。默认流程不访问 SEC、FRED
 | --- | --- | --- |
 | API 5xx | Request ID、错误码、DB/queue health | 不公开堆栈；确认数据库后再重试 |
 | runnable 过老 | Worker active、claim、lease/reaper | 扩 Worker 前先排除 DB 锁和失效 lease |
+| outbox backlog | relay enabled、listener error code、DB locks | 保持 event ID 幂等；修复 listener 后让 relay 重放，不手工伪造 published_at |
 | Provider circuit open | provider outcome/retry、官方状态 | 保持显式降级；禁止改为无界重试 |
 | Redis down | health DEGRADED、cache error | 允许直取；PostgreSQL 仍是权威 |
 | PDF 失败 | byte/page/font boundary | HTML/Markdown 保持可用，不改变报告状态 |
 | LLM 预算/调用失败 | reservation、pricing version、failure audit | 安全回退或失败，不绕过预算 |
+| `RESEARCH_EXECUTION_BUDGET_EXCEEDED` | `started_at`、当前步骤、Provider/Analytics/LLM 延迟 | 不重试同一执行；先消除慢调用或经容量评审后调整全局上限 |
 | Evidence 验证失败 | validation code、Evidence/Claim lineage | 删除不安全 Claim 或 FAILED，不发布伪成功 |
 
 ## 5. 数据恢复与保留
