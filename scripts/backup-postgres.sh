@@ -19,6 +19,20 @@ timestamp=$(date -u +%Y%m%dT%H%M%SZ)
 destination="${BACKUP_DIR}/postgres-${timestamp}.dump.enc"
 temporary="${destination}.partial"
 
+compose_files=(-f "${ROOT_DIR}/docker-compose.yml")
+case "${BACKUP_RUNTIME_PROFILE:-production}" in
+  production)
+    compose_files+=(-f "${ROOT_DIR}/compose.production.yml")
+    ;;
+  shared-host)
+    compose_files+=(-f "${ROOT_DIR}/compose.shared-host.yml")
+    ;;
+  *)
+    echo "BACKUP_RUNTIME_PROFILE must be production or shared-host" >&2
+    exit 1
+    ;;
+esac
+
 if [[ ! -r "${BACKUP_PASSPHRASE_FILE}" ]]; then
   echo "Backup passphrase file is missing or unreadable" >&2
   exit 1
@@ -30,8 +44,7 @@ trap 'rm -f "${temporary}"' EXIT
 
 docker compose \
   --env-file "${ENV_FILE}" \
-  -f "${ROOT_DIR}/docker-compose.yml" \
-  -f "${ROOT_DIR}/compose.production.yml" \
+  "${compose_files[@]}" \
   exec -T postgres pg_dump \
     --username "${POSTGRES_USER}" \
     --dbname "${POSTGRES_DB}" \

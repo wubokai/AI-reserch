@@ -72,6 +72,8 @@ sudo systemctl status ai-quant-backup.service
 备份使用 AES-256-CBC/PBKDF2 加密并生成 SHA-256 与 Git commit sidecar；本地和可选 `rclone` 私有远程
 副本均执行 90 天保留。首次上线后运行 `./scripts/verify-backup.sh <backup.dump.enc>` 验证 checksum、解密
 和 `pg_restore --list`；完整恢复仍必须在隔离 VM 进行，不能覆盖生产库验证。
+共享主机的安全演示环境把 `BACKUP_RUNTIME_PROFILE` 设为 `shared-host`；正式 REAL 环境必须设为
+`production`，两种模式都只备份同一 Compose 项目的 PostgreSQL 服务。
 
 ## 发布与回滚
 
