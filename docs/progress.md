@@ -20,7 +20,7 @@
 - OpenAPI 3.1 YAML 可解析，本地引用与必需操作完整；
 - LLM/Analytics JSON Schema 是合法 JSON；
 - Web：ESLint、TypeScript、21 个 Vitest、Next.js production build 与 4 个 Playwright 用例通过；新增 REAL 来源归属与 Demo 标识隔离测试；
-- API：Java 21 / Spring Boot 3.5，193 个 Surefire 本地通过；Provider Runtime 的 48 个 Failsafe/Testcontainers 已通过上一检查点；新增不可变归属查询、三格式导出、PDF 文本和模板缓存版本覆盖；
+- API：Java 21 / Spring Boot 3.5，193 个 Surefire 与 48 个 Failsafe/Testcontainers 通过；新增不可变归属查询、三格式导出、PDF 文本和模板缓存版本覆盖；
 - PostgreSQL 17：Flyway V1–V8；V8 的 `llm_budget_reservations`、provider/pricing/request 元数据、真实 HTTP 调用计数、原子预留、幂等、超支阻断、结算、失败审计和不可变约束均通过 Testcontainers；
 - Analytics：Ruff、strict mypy、41 个 pytest 通过，branch coverage 93.92%；完整覆盖收益、风险、技术/Trend、基本面、估值与情景；
 - 本地真实服务链路：MU、NVDA、RKLB 完整研究均形成已验证报告；关闭基本面叙事时安全部分完成，关闭宏观时完整完成；所有保留的重要 Claim 都关联同任务 Evidence；
@@ -36,6 +36,7 @@
 - GitHub Actions：Phase 7 Provider 许可检查点的 Web/Playwright、Analytics、181+46 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29138819196`](https://github.com/wubokai/AI-reserch/actions/runs/29138819196)）；Market 书面权利失败关闭和默认 Mock 无 Key 路径均已验证；
 - GitHub Actions：Phase 7 SEC XBRL 检查点的 Web/Playwright、Analytics、185+47 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29141192029`](https://github.com/wubokai/AI-reserch/actions/runs/29141192029)）；黄金映射、concept/accession lineage、mixed-period freshness 与 Mock 默认路径均已验证；
 - GitHub Actions：Phase 7 Provider Runtime 检查点的 Web/Playwright、Analytics、191+48 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29142394155`](https://github.com/wubokai/AI-reserch/actions/runs/29142394155)）；真实 Redis 命中/TTL、有界缓存、故障降级、可重试熔断与低基数指标均已验证；
+- GitHub Actions：Phase 7 来源归属检查点的 Web/Playwright、Analytics、193+48 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29143064626`](https://github.com/wubokai/AI-reserch/actions/runs/29143064626)）；SEC/FRED 归属、许可策略、REAL/Mock 标识隔离和 Markdown/HTML/PDF 模板版本均已验证；
 - Phase 3–7 详细证据见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)、[`phase4-test-matrix.md`](./phase4-test-matrix.md)、[`phase5-test-matrix.md`](./phase5-test-matrix.md)、[`phase6-test-matrix.md`](./phase6-test-matrix.md) 和 [`phase7-test-matrix.md`](./phase7-test-matrix.md)。
 
 ## 当前限制

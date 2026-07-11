@@ -85,7 +85,7 @@ SEC XBRL 检查点当前为 185 个 Surefire 与 47 个 Failsafe/Testcontainers 
 
 Provider Runtime 检查点当前为 191 个 Surefire 与 48 个 Failsafe/Testcontainers 测试通过：SEC/FRED/XBRL 共用有界 Redis 缓存、只统计可重试故障的熔断器，以及 `provider.requests/cache/retries` Prometheus 指标。Redis 故障不会阻断真实取数，超大 Filing 快照会跳过缓存；TTL 被限制在大于零且不超过七天。全仓终验见 [GitHub Actions run 29142394155](https://github.com/wubokai/AI-reserch/actions/runs/29142394155)。
 
-来源归属检查点将快照中的 Provider、官方 URL、归属声明和许可策略版本贯通到 Evidence API、报告页面及 Markdown/HTML/PDF；REAL 输出不显示 Demo 标识，Mock 输出仍强制保留。当前本地基线为 193 个 Surefire 与 21 个 Vitest 通过，容器终验等待本次 CI。
+来源归属检查点将快照中的 Provider、官方 URL、归属声明和许可策略版本贯通到 Evidence API、报告页面及 Markdown/HTML/PDF；REAL 输出不显示 Demo 标识，Mock 输出仍强制保留。193 个 Surefire、48 个 Failsafe/Testcontainers、21 个 Vitest、Playwright 与 Compose 已通过全仓终验，见 [GitHub Actions run 29143064626](https://github.com/wubokai/AI-reserch/actions/runs/29143064626)。
 
 当前已接入真实 SEC Filing、SEC Companyfacts/XBRL 基本面与 FRED 宏观 Provider，但尚未接入获准外部展示和报告导出的真实 Market Provider，也未在测试或 CI 中发送真实 OpenAI 请求。Phase 6 的真实 Adapter 由本地 HTTP mock 验证；部署只有同时提供 API Key、模型、HMAC secret 和带生效日期的价格版本时才会启用。成功终态仍必须与通过验证的不可变报告和运行 manifest 同事务发布。
 
