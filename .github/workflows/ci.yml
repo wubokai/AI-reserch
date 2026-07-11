@@ -83,8 +83,9 @@ jobs:
             | sha256sum --check
           tar -xzf /tmp/grype.tar.gz -C /tmp grype
           for service in web api analytics; do
-            image_id="$(docker compose images --quiet "$service")"
-            /tmp/grype "docker:$image_id" --only-fixed --fail-on critical
+            image_ref="ai-quant-research-assistant-${service}:local"
+            docker image inspect "$image_ref" >/dev/null
+            /tmp/grype "docker:$image_ref" --only-fixed --fail-on critical
           done
       - run: docker compose up -d
       - name: Phase 3 closed-loop smoke

@@ -29,6 +29,7 @@ services:
     networks: [quant_internal]
 
   analytics:
+    image: ai-quant-research-assistant-analytics:local
     build:
       context: ./apps/analytics
     environment:
@@ -58,6 +59,7 @@ services:
     networks: [quant_internal]
 
   api:
+    image: ai-quant-research-assistant-api:local
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -161,6 +163,7 @@ services:
     networks: [quant_internal]
 
   web:
+    image: ai-quant-research-assistant-web:local
     build:
       context: .
       dockerfile: apps/web/Dockerfile
