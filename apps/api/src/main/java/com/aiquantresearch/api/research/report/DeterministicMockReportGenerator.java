@@ -268,12 +268,28 @@ public class DeterministicMockReportGenerator {
                         quantByMetric,
                         "technical",
                         List.of(
-                                new MetricDisplay("rsi_14", "RSI 14", "RSI 14"),
+                                new MetricDisplay(
+                                        "rsi_14",
+                                        "十四期相对强弱指标",
+                                        "Fourteen-period relative-strength index"
+                                ),
                                 new MetricDisplay("macd", "MACD", "MACD"),
                                 new MetricDisplay("macd_signal", "MACD 信号线", "MACD signal"),
-                                new MetricDisplay("atr_14", "ATR 14", "ATR 14"),
-                                new MetricDisplay("distance_from_52_week_high", "距 52 周高点", "Distance from 52-week high"),
-                                new MetricDisplay("volume_moving_average_20", "20 日成交量均值", "20-day volume moving average"),
+                                new MetricDisplay(
+                                        "atr_14",
+                                        "十四期平均真实波幅",
+                                        "Fourteen-period average true range"
+                                ),
+                                new MetricDisplay(
+                                        "distance_from_52_week_high",
+                                        "距滚动一年高点",
+                                        "Distance from rolling-year high"
+                                ),
+                                new MetricDisplay(
+                                        "volume_moving_average_20",
+                                        "二十交易日成交量均值",
+                                        "Twenty-session average volume"
+                                ),
                                 new MetricDisplay("trend_score", "趋势评分", "Trend score")
                         )
                 ),
