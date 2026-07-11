@@ -2,7 +2,9 @@
 Description=Daily AI Quant Research Assistant backup
 
 [Timer]
-OnCalendar=*-*-* 03:15:00 UTC
+# Runs at 03:15 in the host timezone. This syntax remains compatible with
+# systemd 219 on CentOS 7; newer hosts may set the machine timezone to UTC.
+OnCalendar=*-*-* 03:15:00
 Persistent=true
 RandomizedDelaySec=900
 Unit=ai-quant-backup.service

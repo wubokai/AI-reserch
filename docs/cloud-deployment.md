@@ -69,6 +69,9 @@ sudo systemctl start ai-quant-backup.service
 sudo systemctl status ai-quant-backup.service
 ```
 
+定时器按宿主机时区每天 03:15 运行，以兼容 CentOS 7 的 systemd 219；需要固定 UTC 时，应先把宿主机
+时区统一为 UTC，而不是在旧版 `OnCalendar` 表达式末尾添加时区。
+
 备份使用 AES-256-CBC/PBKDF2 加密并生成 SHA-256 与 Git commit sidecar；本地和可选 `rclone` 私有远程
 副本均执行 90 天保留。首次上线后运行 `./scripts/verify-backup.sh <backup.dump.enc>` 验证 checksum、解密
 和 `pg_restore --list`；完整恢复仍必须在隔离 VM 进行，不能覆盖生产库验证。
