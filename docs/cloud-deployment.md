@@ -74,6 +74,8 @@ sudo systemctl status ai-quant-backup.service
 和 `pg_restore --list`；完整恢复仍必须在隔离 VM 进行，不能覆盖生产库验证。
 共享主机的安全演示环境把 `BACKUP_RUNTIME_PROFILE` 设为 `shared-host`；正式 REAL 环境必须设为
 `production`，两种模式都只备份同一 Compose 项目的 PostgreSQL 服务。
+CentOS 7 等旧系统若已安装 EPEL `openssl11`，应把 `OPENSSL_BIN=openssl11` 写入私有环境文件；不得因系统
+OpenSSL 过旧而移除 PBKDF2 参数或降级备份加密。
 
 ## 发布与回滚
 

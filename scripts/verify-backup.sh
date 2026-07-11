@@ -16,6 +16,7 @@ source "${ENV_FILE}"
 set +a
 
 BACKUP_PASSPHRASE_FILE=${BACKUP_PASSPHRASE_FILE:-"${ROOT_DIR}/.secrets/backup-passphrase"}
+OPENSSL_BIN=${OPENSSL_BIN:-openssl}
 if [[ "${BACKUP_PASSPHRASE_FILE}" != /* ]]; then
   BACKUP_PASSPHRASE_FILE="${ROOT_DIR}/${BACKUP_PASSPHRASE_FILE}"
 fi
@@ -25,7 +26,7 @@ fi
 [[ -r "${BACKUP_PASSPHRASE_FILE}" ]] || { echo "Passphrase file is unreadable" >&2; exit 1; }
 
 (cd "$(dirname "${BACKUP_FILE}")" && sha256sum --check "$(basename "${BACKUP_FILE}.sha256")")
-openssl enc -d -aes-256-cbc -pbkdf2 \
+"${OPENSSL_BIN}" enc -d -aes-256-cbc -pbkdf2 \
   -pass "file:${BACKUP_PASSPHRASE_FILE}" \
   -in "${BACKUP_FILE}" \
   | docker run --rm -i postgres:17-alpine pg_restore --list >/dev/null

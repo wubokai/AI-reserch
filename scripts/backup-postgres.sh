@@ -11,6 +11,7 @@ set +a
 
 BACKUP_DIR=${BACKUP_DIR:-/var/backups/ai-quant-research}
 BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-90}
+OPENSSL_BIN=${OPENSSL_BIN:-openssl}
 BACKUP_PASSPHRASE_FILE=${BACKUP_PASSPHRASE_FILE:-"${ROOT_DIR}/.secrets/backup-passphrase"}
 if [[ "${BACKUP_PASSPHRASE_FILE}" != /* ]]; then
   BACKUP_PASSPHRASE_FILE="${ROOT_DIR}/${BACKUP_PASSPHRASE_FILE}"
@@ -50,7 +51,7 @@ docker compose \
     --dbname "${POSTGRES_DB}" \
     --format custom \
     --no-owner \
-  | openssl enc -aes-256-cbc -pbkdf2 -salt \
+  | "${OPENSSL_BIN}" enc -aes-256-cbc -pbkdf2 -salt \
       -pass "file:${BACKUP_PASSPHRASE_FILE}" \
       -out "${temporary}"
 
