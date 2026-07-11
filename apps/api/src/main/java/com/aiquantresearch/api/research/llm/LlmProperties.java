@@ -63,13 +63,26 @@ public record LlmProperties(
         boolean official = "api.openai.com".equalsIgnoreCase(host)
                 && "https".equalsIgnoreCase(uri.getScheme())
                 && (uri.getPort() == -1 || uri.getPort() == 443);
-        if (!loopback && !official) {
+        boolean approvedLanYi = "lanyapi.com".equalsIgnoreCase(host)
+                && "https".equalsIgnoreCase(uri.getScheme())
+                && (uri.getPort() == -1 || uri.getPort() == 443)
+                && approvedApiPath(uri.getPath());
+        if (!loopback && !official && !approvedLanYi) {
             throw new IllegalArgumentException("OpenAI base URL is outside the approved boundary");
         }
         if (loopback && !"http".equalsIgnoreCase(uri.getScheme())
                 && !"https".equalsIgnoreCase(uri.getScheme())) {
             throw new IllegalArgumentException("OpenAI loopback test URL uses an unsupported scheme");
         }
+    }
+
+    public String providerName() {
+        return "lanyapi.com".equalsIgnoreCase(baseUrl.getHost()) ? "LANYI" : "OPENAI";
+    }
+
+    private static boolean approvedApiPath(String path) {
+        return path == null || path.isBlank() || "/".equals(path)
+                || "/v1".equals(path) || "/v1/".equals(path);
     }
 
     public boolean mockMode() {

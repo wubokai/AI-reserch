@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily AI Quant Research Assistant backup
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 UTC
+Persistent=true
+RandomizedDelaySec=900
+Unit=ai-quant-backup.service
+
+[Install]
+WantedBy=timers.target

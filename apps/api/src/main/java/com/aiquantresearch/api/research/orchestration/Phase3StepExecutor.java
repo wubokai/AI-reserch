@@ -236,8 +236,18 @@ public class Phase3StepExecutor {
         String benchmark = context.request().path("benchmark").asText("SPY");
         MarketDataSnapshot target = marketDataProvider.fetchFiveYearDaily(context.symbol());
         MarketDataSnapshot reference = marketDataProvider.fetchFiveYearDaily(benchmark);
-        LocalDate end = requestedEnd(context, target.periodEnd());
-        LocalDate start = requestedStart(context, target.periodStart(), end);
+        LocalDate availableEnd = target.periodEnd().isBefore(reference.periodEnd())
+                ? target.periodEnd()
+                : reference.periodEnd();
+        LocalDate end = requestedEnd(context, availableEnd);
+        LocalDate requestedStart = requestedStart(context, end);
+        LocalDate start = requestedStart;
+        if (target.periodStart().isAfter(start)) {
+            start = target.periodStart();
+        }
+        if (reference.periodStart().isAfter(start)) {
+            start = reference.periodStart();
+        }
         ObjectNode output = objectMapper.createObjectNode();
         output.set("target", objectMapper.valueToTree(target.within(start, end)));
         output.set("benchmark", objectMapper.valueToTree(reference.within(start, end)));
@@ -305,7 +315,6 @@ public class Phase3StepExecutor {
 
     private static LocalDate requestedStart(
             ResearchExecutionContext context,
-            LocalDate availableStart,
             LocalDate end
     ) {
         String explicit = context.request().path("startDate").asText();
@@ -318,7 +327,7 @@ public class Phase3StepExecutor {
         return switch (period) {
             case ONE_YEAR -> end.minusYears(1).plusDays(1);
             case THREE_YEARS -> end.minusYears(3).plusDays(1);
-            case FIVE_YEARS -> availableStart;
+            case FIVE_YEARS -> end.minusYears(5).plusDays(1);
             case TEN_YEARS, MAX -> throw new StepExecutionException(
                     "RESEARCH_PERIOD_UNSUPPORTED",
                     "The requested research period is outside the supported boundary",
@@ -335,9 +344,9 @@ public class Phase3StepExecutor {
                 context.request().path("period").asText("5y")
         );
         return switch (period) {
-            case ONE_YEAR -> 240;
-            case THREE_YEARS -> 740;
-            case FIVE_YEARS -> 1_290;
+            case ONE_YEAR -> 220;
+            case THREE_YEARS -> 700;
+            case FIVE_YEARS -> 1_200;
             case TEN_YEARS, MAX -> Integer.MAX_VALUE;
         };
     }

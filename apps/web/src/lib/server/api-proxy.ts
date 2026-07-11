@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { createHmac, randomUUID } from "node:crypto";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -62,8 +63,54 @@ function problem(status: number, code: string, message: string): Response {
   );
 }
 
+function base64Url(value: string | Buffer): string {
+  return Buffer.from(value).toString("base64url");
+}
+
+function serviceAuthorization(): string | null {
+  const encodedSecret = process.env.SERVICE_JWT_HMAC_SECRET;
+  if (!encodedSecret) {
+    return null;
+  }
+  const secret = Buffer.from(encodedSecret, "base64");
+  if (secret.length < 32) {
+    return null;
+  }
+  const issuer = process.env.SERVICE_JWT_ISSUER ?? "ai-quant-web";
+  const audience = process.env.SERVICE_JWT_AUDIENCE ?? "ai-quant-api";
+  const subject = process.env.SERVICE_JWT_SUBJECT ?? "primary-owner";
+  const email = process.env.SERVICE_JWT_EMAIL;
+  if (!email || !email.includes("@")) {
+    return null;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const payload = base64Url(JSON.stringify({
+    iss: issuer,
+    aud: audience,
+    sub: subject,
+    email,
+    iat: now,
+    nbf: now - 5,
+    exp: now + 60,
+    jti: randomUUID(),
+  }));
+  const signingInput = `${header}.${payload}`;
+  const signature = createHmac("sha256", secret)
+    .update(signingInput)
+    .digest("base64url");
+  return `Bearer ${signingInput}.${signature}`;
+}
+
 function configuration() {
   const baseUrl = process.env.API_INTERNAL_BASE_URL ?? "http://127.0.0.1:8080";
+  const bearer = serviceAuthorization();
+  if (bearer) {
+    return {
+      baseUrl: baseUrl.replace(/\/$/, ""),
+      authorization: bearer,
+    };
+  }
   const username = process.env.API_DEMO_USERNAME;
   const password = process.env.API_DEMO_PASSWORD;
   if (!username || !password) {

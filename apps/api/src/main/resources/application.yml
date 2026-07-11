@@ -99,6 +99,13 @@ app:
       max-response-bytes: ${FRED_MAX_RESPONSE_BYTES:5000000}
       max-requests-per-second: ${FRED_MAX_REQUESTS_PER_SECOND:2}
       max-attempts: ${FRED_MAX_ATTEMPTS:3}
+    tiingo:
+      base-url: ${TIINGO_BASE_URL:https://api.tiingo.com}
+      timeout: ${TIINGO_TIMEOUT:20s}
+      api-key: ${TIINGO_API_KEY:${MARKET_DATA_API_KEY:}}
+      user-agent: ${TIINGO_USER_AGENT:AI Quant Research Assistant}
+      max-response-bytes: ${TIINGO_MAX_RESPONSE_BYTES:10000000}
+      max-attempts: ${TIINGO_MAX_ATTEMPTS:3}
   llm:
     base-url: ${OPENAI_BASE_URL:https://api.openai.com}
     timeout: ${OPENAI_TIMEOUT:45s}
@@ -142,11 +149,27 @@ app:
     relay-delay: ${OUTBOX_RELAY_DELAY:1s}
     initial-delay: ${OUTBOX_RELAY_INITIAL_DELAY:2s}
     batch-size: ${OUTBOX_RELAY_BATCH_SIZE:100}
+  retention:
+    enabled: ${RETENTION_ENABLED:false}
+    research-artifact-days: ${RESEARCH_ARTIFACT_RETENTION_DAYS:1095}
+    provider-raw-days: ${PROVIDER_RAW_RETENTION_DAYS:365}
+    backup-days: ${BACKUP_RETENTION_DAYS:90}
+    batch-size: ${RETENTION_BATCH_SIZE:100}
+    initial-delay: ${RETENTION_INITIAL_DELAY:10m}
+    sweep-delay: ${RETENTION_SWEEP_DELAY:24h}
   security:
     demo-principal:
       enabled: false
       username: ""
       password: ""
+    service-jwt:
+      enabled: ${SERVICE_JWT_ENABLED:false}
+      issuer: ${SERVICE_JWT_ISSUER:ai-quant-web}
+      audience: ${SERVICE_JWT_AUDIENCE:ai-quant-api}
+      hmac-secret: ${SERVICE_JWT_HMAC_SECRET:}
+      subject: ${SERVICE_JWT_SUBJECT:primary-owner}
+      email: ${SERVICE_JWT_EMAIL:bw2754@nyu.edu}
+      token-ttl: ${SERVICE_JWT_TOKEN_TTL:60s}
 
 management:
   endpoints:
@@ -186,6 +209,9 @@ resilience4j:
         base-config: default
         record-failure-predicate: com.aiquantresearch.api.research.provider.runtime.ProviderCircuitFailurePredicate
       fred:
+        base-config: default
+        record-failure-predicate: com.aiquantresearch.api.research.provider.runtime.ProviderCircuitFailurePredicate
+      tiingo:
         base-config: default
         record-failure-predicate: com.aiquantresearch.api.research.provider.runtime.ProviderCircuitFailurePredicate
   retry:

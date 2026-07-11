@@ -256,6 +256,7 @@ public class StepCommitService {
                 UUID.randomUUID(),
                 claim.researchJobId(),
                 symbol,
+                claim.researchJobId(),
                 symbol,
                 date(bar, "date"),
                 decimal(bar, "open"),
@@ -276,8 +277,12 @@ public class StepCommitService {
                     close, adjusted_close, volume, provider, retrieved_at
                 )
                 select ?, ?, source.id,
-                       (select id from securities where symbol = ? and active
-                         order by is_demo_data desc, id limit 1),
+                       (select id from securities
+                         where symbol = ? and active
+                           and is_demo_data = (
+                               select data_mode <> 'REAL' from research_jobs where id = ?
+                           )
+                         order by id limit 1),
                        ?, '1d', ?, ?, ?, ?, ?, ?, ?, source.provider, source.retrieved_at
                   from source_snapshots source
                  where source.id = ?
@@ -301,6 +306,7 @@ public class StepCommitService {
                     UUID.randomUUID(),
                     claim.researchJobId(),
                     symbol,
+                    claim.researchJobId(),
                     symbol,
                     text(metric, "periodType", "UNKNOWN"),
                     periodEnd.getYear(),
@@ -328,8 +334,12 @@ public class StepCommitService {
                     accession_number, is_derived
                 )
                 select ?, ?, source.id,
-                       (select id from securities where symbol = ? and active
-                         order by is_demo_data desc, id limit 1),
+                       (select id from securities
+                         where symbol = ? and active
+                           and is_demo_data = (
+                               select data_mode <> 'REAL' from research_jobs where id = ?
+                           )
+                         order by id limit 1),
                        ?, ?, ?, ?, ?, ?, ?, source.provider, source.source_url,
                        ?, source.retrieved_at, ?, ?, ?, ?
                   from source_snapshots source

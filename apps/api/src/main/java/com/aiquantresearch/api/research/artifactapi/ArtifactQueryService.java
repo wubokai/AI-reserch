@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.core.env.Environment;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -39,17 +40,20 @@ public class ArtifactQueryService {
     private final ObjectMapper objectMapper;
     private final ApplicationProperties applicationProperties;
     private final Clock clock;
+    private final Environment environment;
 
     public ArtifactQueryService(
             JdbcTemplate jdbc,
             ObjectMapper objectMapper,
             ApplicationProperties applicationProperties,
-            Clock clock
+            Clock clock,
+            Environment environment
     ) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
         this.applicationProperties = applicationProperties;
         this.clock = clock;
+        this.environment = environment;
     }
 
     @Transactional(readOnly = true)
@@ -150,12 +154,113 @@ public class ArtifactQueryService {
                     now
             );
         }
+        if (mode == DataMode.MIXED_TEST) {
+            return new ArtifactApiResponses.ProviderStatusResponse(
+                    "UNKNOWN", mode, List.of(), now
+            );
+        }
+        List<ArtifactApiResponses.ProviderStatus> providers = List.of(
+                realProviderStatus(
+                        "Tiingo EOD",
+                        List.of("MARKET_DATA"),
+                        "TIINGO_API_KEY",
+                        "TIINGO_EOD",
+                        now,
+                        "Personal internal use only"
+                ),
+                realProviderStatus(
+                        "SEC EDGAR",
+                        List.of("FUNDAMENTALS", "FILINGS"),
+                        "SEC_USER_AGENT",
+                        "SEC_EDGAR%",
+                        now,
+                        "Official public filings and XBRL"
+                ),
+                realProviderStatus(
+                        "FRED",
+                        List.of("MACRO"),
+                        "FRED_API_KEY",
+                        "FRED",
+                        now,
+                        "Required attribution is preserved"
+                ),
+                llmProviderStatus(now)
+        );
+        boolean allUp = providers.stream().allMatch(value -> "UP".equals(value.status()));
         return new ArtifactApiResponses.ProviderStatusResponse(
-                mode == DataMode.MIXED_TEST ? "UNKNOWN" : "DEGRADED",
+                allUp ? "UP" : "DEGRADED",
                 mode,
-                List.of(),
+                providers,
                 now
         );
+    }
+
+    private ArtifactApiResponses.ProviderStatus realProviderStatus(
+            String name,
+            List<String> capabilities,
+            String configurationKey,
+            String providerPattern,
+            Instant now,
+            String message
+    ) {
+        boolean configured = hasConfiguration(configurationKey);
+        Instant lastSuccess = configured ? latestSource(providerPattern) : null;
+        return new ArtifactApiResponses.ProviderStatus(
+                name,
+                capabilities,
+                "REAL",
+                !configured ? "DOWN" : lastSuccess == null ? "UNKNOWN" : "UP",
+                configured,
+                now,
+                lastSuccess,
+                null,
+                new ArtifactApiResponses.RateLimitStatus(true, null, null),
+                configured ? message : configurationKey + " is not configured"
+        );
+    }
+
+    private ArtifactApiResponses.ProviderStatus llmProviderStatus(Instant now) {
+        boolean configured = hasConfiguration("OPENAI_API_KEY")
+                && hasConfiguration("OPENAI_REPORT_MODEL");
+        Instant lastSuccess = configured ? latestLlmSuccess() : null;
+        String name = environment.getProperty("OPENAI_BASE_URL", "")
+                .contains("lanyapi.com") ? "LanYi" : "OpenAI";
+        return new ArtifactApiResponses.ProviderStatus(
+                name,
+                List.of("LLM"),
+                "REAL",
+                !configured ? "DOWN" : lastSuccess == null ? "UNKNOWN" : "UP",
+                configured,
+                now,
+                lastSuccess,
+                null,
+                ArtifactApiResponses.RateLimitStatus.unlimited(),
+                configured ? "Responses-compatible structured report generation"
+                        : "LLM credentials are not configured"
+        );
+    }
+
+    private Instant latestSource(String providerPattern) {
+        Timestamp value = jdbc.queryForObject("""
+                select max(retrieved_at)
+                  from source_snapshots
+                 where provider like ? and not is_demo_data
+                """, Timestamp.class, providerPattern);
+        return value == null ? null : value.toInstant();
+    }
+
+    private Instant latestLlmSuccess() {
+        Timestamp value = jdbc.queryForObject("""
+                select max(created_at)
+                  from llm_calls
+                 where not is_mock and status = 'SUCCEEDED'
+                """, Timestamp.class);
+        return value == null ? null : value.toInstant();
+    }
+
+    private boolean hasConfiguration(String name) {
+        String value = environment.getProperty(name);
+        return value != null && !value.isBlank();
     }
 
     @Transactional(readOnly = true)

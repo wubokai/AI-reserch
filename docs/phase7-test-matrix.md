@@ -5,8 +5,8 @@
 ## 1. 当前范围
 
 Phase 7 按 SEC → FRED → Market → Fundamental 分段交付。本文件记录 SEC EDGAR、
-FRED、SEC Companyfacts/XBRL 与统一 Provider Runtime 检查点；它们尚不代表 Gate G7
-完成，也不启用完整 REAL 用户闭环。
+FRED、SEC Companyfacts/XBRL、统一 Provider Runtime 与 Tiingo EOD Adapter。自主工程范围已经完成；
+首次真实网络闭环仍等待部署 Secret。
 
 已实现：
 
@@ -70,13 +70,16 @@ FRED、SEC Companyfacts/XBRL 与统一 Provider Runtime 检查点；它们尚不
   与五服务 Compose 全部通过；FRED vintage/attribution/Key 脱敏、真实来源落库与默认 Mock
   无 Key 启动路径均在同一 head 验证。
 
-## 6. 尚未关闭的 Gate G7 项
+## 6. Tiingo 与 REAL 终验增量
 
-- 完整 REAL Worker 编排；
-- Market 功能、质量、成本以及存储/展示/导出/再分发书面许可；
-- 经许可的 Market Adapter、全 REAL 报告、UI 归属和导出验证。
+- Contract Test：adjusted OHLCV 映射、日期排序、Token header、source URL 脱敏、429 重试、非法 OHLC、
+  内容/字节/host 边界；
+- REAL 修复：量化和 Evidence 不再硬编码 `is_demo_data=true`，价格/财务行按 research data mode 选择
+  real security，1y/3y/5y normalized snapshots 不再因同 raw hash 别名；
+- 生产门禁：Tiingo 个人许可版本、LanYi 精确 host、短时 Bearer、R3 retention 和云端 preflight；
+- 尚待执行：使用旋转后的三个 Key 在私有云运行全 REAL Worker、旧报告复现和备份恢复 smoke。
 
-因此当前状态为“Phase 7 进行中 / SEC、FRED、SEC XBRL、Provider Runtime 与多格式归属检查点已完成”，不是 Gate G7 通过。
+因此当前状态为“Phase 7 自主工程完成 / 在线凭据验收待执行”。
 
 ## 7. Market/Fundamental 许可决策检查点
 

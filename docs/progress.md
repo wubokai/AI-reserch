@@ -11,7 +11,7 @@
 | Phase 4：完整量化服务 | 完成 | 73 个有序 Metric、确定性 Trend、黄金数据集、完整数值/语义边界、Java/Python 契约和原有 Mock 闭环回归均通过；Gate G4 通过 |
 | Phase 5：Evidence 与 SEC 检索基础 | 完成 | Source Snapshot、日期/数值引用、确定性 Freshness/Confidence/Data Quality、一次安全修复、Filing 清洗/Chunk/GIN 检索、Evidence Drawer 与快照复现均通过；Gate G5 通过 |
 | Phase 6：真实 LLM 安全接入 | 完成 | `ResearchLanguageModel` Mock/Real 双实现、Responses API、6 个严格 Schema、三工具 allowlist、预算预留/结算、调用/失败审计和安全回退已通过；Gate G6 通过 |
-| Phase 7：真实数据源 | 进行中 | SEC/FRED/XBRL、Runtime 与多格式归属已通过 CI；provider-neutral REAL 创建/解析/发布边界已完成本地检查点；Market 许可和 Adapter 仍阻塞完整 REAL 终验 |
+| Phase 7：真实数据源 | 工程完成 | Tiingo 个人内部许可决策、adjusted EOD Adapter、Token/header、raw hash、缓存/熔断、REAL security master、归属和非 Demo lineage 已实现；首次真实网络终验等待三个外部 Key |
 | Phase 8：完整前端产品 | 完成 | Dashboard、完整表单、进度控制、报告图表、Evidence/Data Quality、版本/历史、Provider 状态、导出反馈、响应校验、移动端均完成；Gate G8 通过 |
 | Phase 9：发布硬化 | 完成 | JSON 日志、Prometheus/SLO、输入/SSRF/XSS/IDOR/PDF、全局执行截止时间、供应链、最小权限容器、运行/扩展/保留文档和远端 G9 工程 Gate 均完成 |
 
@@ -20,9 +20,9 @@
 - 原始 DOCX 需求已全文读取并完成结构/页面核对；
 - OpenAPI 3.1 YAML 可解析，本地引用与必需操作完整；
 - LLM/Analytics JSON Schema 是合法 JSON；
-- Web：ESLint、TypeScript、32 个 Vitest、Next.js production build 与 5 个 Playwright 用例通过；Phase 8 状态、操作、版本、筛选、导出、Zod、company-only、周期/深度、Provider 和移动端矩阵已覆盖；
-- API：Java 21 / Spring Boot 3.5，231 个 Surefire 与 50 个 Failsafe/Testcontainers 通过；新增 Phase 9 日志/指标、JSON/PDF 边界、SSRF、安全头、company-only、1y/3y/5y、QUICK/STANDARD/DEEP、完整安全报告章节、Research 全局执行截止时间、outbox relay 与 LLM Filing FTS 覆盖；
-- PostgreSQL 17：Flyway V1–V9；V8 提供 LLM 原子预算/审计，V9 提供带 Research/Source 血缘、唯一约束和不可变触发器的 `market_price_bars`、`financial_metrics`、`macro_series` 规范化事实投影；
+- Web：ESLint、TypeScript、33 个 Vitest、Next.js production build 与既有 5 个 Playwright 用例通过；新增生产 BFF JWT 覆盖；
+- API：Java 21 / Spring Boot 3.5，242 个 Surefire 本地通过，历史 50 个 Failsafe/Testcontainers 等待本次主干 CI 复验；新增 Tiingo、LanYi allowlist、Bearer、REAL/Demo 隔离和 R3 retention 覆盖；
+- PostgreSQL 17：Flyway V1–V12；V10 增加真实 security master，V11 修正 raw/normalized snapshot identity，V12 增加 legal hold 与 R3 retention 索引；
 - Analytics：Ruff、strict mypy、41 个 pytest 通过，branch coverage 93.92%；完整覆盖收益、风险、技术/Trend、基本面、估值与情景；
 - 供应链：`pnpm audit` 与 Python `pip-audit --local` 均为 0 已知漏洞；PostCSS 已提升到修复版本，Dependabot 覆盖 npm/pip/Maven/Actions；
 - 本地真实服务链路：MU、NVDA、RKLB 完整研究均形成已验证报告；关闭基本面叙事时安全部分完成，关闭宏观时完整完成；所有保留的重要 Claim 都关联同任务 Evidence；
@@ -47,9 +47,16 @@
 ## 当前限制
 
 - 本机没有 Docker；Gate G3–G6、Phase 7 各检查点、G8 与 G9 的容器、Testcontainers 和 Compose 终验均由 GitHub Actions Linux runner 完成。
-- 普通用户闭环只允许 `dataMode=MOCK`；目标支持 MU/NVDA/RKLB，基准支持 SPY/QQQ，周期支持 1y/3y/5y 或最长五年的显式范围，深度支持 QUICK/STANDARD/DEEP；核心量化所需技术分析必须启用。
+- 本地默认闭环使用 `dataMode=MOCK`；私有生产配置允许严格 REAL。目标支持 MU/NVDA/RKLB，基准支持 SPY/QQQ，周期支持 1y/3y/5y 或最长五年的显式范围，深度支持 QUICK/STANDARD/DEEP。
 - 基本面开关只控制可选叙事分析步骤；情景计算所需的规范化基本面数据仍会获取。宏观开关关闭时跳过宏观取数。
-- SEC Filing、SEC XBRL 与 FRED Adapter 已接入但默认关闭；缓存、熔断和 Provider 指标已完成，完整 REAL 编排仍受 Market 许可阻塞，不能描述为可发布的真实研究闭环。
-- SEC/FRED 页面与 Markdown/HTML/PDF 归属已完成本地验证。Fundamental 已选择 SEC Companyfacts/XBRL；真实 Market 在取得覆盖持久化、外部展示和报告导出的书面权利前保持未选择。
-- REAL 证券必须预先存在于非 Demo security master；当前尚无自动注册 Adapter，缺失或歧义会明确失败，不会使用 Mock fixture。
-- 真实 OpenAI Adapter 已接入但未配置生产模型、Key 或价格；当前默认仍只发布确定性 Mock 报告，测试不访问真实外部模型。
+- Tiingo、SEC Filing、SEC XBRL 与 FRED Adapter 已接入但默认关闭；缓存、熔断和 Provider 指标已完成。
+  REAL 私有闭环的代码门禁已关闭，首次在线运行仍等待外部 Key 与 LanYi 计价。
+- SEC/FRED 页面与 Markdown/HTML/PDF 归属已完成本地验证；Fundamental 使用 SEC Companyfacts/XBRL，
+  Market 已按项目负责人确认的单人私有范围选择 Tiingo Individual Starter。
+- 2026-07-11 项目负责人选择 Tiingo Individual Starter 且限定本人 Tailscale 私网内部使用；已接入
+  `adjOpen/adjHigh/adjLow/adjClose/adjVolume`、精确 raw hash、许可版本和 attribution。任何分享或公开
+  部署仍被许可门禁禁止。
+- 生产方案已固定为 LanYi 精确 host allowlist、60 秒 Web→API Bearer JWT、R3 1095/365/90 天策略、
+  加密备份和 Oracle Always Free/Hetzner 后备的 Tailscale 私有云部署。
+- REAL security master 已预置 MU/NVDA/RKLB/SPY/QQQ；其他证券仍需显式注册，缺失或歧义不会回退 Mock。
+- LanYi Adapter 已接入但尚未配置旋转后的生产 Key和准确价格；当前默认仍发布确定性 Mock 报告，测试不访问真实外部模型。

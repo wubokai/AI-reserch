@@ -63,14 +63,14 @@ Adapter 负责认证、分页、速率限制、字段映射、响应校验和来
 | 证券、行情、基本面、Filing、宏观 | 确定性 Mock Provider | 可替换真实 Adapter | Mock 固定种子与固定 `asOfDate` |
 | SEC Filing | Mock 文档 | SEC EDGAR（Phase 7 首检查点已接入，默认关闭） | 主要来源；合规 User-Agent、限流、HTML 清理、原始哈希与来源 URL 已实现 |
 | 宏观 | Mock 序列 | FRED（Phase 7 本地检查点已接入） | 保留频率、单位、realtime vintage、修订边界、effective date 与归属声明 |
-| 行情 | Mock adjusted OHLCV | 供应商待 Phase 7 许可评审 | 必须支持历史保存、展示和导出的合同权利 |
+| 行情 | Mock adjusted OHLCV | Tiingo EOD（个人内部私有） | 现金分红+拆股 adjusted OHLCV；禁止公开展示和再分发 |
 | 基本面 | Mock 报表 | SEC EDGAR Companyfacts/XBRL（Adapter 已实现） | 官方主来源；保留 taxonomy/concept/unit/period/accession，并通过修订/跨期黄金样例 |
 | 新闻 | 不启用 | 可选 | 不作为报告完成的硬依赖，不抓取付费墙 |
 
 行情和基本面供应商暂不在 Phase 0 硬编码。Phase 7 选型门禁包括：覆盖率、调整价口径、财务字段定义、历史深度、限流、SLA、成本，以及存储、缓存、派生分析、UI 展示和 PDF 导出的许可。
 
-Phase 7 许可结论：Market 尚未获得覆盖外部展示和报告导出的书面权利，保持 Mock；
-Fundamental 选择 SEC Companyfacts/XBRL。详见[许可矩阵](./provider-license-matrix.md)。
+Phase 7 许可结论：Market 选择 Tiingo Individual Starter，但部署必须保持单 owner Tailscale 私网，导出
+仅供本人内部使用；Fundamental 选择 SEC Companyfacts/XBRL。详见[许可矩阵](./provider-license-matrix.md)。
 
 SEC XBRL 的标准 concept、期间选择、修订去重、派生公式与 NOT_AVAILABLE 规则见
 [Companyfacts 映射与数据质量规则](./sec-xbrl-mapping.md)。
@@ -85,7 +85,8 @@ SEC XBRL 的标准 concept、期间选择、修订去重、派生公式与 NOT_A
 - Source Snapshot 保存 provider、schema、retrieved/effective date、官方来源 URL、freshness、原始哈希和访问政策版本；每份 Filing 的官方 URL 保存为 `raw_text_uri`；
 - 官方契约依据：[SEC EDGAR API](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)、[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions) 与 [SEC Rate Control Notice](https://www.sec.gov/filergroup/announcements-old/new-rate-control-limits)。
 
-后续检查点已补齐 SEC/FRED/XBRL 共用 Redis 缓存、熔断器、Provider 指标与 provider-neutral REAL 编排；完整 REAL Gate 仍只等待经许可的 Market Adapter 与外部终验输入。
+后续检查点已补齐 Tiingo/SEC/FRED/XBRL 共用 Redis 缓存、熔断器、Provider 指标与 provider-neutral
+REAL 编排；完整在线终验只等待外部 Key。
 
 ### 4.2 FRED Adapter v1
 
@@ -95,7 +96,18 @@ SEC XBRL 的标准 concept、期间选择、修订去重、派生公式与 NOT_A
 - 原始 metadata/observation 字节形成 SHA-256，规范化 Payload 另存哈希；Source Snapshot 保存 vintage、effective date、freshness、许可复核版本和官方要求的归属文本；
 - 契约依据：[FRED Series Observations](https://fred.stlouisfed.org/docs/api/fred/series_observations.html)、[FRED API Terms](https://fred.stlouisfed.org/docs/api/terms_of_use.html) 与 [FRED Legal Terms](https://fred.stlouisfed.org/legal/terms/)。
 
-FRED 缓存、熔断、Provider 指标及页面/Markdown/HTML/PDF 归属展示均已完成；归属文本和许可策略版本来自不可变 Source Snapshot，导出模板版本变化会强制生成新缓存。完整 REAL 闭环仍受 Market 书面权利阻塞。
+FRED 缓存、熔断、Provider 指标及页面/Markdown/HTML/PDF 归属展示均已完成；归属文本和许可策略版本来自不可变 Source Snapshot，导出模板版本变化会强制生成新缓存。
+
+### 4.3 Tiingo EOD Adapter v1
+
+- 仅允许 `https://api.tiingo.com`（Contract Test 为 loopback），Token 只进入 Authorization header；
+- 请求覆盖当前日向前五年加 14 天缓冲，响应按日期排序并拒绝重复、非正价格、负成交量和非法 OHLC；
+- 只映射 `adjOpen/adjHigh/adjLow/adjClose/adjVolume`，调整口径记录为
+  `SPLIT_AND_CASH_DIVIDEND_ADJUSTED`；
+- exact response bytes 形成 `rawDataHash`，研究窗口裁剪形成独立 normalized hash；同一 raw payload 的
+  1y/3y/5y 规范化快照不会互相覆盖；
+- 429/502/503、网络和超时有限重试，其余 HTTP、内容类型和 Schema 错误永久失败；
+- attribution、freshness 和 `tiingo_individual_internal_v1_2026_02_18` 随快照进入 Evidence/导出。
 
 ## 5. SourceSnapshot
 

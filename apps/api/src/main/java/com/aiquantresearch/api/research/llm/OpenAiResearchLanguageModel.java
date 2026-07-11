@@ -22,8 +22,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @Component
 public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
 
-    private static final String PROVIDER = "OPENAI";
-
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
     private final LlmProperties properties;
@@ -152,7 +150,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                 return new ResearchLanguageModelResult(
                         report,
                         new LlmCallAudit(
-                                PROVIDER,
+                                properties.providerName(),
                                 properties.reportModel(),
                                 properties.promptVersion(),
                                 properties.schemaVersion(),
@@ -242,7 +240,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
             if (response == null || !response.isObject()) {
                 throw new OpenAiResponseException(
                         "LLM_RESPONSE_INVALID",
-                        "OpenAI returned an empty or invalid response",
+                        "The configured LLM provider returned an empty or invalid response",
                         true
                 );
             }
@@ -252,21 +250,21 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
             boolean retryable = status == 429 || status == 502 || status == 503;
             throw new OpenAiResponseException(
                     "LLM_HTTP_" + status,
-                    "OpenAI request failed with HTTP " + status,
+                    "The configured LLM provider request failed with HTTP " + status,
                     retryable,
                     exception
             );
         } catch (WebClientRequestException exception) {
             throw new OpenAiResponseException(
                     "LLM_UNAVAILABLE",
-                    "OpenAI is temporarily unavailable",
+                    "The configured LLM provider is temporarily unavailable",
                     true,
                     exception
             );
         } catch (IllegalStateException exception) {
             throw new OpenAiResponseException(
                     "LLM_TIMEOUT",
-                    "OpenAI request exceeded the configured timeout",
+                    "The configured LLM provider request exceeded the configured timeout",
                     true,
                     exception
             );
@@ -277,7 +275,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
         if (response.path("error").isObject()) {
             throw new OpenAiResponseException(
                     "LLM_RESPONSE_ERROR",
-                    "OpenAI returned a response error",
+                    "The configured LLM provider returned a response error",
                     false
             );
         }
@@ -286,14 +284,14 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
             String reason = response.path("incomplete_details").path("reason").asText("unknown");
             throw new OpenAiResponseException(
                     "LLM_INCOMPLETE_" + safeCode(reason),
-                    "OpenAI returned an incomplete structured response",
+                    "The configured LLM provider returned an incomplete structured response",
                     false
             );
         }
         if (!"completed".equals(status)) {
             throw new OpenAiResponseException(
                     "LLM_RESPONSE_STATUS_INVALID",
-                    "OpenAI returned an unsupported response status",
+                    "The configured LLM provider returned an unsupported response status",
                     false
             );
         }
@@ -319,7 +317,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                 if ("refusal".equals(content.path("type").asText())) {
                     throw new OpenAiResponseException(
                             "LLM_REFUSED",
-                            "OpenAI refused to generate the structured report",
+                            "The configured LLM provider refused the structured report",
                             false
                     );
                 }
@@ -333,7 +331,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
         }
         throw new OpenAiResponseException(
                 "LLM_OUTPUT_MISSING",
-                "OpenAI completed without a structured report",
+                "The configured LLM provider completed without a structured report",
                 false
         );
     }
@@ -345,7 +343,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
                     || !properties.schemaVersion().equals(report.path("schemaVersion").asText())) {
                 throw new OpenAiResponseException(
                         "LLM_SCHEMA_INVALID",
-                        "OpenAI output did not match the configured report schema version",
+                        "The LLM output did not match the configured report schema version",
                         false
                 );
             }
@@ -353,7 +351,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
         } catch (JsonProcessingException exception) {
             throw new OpenAiResponseException(
                     "LLM_SCHEMA_INVALID",
-                    "OpenAI output was not valid structured JSON",
+                    "The LLM output was not valid structured JSON",
                     false,
                     exception
             );
@@ -366,7 +364,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
             if (!arguments.isObject()) {
                 throw new OpenAiResponseException(
                         "LLM_TOOL_ARGUMENTS_INVALID",
-                        "OpenAI returned invalid tool arguments",
+                        "The configured LLM provider returned invalid tool arguments",
                         false
                 );
             }
@@ -374,7 +372,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
         } catch (JsonProcessingException exception) {
             throw new OpenAiResponseException(
                     "LLM_TOOL_ARGUMENTS_INVALID",
-                    "OpenAI returned invalid tool arguments",
+                    "The configured LLM provider returned invalid tool arguments",
                     false,
                     exception
             );
@@ -412,7 +410,7 @@ public class OpenAiResearchLanguageModel implements ResearchLanguageModel {
         if (value.isBlank()) {
             throw new OpenAiResponseException(
                     "LLM_RESPONSE_INVALID",
-                    "OpenAI returned an invalid tool call",
+                    "The configured LLM provider returned an invalid tool call",
                     false
             );
         }

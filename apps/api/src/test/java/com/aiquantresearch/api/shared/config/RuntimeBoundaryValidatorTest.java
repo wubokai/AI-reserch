@@ -35,6 +35,35 @@ class RuntimeBoundaryValidatorTest {
     }
 
     @Test
+    void productionRealModeRejectsAnyMockProvider() {
+        var environment = new MockEnvironment();
+        environment.setActiveProfiles("production");
+        var validator = new RuntimeBoundaryValidator(properties(DataMode.REAL), environment);
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("real providers for every data boundary");
+    }
+
+    @Test
+    void productionAcceptsTheFullyRealPrivateProviderSet() {
+        var environment = new MockEnvironment();
+        environment.setActiveProfiles("production");
+        environment.setProperty("app.providers.market", "tiingo");
+        environment.setProperty("app.providers.fundamental", "sec-xbrl");
+        environment.setProperty("app.providers.filing", "sec");
+        environment.setProperty("app.providers.macro", "fred");
+        environment.setProperty("app.providers.market-license-confirmed", "true");
+        environment.setProperty(
+                "app.providers.market-license-policy-version",
+                "tiingo_individual_internal_v1_2026_02_18"
+        );
+        var validator = new RuntimeBoundaryValidator(properties(DataMode.REAL), environment);
+
+        assertThatNoException().isThrownBy(validator::validate);
+    }
+
+    @Test
     void mockModeIsAllowedInDevelopment() {
         var environment = new MockEnvironment();
         environment.setActiveProfiles("development");

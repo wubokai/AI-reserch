@@ -63,9 +63,15 @@ public class EvidenceBuilder {
                 var last = prices.isArray() && !prices.isEmpty()
                         ? prices.get(prices.size() - 1)
                         : objectMapper.createObjectNode();
-                title = symbol + " synthetic adjusted market series";
-                summary = "Fixed five-year synthetic adjusted OHLCV series ending "
-                        + source.payload().path("periodEnd").asText("unknown") + ".";
+                title = symbol + (source.demoData()
+                        ? " synthetic adjusted market series"
+                        : " adjusted market series");
+                summary = source.demoData()
+                        ? "Fixed five-year synthetic adjusted OHLCV series ending "
+                                + source.payload().path("periodEnd").asText("unknown") + "."
+                        : "Provider-sourced adjusted OHLCV series ending "
+                                + source.payload().path("periodEnd").asText("unknown")
+                                + " under the recorded internal-use license policy.";
                 value.put("symbol", symbol);
                 value.put("asOfDate", source.payload().path("periodEnd").asText());
                 value.put(
@@ -73,6 +79,12 @@ public class EvidenceBuilder {
                         last.path("adjustedClose").asText(last.path("close").asText())
                 );
                 value.put("sampleSize", prices.size());
+                if (source.payload().hasNonNull("priceAdjustment")) {
+                    value.set("priceAdjustment", source.payload().path("priceAdjustment"));
+                }
+                if (source.payload().hasNonNull("attribution")) {
+                    value.set("attribution", source.payload().path("attribution"));
+                }
             }
             case "FUNDAMENTALS" -> {
                 type = "FINANCIAL_METRIC";
@@ -118,8 +130,12 @@ public class EvidenceBuilder {
             }
             default -> {
                 type = "COMPANY_PROFILE";
-                title = source.externalSourceId() + " synthetic security profile";
-                summary = "Local deterministic security-master resolution.";
+                title = source.externalSourceId() + (source.demoData()
+                        ? " synthetic security profile"
+                        : " security profile");
+                summary = source.demoData()
+                        ? "Local deterministic Mock security-master resolution."
+                        : "Local registered real security-master resolution.";
                 value.set("profile", source.payload());
             }
         }

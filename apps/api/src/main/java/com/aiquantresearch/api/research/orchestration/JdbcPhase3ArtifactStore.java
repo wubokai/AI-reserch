@@ -225,7 +225,9 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                     is_primary_source, freshness_status, is_demo_data, schema_version,
                     metadata_json
                 ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?::jsonb)
-                on conflict (provider, raw_data_hash, schema_version) do nothing
+                on conflict (
+                    provider, raw_data_hash, normalized_data_hash, schema_version
+                ) do nothing
                 """,
                 proposedId,
                 registration.provider(),
@@ -248,8 +250,9 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
         );
         UUID sourceId = jdbcTemplate.queryForObject("""
                 select id from source_snapshots
-                 where provider = ? and raw_data_hash = ? and schema_version = ?
-                """, UUID.class, registration.provider(), rawDataHash,
+                 where provider = ? and raw_data_hash = ?
+                   and normalized_data_hash = ? and schema_version = ?
+                """, UUID.class, registration.provider(), rawDataHash, contentHash,
                 registration.schemaVersion());
         if (sourceId == null) {
             throw new StepExecutionException(
@@ -284,6 +287,7 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
             JsonNode response
     ) {
         List<StoredQuantResult> results = new ArrayList<>();
+        boolean demoData = isDemoResearch(claim.researchJobId());
         String inputHash = response.path("inputHash").asText();
         String calculationVersion = response.path("calculationVersion").asText("quant_v1");
         LocalDate periodStart = LocalDate.parse(response.path("periodStart").asText());
@@ -305,7 +309,7 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                         unit, result_status, result_json, calculation_version,
                         input_hash, input_data_start, input_data_end, sample_size,
                         warnings_json, is_demo_data
-                    ) values (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, true)
+                    ) values (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?)
                     on conflict (research_job_id, metric_name, calculation_version, input_hash)
                     do nothing
                     """,
@@ -322,7 +326,8 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                     periodStart,
                     periodEnd,
                     metric.path("sampleSize").asInt(),
-                    jsonText(metric.path("warnings"))
+                    jsonText(metric.path("warnings")),
+                    demoData
             );
         }
         results.addAll(quantResults(claim.researchJobId()));
@@ -334,6 +339,7 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
             QueueClaim claim,
             List<EvidenceDraft> drafts
     ) {
+        boolean demoData = isDemoResearch(claim.researchJobId());
         for (EvidenceDraft draft : drafts) {
             String publicId = publicId("ev", claim.researchJobId(), draft.key());
             jdbcTemplate.update("""
@@ -341,7 +347,7 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                         id, public_id, research_job_id, source_snapshot_id,
                         quant_result_id, evidence_type, title, summary,
                         value_json, unit, quality_score, is_demo_data
-                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, true)
+                    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)
                     on conflict (public_id) do nothing
                     """,
                     UUID.randomUUID(),
@@ -354,7 +360,8 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                     draft.summary(),
                     jsonText(draft.value()),
                     draft.unit(),
-                    BigDecimal.valueOf(draft.qualityScore())
+                    BigDecimal.valueOf(draft.qualityScore()),
+                    demoData
             );
         }
         return evidence(claim.researchJobId());
@@ -421,6 +428,22 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                 row.getString("freshness_status"),
                 row.getBoolean("is_demo_data")
         );
+    }
+
+    private boolean isDemoResearch(UUID researchId) {
+        String mode = jdbcTemplate.queryForObject(
+                "select data_mode from research_jobs where id = ?",
+                String.class,
+                researchId
+        );
+        if (mode == null) {
+            throw new StepExecutionException(
+                    "RESEARCH_CONTEXT_NOT_FOUND",
+                    "The research execution context is unavailable",
+                    false
+            );
+        }
+        return mode != DataMode.REAL.name();
     }
 
     private String publicId(String prefix, UUID researchId, String key) {

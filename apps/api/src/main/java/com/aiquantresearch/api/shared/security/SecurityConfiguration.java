@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Set;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +23,14 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
@@ -35,7 +46,9 @@ public class SecurityConfiguration {
     @Bean
     SecurityFilterChain apiSecurityFilterChain(
             HttpSecurity http,
-            SecurityProblemWriter problemWriter
+            SecurityProblemWriter problemWriter,
+            Environment environment,
+            ObjectProvider<JwtDecoder> jwtDecoderProvider
     ) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
@@ -58,7 +71,6 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, exception) -> problemWriter.write(
                                 response,
@@ -71,7 +83,61 @@ public class SecurityConfiguration {
                                 "The current principal cannot access this resource"
                         )));
 
+        if (isProduction(environment)) {
+            JwtDecoder decoder = jwtDecoderProvider.getIfAvailable();
+            if (decoder == null) {
+                throw new IllegalStateException(
+                        "Production startup is fail-closed without a service JWT decoder"
+                );
+            }
+            http.oauth2ResourceServer(oauth -> oauth
+                    .jwt(jwt -> jwt.decoder(decoder))
+                    .authenticationEntryPoint((request, response, exception) -> problemWriter.write(
+                            response,
+                            ApiErrorCode.UNAUTHORIZED,
+                            "Authentication is required"
+                    )));
+        } else {
+            http.httpBasic(Customizer.withDefaults());
+        }
+
         return http.build();
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+            name = "app.security.service-jwt.enabled",
+            havingValue = "true"
+    )
+    JwtDecoder serviceJwtDecoder(ServiceJwtProperties properties) {
+        SecretKey key = new SecretKeySpec(properties.requireSecretBytes(), "HmacSHA256");
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key)
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
+        OAuth2TokenValidator<Jwt> defaults = JwtValidators.createDefaultWithIssuer(
+                properties.issuer()
+        );
+        OAuth2TokenValidator<Jwt> audience = token -> token.getAudience().contains(
+                properties.audience()
+        ) ? OAuth2TokenValidatorResult.success() : OAuth2TokenValidatorResult.failure(
+                new OAuth2Error("invalid_token", "The JWT audience is invalid", null)
+        );
+        OAuth2TokenValidator<Jwt> owner = token -> properties.subject().equals(
+                token.getSubject()
+        ) && properties.email().equalsIgnoreCase(token.getClaimAsString("email"))
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error("invalid_token", "The JWT owner is invalid", null)
+                );
+        decoder.setJwtValidator(token -> {
+            OAuth2TokenValidatorResult standard = defaults.validate(token);
+            if (standard.hasErrors()) {
+                return standard;
+            }
+            OAuth2TokenValidatorResult audienceResult = audience.validate(token);
+            return audienceResult.hasErrors() ? audienceResult : owner.validate(token);
+        });
+        return decoder;
     }
 
     @Bean
@@ -122,18 +188,23 @@ public class SecurityConfiguration {
             DemoPrincipalProperties properties,
             Environment environment
     ) {
-        boolean production = Arrays.asList(environment.getActiveProfiles())
-                .contains("production");
+        boolean production = isProduction(environment);
         if (!production) {
             return;
         }
         if (properties.enabled()) {
             validateDemoBoundary(properties, environment);
         }
-        throw new IllegalStateException(
-                "Production startup is fail-closed until formal Bearer authentication "
-                        + "is implemented"
-        );
+        if (!environment.getProperty(
+                "app.security.service-jwt.enabled",
+                Boolean.class,
+                false
+        )) {
+            throw new IllegalStateException(
+                    "Production startup is fail-closed until formal Bearer authentication "
+                            + "is configured"
+            );
+        }
     }
 
     static void validateDemoBoundary(DemoPrincipalProperties properties, Environment environment) {
@@ -153,5 +224,9 @@ public class SecurityConfiguration {
                     "Demo principal password must be explicitly configured with at least 16 characters"
             );
         }
+    }
+
+    private static boolean isProduction(Environment environment) {
+        return Arrays.asList(environment.getActiveProfiles()).contains("production");
     }
 }

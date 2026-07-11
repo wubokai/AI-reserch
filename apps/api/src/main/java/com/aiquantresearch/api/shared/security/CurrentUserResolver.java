@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -29,9 +30,12 @@ public class CurrentUserResolver {
         UUID id = UUID.nameUUIDFromBytes(
                 (ID_NAMESPACE + normalized).getBytes(StandardCharsets.UTF_8)
         );
-        String email = normalized.contains("@")
-                ? normalized
-                : normalized + "@local.invalid";
+        String jwtEmail = authentication.getPrincipal() instanceof Jwt jwt
+                ? jwt.getClaimAsString("email")
+                : null;
+        String email = jwtEmail == null || jwtEmail.isBlank()
+                ? (normalized.contains("@") ? normalized : normalized + "@local.invalid")
+                : jwtEmail.strip().toLowerCase(Locale.ROOT);
         return new CurrentUserIdentity(id, username.trim(), email);
     }
 }

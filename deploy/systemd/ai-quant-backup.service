@@ -1,0 +1,13 @@
+[Unit]
+Description=AI Quant Research Assistant encrypted PostgreSQL backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=aiquant
+WorkingDirectory=/opt/ai-quant-research-assistant
+Environment=ENV_FILE=/opt/ai-quant-research-assistant/.env.production
+ExecStart=/opt/ai-quant-research-assistant/scripts/backup-postgres.sh
+PrivateTmp=true
+NoNewPrivileges=true

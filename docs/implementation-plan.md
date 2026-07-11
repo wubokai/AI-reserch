@@ -2,7 +2,7 @@
 
 文档版本：0.1
 
-状态：Phase 0–6、8–9 已完成；Gate G0–G6、G8 与 G9 工程 Gate 已通过；G7 等待 Market 外部门禁
+状态：Phase 0–9 自主工程已完成；G7 已在单人私有 Tiingo 许可边界内完成，首次 REAL 在线验收等待外部 Key
 
 日期：2026-07-10
 
@@ -469,14 +469,11 @@ Market 和 Fundamental Provider 尚未选择。选择前必须完成：
 
 ## 16. 当前下一步
 
-Phase 0–6 与 Gate G0–G6 已完成。Phase 7 已完成 SEC EDGAR、FRED、SEC
-Companyfacts/XBRL 和统一 Provider Runtime 工程检查点。Gate G7 的下一步固定为：
+Phase 7 已完成 SEC EDGAR、FRED、SEC Companyfacts/XBRL、统一 Provider Runtime 和 Tiingo EOD Adapter。
+Tiingo Individual 仅允许项目负责人本人通过 Tailscale 私网内部使用；任何第二用户、公开展示或再分发都
+重新打开许可 Gate。Phase 9 的生产增量包括 LanYi 精确 allowlist、Web→API 短时 Bearer JWT、R3 保留、
+90 天加密备份和云部署 preflight。
 
-1. 取得覆盖持久化、外部展示、报告导出和再分发的 Market Provider 书面权利；
-2. 许可通过后接入 Market Adapter；未通过时保持禁用；
-3. Provider-neutral REAL 创建/解析/发布边界已完成；接入 Market 后执行全 REAL Worker 与旧报告复现终验，不允许静默混入 Mock；
-4. SEC/FRED 的 UI、Markdown、HTML 与 PDF 来源归属已完成；Market 归属随许可后的 Adapter 一并验证；
-5. 通过最终 Web、Analytics、API/Testcontainers、secret scan 与 Compose 终验后关闭 Gate G7。
-
-Phase 9 发布硬化、远端 Gate G9 工程终验和文档证据已完成。当前可自主工程范围已经收口；
-Gate G7/AC-22 的 Market 外部许可及生产配置阻塞保持独立记录，不允许通过 Mock 或局部真实数据绕过，集中输入见 [`external-inputs.md`](./external-inputs.md)。
+当前只剩无法由代码生成的外部动作：撤销已在聊天暴露的 LanYi Key，在服务器 Secret 中填入旋转后的
+LanYi/Tiingo/FRED Key 和 LanYi 准确计价，创建云主机与 Tailscale，然后执行全 REAL Worker、旧报告
+复现和备份恢复 smoke。集中输入见 [`external-inputs.md`](./external-inputs.md)。

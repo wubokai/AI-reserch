@@ -22,14 +22,18 @@ Markdown/HTML/PDF 和 Web BFF 字节一致性。默认流程不访问 SEC、FRED
 ## 2. 配置边界
 
 - `development` + `DATA_MODE=MOCK` 是可交付演示配置。
-- `production` 会拒绝 demo Basic auth；正式 Bearer/OIDC 未配置前启动失败关闭。
+- `production` 会拒绝 demo Basic auth；本项目的私有云方案使用 Web BFF 签发的 60 秒 HS256 Bearer JWT，
+  API 同时校验 issuer、audience、签名、时间和 owner email。Secret 缺失或弱于 256 bit 时启动失败关闭。
 - REAL 不得混入 Mock。真实行情 Provider 未通过书面许可门禁前保持 `mock`。
-- OpenAI 只允许官方 HTTPS endpoint，测试只允许 loopback；Key、模型、HMAC、价格版本和生效日
+- LLM 只允许官方 OpenAI HTTPS、精确的 `lanyapi.com[/v1]` 或测试 loopback；Key、模型、HMAC、价格版本和生效日
   缺一项都不会发起真实请求。
 - SEC/FRED 只允许各自官方 host，测试只允许 loopback。
 - `RESEARCH_MAX_EXECUTION_MINUTES` 默认 15，合法范围 1–1440；调大前必须同时评审 Provider/LLM 超时、Worker 容量与成本上限。
 
 所有 secret 由部署 Secret Store 或环境变量注入，不写入 `.env.example`、镜像、日志或指标。
+
+生产云端的逐步操作见 [`cloud-deployment.md`](cloud-deployment.md)，配置入口是
+`.env.production.example`、`compose.production.yml` 和 `scripts/production-preflight.sh`。
 
 ## 3. 发布步骤
 

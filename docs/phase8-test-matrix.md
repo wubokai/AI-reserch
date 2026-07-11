@@ -46,7 +46,7 @@
 
 - 默认普通用户流程仍为 MOCK，并持续显示 `DEMO DATA — NOT REAL MARKET DATA`；
 - 1y/3y/5y 与 QUICK/STANDARD/DEEP 已在需求审计检查点开放；真实 Market 仍由许可门控制，前端不伪装为可用；
-- Gate G8 只验收前端产品完整性，不替代仍受 Market 许可阻塞的 Gate G7。
+- Gate G8 只验收前端产品完整性；后续 Tiingo 单 owner 私有许可与 REAL Adapter 由 Gate G7 增量覆盖。
 
 ## 5. 远端终验
 

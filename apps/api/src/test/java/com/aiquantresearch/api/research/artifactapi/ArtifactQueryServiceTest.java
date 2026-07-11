@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.env.MockEnvironment;
 
 @ExtendWith(MockitoExtension.class)
 class ArtifactQueryServiceTest {
@@ -53,7 +54,8 @@ class ArtifactQueryServiceTest {
                 jdbc,
                 new ObjectMapper().findAndRegisterModules(),
                 new ApplicationProperties("api", "test", DataMode.MOCK),
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                new MockEnvironment()
         );
     }
 
@@ -93,6 +95,34 @@ class ArtifactQueryServiceTest {
                 contains("r.data_mode <> 'MIXED_TEST'"),
                 any(Object[].class)
         );
+    }
+
+    @Test
+    void realProviderStatusListsConfiguredBoundariesBeforeFirstSuccess() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("TIINGO_API_KEY", "configured")
+                .withProperty("SEC_USER_AGENT", "AI Quant Research Assistant ops@example.test")
+                .withProperty("FRED_API_KEY", "configured")
+                .withProperty("OPENAI_API_KEY", "configured")
+                .withProperty("OPENAI_REPORT_MODEL", "gpt-5.5")
+                .withProperty("OPENAI_BASE_URL", "https://lanyapi.com/v1/");
+        var realService = new ArtifactQueryService(
+                jdbc,
+                new ObjectMapper().findAndRegisterModules(),
+                new ApplicationProperties("api", "test", DataMode.REAL),
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                environment
+        );
+
+        ArtifactApiResponses.ProviderStatusResponse response = realService.providerStatus();
+
+        assertThat(response.status()).isEqualTo("DEGRADED");
+        assertThat(response.providers()).extracting(ArtifactApiResponses.ProviderStatus::name)
+                .containsExactly("Tiingo EOD", "SEC EDGAR", "FRED", "LanYi");
+        assertThat(response.providers()).allSatisfy(provider -> {
+            assertThat(provider.configured()).isTrue();
+            assertThat(provider.status()).isEqualTo("UNKNOWN");
+        });
     }
 
     @Test

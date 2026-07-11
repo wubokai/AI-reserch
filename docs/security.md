@@ -28,7 +28,9 @@ flowchart LR
 ## 3. 身份与授权
 
 - Phase 3 继续使用 `dev-demo` Basic 固定演示用户，仅允许 development/test 且必须显式配置强度足够的演示密码；本地 Compose 只把应用端口发布到 host loopback。
-- Bearer Token 是生产认证契约，但正式实现延后到后续阶段。production profile 无论是否误开 demo auth 都拒绝启动：不能用 Basic、空用户库或匿名模式假装生产鉴权已就绪。
+- Bearer Token 是生产认证契约。单 owner 私有云方案由 Web BFF 使用至少 256-bit 共享 Secret 签发 60 秒
+  HS256 JWT；API 验证 issuer、audience、签名和时间，并从已验证 `sub/email` 建立稳定 owner。入口只经
+  Tailscale Serve 暴露给个人 tailnet；production 仍拒绝 Basic、匿名和弱 Secret。
 - 从第一天开始，所有 research、report、evidence、export 查询都带 `owner_user_id` 条件；禁止“先按 ID 查再在 Controller 比较”的脆弱模式。
 - 正式认证在后续阶段采用短期会话/Token、密码哈希（Argon2id 或受支持的强算法）、CSRF/同源策略和角色最小权限。
 - `DELETE` 是软删除，只影响用户可见性；审计和来源链保留。
@@ -134,7 +136,7 @@ flowchart LR
 
 ## 13. 上线门禁
 
-- [x] production profile 拒绝 demo auth；正式 Bearer/OIDC 未实现时整体启动失败关闭，不能用 Mock/default 冒充生产。
+- [x] production profile 拒绝 demo auth；Bearer JWT 未完整配置时整体启动失败关闭，不能用 Mock/default 冒充生产。
 - [x] 所有 Research、Report、Evidence 和 Export 接口有 owner-scoped/跨用户隐藏测试。
 - [x] SSRF official-host、超时、body/content-type 限制、恶意 HTML 和 PDF 远程资源禁用测试通过。
 - [x] Prompt injection fixture 无法调用未授权工具或新增 Evidence。

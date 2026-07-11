@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "production_eval_matrix_v1",
+  "symbols": ["MU", "NVDA", "RKLB"],
+  "locales": ["en-US", "zh-CN"],
+  "scenarios": [
+    {
+      "id": "quick_1y_trend",
+      "period": "1y",
+      "reportDepth": "QUICK",
+      "question": {
+        "en-US": "What does the last year of price and risk evidence show?",
+        "zh-CN": "过去一年的价格趋势和风险证据说明了什么？"
+      }
+    },
+    {
+      "id": "standard_3y_full",
+      "period": "3y",
+      "reportDepth": "STANDARD",
+      "question": {
+        "en-US": "Evaluate the three-year return, risk, fundamentals and major filings.",
+        "zh-CN": "评估三年收益、风险、基本面和主要申报文件。"
+      }
+    },
+    {
+      "id": "deep_5y_thesis",
+      "period": "5y",
+      "reportDepth": "DEEP",
+      "question": {
+        "en-US": "Build an evidence-backed five-year bull, base and bear research thesis.",
+        "zh-CN": "构建有证据支持的五年牛市、基准和熊市研究论点。"
+      }
+    },
+    {
+      "id": "standard_1y_drawdown",
+      "period": "1y",
+      "reportDepth": "STANDARD",
+      "question": {
+        "en-US": "Explain drawdown, volatility and benchmark-relative behavior without predicting returns.",
+        "zh-CN": "解释回撤、波动率及相对基准表现，不预测未来收益。"
+      }
+    },
+    {
+      "id": "deep_3y_evidence",
+      "period": "3y",
+      "reportDepth": "DEEP",
+      "question": {
+        "en-US": "Reconcile market, filing, fundamental and macro evidence and state all limitations.",
+        "zh-CN": "综合行情、申报、基本面和宏观证据，并明确所有局限。"
+      }
+    }
+  ],
+  "thresholds": {
+    "expandedCases": 30,
+    "schemaValidRate": 1.0,
+    "materialClaimEvidenceRate": 1.0,
+    "numericReferenceExactRate": 1.0,
+    "unsupportedMaterialClaims": 0,
+    "safeTerminalRate": 0.93,
+    "maximumCostUsdPerResearch": 1.0,
+    "maximumP95DurationMinutes": 20
+  }
+}

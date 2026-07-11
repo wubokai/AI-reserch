@@ -49,6 +49,14 @@ public class RuntimeBoundaryValidator {
         }
         String marketProvider = provider("app.providers.market");
         String fundamentalProvider = provider("app.providers.fundamental");
+        if (production && ("mock".equalsIgnoreCase(marketProvider)
+                || "mock".equalsIgnoreCase(fundamentalProvider)
+                || "mock".equalsIgnoreCase(filingProvider)
+                || "mock".equalsIgnoreCase(macroProvider))) {
+            throw new IllegalStateException(
+                    "The production profile requires real providers for every data boundary"
+            );
+        }
         if (applicationProperties.dataMode() == DataMode.MOCK
                 && !"mock".equalsIgnoreCase(marketProvider)) {
             throw new IllegalStateException(

@@ -2,7 +2,9 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 9 发布硬化与远端 G9 工程 Gate 已完成；Phase 7 的真实 Market 仍因许可未确认保持禁用，因此默认业务闭环继续使用固定演示数据，不产生真实或当前市场结论。
+> 当前进度：Phase 9 工程 Gate 已完成；Phase 7 已选择并接入仅限个人内部使用的 Tiingo EOD Adapter，
+> LanYi 受限 Responses endpoint、生产 Bearer、R3 保留和私有云部署资产已完成。默认本地流程仍是 Mock；
+> 首次 REAL 在线验收等待旋转后的外部 Key、LanYi 准确计价和云账户。
 
 ![Phase 1 research workspace](docs/assets/screenshots/phase1-workspace.png)
 
@@ -13,14 +15,14 @@
 - 重要结论使用 `FACT | CALCULATION | INFERENCE | OPINION` 分类，并关联同一研究任务中的 Evidence。
 - PostgreSQL 是任务、lease、状态、取消、报告版本和审计的权威来源；Redis 只做可丢失的缓存与加速。
 - Java 负责 API、权限、编排和最终发布；Python 负责量化分析；Next.js 只通过 Java API 访问业务能力。
-- 真实行情和基本面 Provider 在 Phase 7 前完成价格、限流、存储、展示、导出和再分发许可评审后再选择。
+- 真实行情使用 Tiingo Individual Starter，只允许项目负责人通过 Tailscale 私网内部查看和下载；任何第二用户、公开展示或再分发都必须先升级许可。
 
 ## 技术栈
 
 | 模块 | 技术 | 当前能力 |
 | --- | --- | --- |
 | `apps/web` | Next.js 16、React 19、TypeScript、Tailwind、TanStack Query、Zod、Recharts | Dashboard、完整表单、任务控制/耗时、报告图表、Evidence、Data Quality、版本/历史筛选、Provider 状态和有反馈的三格式导出 |
-| `apps/api` | Java 21、Spring Boot 3.5、Spring Security、JPA、Flyway、Redis、Resilience4j、OpenAI Responses API | Research API、durable Worker、Mock Provider、确定性 Evidence/Claim 校验与修复、Filing 检索、Mock/Real LLM 路由、调用预算与审计、报告原子发布/版本/导出 |
+| `apps/api` | Java 21、Spring Boot 3.5、Spring Security Resource Server、JPA、Flyway、Redis、Resilience4j、Responses API | Research API、durable Worker、Mock/Tiingo/SEC/FRED Provider、确定性 Evidence/Claim 校验与修复、短时 Bearer、Mock/Real LLM 路由、预算与审计、报告原子发布/版本/导出 |
 | `apps/analytics` | Python 3.12、FastAPI、Pydantic、Ruff、mypy、pytest | 版本化无状态分析 API：73 个收益/风险/技术/基本面/估值/情景 Metric 与可解释 Trend |
 | 基础设施 | PostgreSQL 17、Redis 7.4、Prometheus、Docker Compose、GitHub Actions | JSON 日志、SLO/告警、供应链扫描、最小权限容器和五服务闭环 CI |
 
@@ -92,7 +94,9 @@ Phase 9 最终需求审计：Web 全 Gate、Analytics 41 个 pytest/93.92% branc
 
 FRED 检查点将 API 基线提升到 179 个 Surefire 与 46 个 Failsafe/Testcontainers；全仓终验见 [GitHub Actions run 29134411188](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)。
 
-Provider 许可检查点当前为 181 个 Surefire 测试通过。Fundamental 已选择 SEC Companyfacts/XBRL；Market 在取得覆盖持久化、外部展示和报告导出的书面权利前保持禁用，详见 [Provider 许可矩阵](docs/provider-license-matrix.md)。
+Provider 许可检查点最初为 181 个 Surefire 测试通过。Fundamental 使用 SEC Companyfacts/XBRL；Market
+现已选择 Tiingo Individual Starter，并由代码强制限制为个人私有内部用途，详见
+[Provider 许可矩阵](docs/provider-license-matrix.md)。
 该检查点的全仓验证见 [GitHub Actions run 29138819196](https://github.com/wubokai/AI-reserch/actions/runs/29138819196)。
 
 SEC XBRL 检查点当前为 185 个 Surefire 与 47 个 Failsafe/Testcontainers 测试通过，新增黄金 Companyfacts fixture 覆盖修订去重、未来 filed fact、单位/年度期间、跨期拒绝及 Gross Margin、FCF、EBITDA proxy、Net Debt 手算结果。全仓终验见 [GitHub Actions run 29141192029](https://github.com/wubokai/AI-reserch/actions/runs/29141192029)。
@@ -103,7 +107,9 @@ Provider Runtime 检查点当前为 191 个 Surefire 与 48 个 Failsafe/Testcon
 
 Provider-neutral REAL 编排边界已移除创建、验证和发布路径中的 Mock 硬编码：REAL 可接受格式合法的目标证券，但必须在非 Demo security master 中唯一解析；缺失时明确失败，不回退 Mock。报告发布要求任务、报告、Source 与 Evidence 模式完全一致，`MIXED_TEST` 禁止发布，REAL 缺失基本面时只传递显式空输入。
 
-当前已接入真实 SEC Filing、SEC Companyfacts/XBRL 基本面与 FRED 宏观 Provider，但尚未接入获准外部展示和报告导出的真实 Market Provider，也未在测试或 CI 中发送真实 OpenAI 请求。Phase 6 的真实 Adapter 由本地 HTTP mock 验证；部署只有同时提供 API Key、模型、HMAC secret 和带生效日期的价格版本时才会启用。成功终态仍必须与通过验证的不可变报告和运行 manifest 同事务发布。
+当前已接入 Tiingo EOD adjusted OHLCV、SEC Filing、SEC Companyfacts/XBRL 与 FRED。Tiingo Token 只通过
+Authorization header 发送，原始响应 hash、复权语义、attribution 与许可版本进入不可变 lineage；测试/CI
+不发送真实外部请求。LanYi 只有同时提供旋转后的 Key、模型、HMAC 和准确计价时才会启用。
 
 ## 数据与模型配置
 
@@ -124,6 +130,13 @@ SEC Adapter 默认关闭。启用时必须同时显式设置 `FILING_DATA_PROVID
 
 FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`DATA_MODE=REAL` 与注册的 `FRED_API_KEY`；默认读取 DFF 与 CPIAUCSL，并以任务抓取日作为 realtime vintage 边界。API key 不进入快照、来源 URL或安全异常，报告数据保留 FRED 要求的归属声明。
 
+Tiingo Adapter 默认关闭。生产启用需设置 `MARKET_DATA_PROVIDER=tiingo`、许可确认版本和个人 Token；只
+使用 `adjOpen/adjHigh/adjLow/adjClose/adjVolume`。免费 Individual 数据不得公开展示或分享导出文件。
+
+生产参考配置是 `.env.production.example` 与 `compose.production.yml`。先运行
+`scripts/init-production-secrets.sh`，只在服务器本地填入 API keys 和 LanYi 计价，再运行
+`scripts/production-preflight.sh`；完整步骤见[私有云部署](docs/cloud-deployment.md)。
+
 ## 文档入口
 
 - [可执行需求与 Must/Should/Could](docs/requirements.md)
@@ -137,6 +150,8 @@ FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`
 - [Phase 8 前端验收矩阵](docs/phase8-test-matrix.md)
 - [Phase 9 发布硬化矩阵](docs/phase9-test-matrix.md)
 - [运行与发布手册](docs/operations-runbook.md)
+- [24 小时私有云部署](docs/cloud-deployment.md)
+- [REAL 生产验收标准](docs/production-acceptance.md)
 - [可观测性与告警](docs/observability.md)
 - [Provider 扩展指南](docs/provider-extension-guide.md)
 - [路线图与非目标](docs/roadmap.md)
@@ -155,7 +170,9 @@ FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`
 
 ## 下一步
 
-Phase 0–9 的可自主工程、测试、硬化与文档工作已经完成。剩余事项全部依赖项目负责人提供外部事实：真实 Market 书面许可/测试账户、生产认证与部署决策、生产模型/价格、数据保留决定及 SEC/FRED 身份；集中清单见[项目负责人外部输入](docs/external-inputs.md)。未授权前所有真实能力继续失败关闭。
+自主管理的代码、测试、硬化、Tiingo Adapter、生产认证、R3 保留、备份和云部署资产已经完成。剩余是
+一次性的外部账户操作：撤销聊天中暴露的 LanYi Key、在服务器填入新 LanYi/Tiingo/FRED Key 和准确计价、
+创建云主机/Tailscale，然后执行 REAL smoke。集中清单见[项目负责人外部输入](docs/external-inputs.md)。
 
 ## 免责声明
 

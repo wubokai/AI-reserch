@@ -7,6 +7,11 @@ describe("research BFF", () => {
     delete process.env.API_INTERNAL_BASE_URL;
     delete process.env.API_DEMO_USERNAME;
     delete process.env.API_DEMO_PASSWORD;
+    delete process.env.SERVICE_JWT_HMAC_SECRET;
+    delete process.env.SERVICE_JWT_ISSUER;
+    delete process.env.SERVICE_JWT_AUDIENCE;
+    delete process.env.SERVICE_JWT_SUBJECT;
+    delete process.env.SERVICE_JWT_EMAIL;
     vi.unstubAllGlobals();
   });
 
@@ -39,6 +44,38 @@ describe("research BFF", () => {
     expect(headers.get("cookie")).toBeNull();
     expect(response.headers.get("authorization")).toBeNull();
     expect(response.headers.get("x-request-id")).toBe("upstream-id");
+  });
+
+  it("uses a short-lived server-only service JWT when production credentials exist", async () => {
+    process.env.API_INTERNAL_BASE_URL = "http://api.internal:8080";
+    process.env.SERVICE_JWT_HMAC_SECRET = Buffer.alloc(32, 7).toString("base64");
+    process.env.SERVICE_JWT_ISSUER = "ai-quant-web";
+    process.env.SERVICE_JWT_AUDIENCE = "ai-quant-api";
+    process.env.SERVICE_JWT_SUBJECT = "primary-owner";
+    process.env.SERVICE_JWT_EMAIL = "bw2754@nyu.edu";
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await proxyResearchRequest(
+      new Request("http://web.local/api/research"),
+      [],
+    );
+
+    expect(response.status).toBe(200);
+    const authorization = new Headers(fetchMock.mock.calls[0]?.[1]?.headers)
+      .get("authorization");
+    expect(authorization).toMatch(/^Bearer [^.]+\.[^.]+\.[^.]+$/);
+    const payload = JSON.parse(Buffer.from(
+      authorization?.split(".")[1] ?? "",
+      "base64url",
+    ).toString("utf8")) as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      iss: "ai-quant-web",
+      aud: "ai-quant-api",
+      sub: "primary-owner",
+      email: "bw2754@nyu.edu",
+    });
+    expect(Number(payload.exp) - Number(payload.iat)).toBe(60);
   });
 
   it("streams an allowlisted export with its safe response headers", async () => {

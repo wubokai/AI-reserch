@@ -10,8 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class LlmFailureAuditService {
 
-    private static final String PROVIDER = "OPENAI";
-
     private final JdbcTemplate jdbc;
     private final LlmProperties properties;
 
@@ -49,7 +47,7 @@ public class LlmFailureAuditService {
                 UUID.randomUUID(),
                 request.context().researchId(),
                 request.attemptId(),
-                PROVIDER,
+                properties.providerName(),
                 properties.reportModel(),
                 properties.promptVersion(),
                 properties.schemaVersion(),
