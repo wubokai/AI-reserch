@@ -88,3 +88,6 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 - Runtime Boundary 新增 2 个测试，全量 API 181 个 Surefire 测试通过；
 - 决策证据见 [`provider-license-matrix.md`](./provider-license-matrix.md) 与
   [`ADR-0009`](./adr/0009-phase7-provider-license-decision.md)。
+- 全仓终验 [run `29138819196`](https://github.com/wubokai/AI-reserch/actions/runs/29138819196)：
+  Web/Playwright、Analytics、181 个 Surefire、46 个 Failsafe/Testcontainers、secret scan
+  与 Compose 全部通过。

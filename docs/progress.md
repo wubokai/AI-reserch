@@ -33,6 +33,7 @@
 - GitHub Actions：Gate G6 的 Web/Playwright、Analytics、167+44 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29118462224`](https://github.com/wubokai/AI-reserch/actions/runs/29118462224)）；新增覆盖 V8、预算/调用数原子 ledger、成功/失败脱敏审计、Responses HTTP mock、结构化输出和安全回退；
 - GitHub Actions：Phase 7 SEC 首检查点的 Web/Playwright、Analytics、175+45 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29134112081`](https://github.com/wubokai/AI-reserch/actions/runs/29134112081)）；真实 SEC Source Snapshot、raw/normalized hash 分离与 Filing 官方 URL 落库已完成容器验证；
 - GitHub Actions：Phase 7 FRED 检查点的 Web/Playwright、Analytics、179+46 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29134411188`](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)）；vintage、归属、Key 脱敏和真实政府数据来源落库已完成容器验证；
+- GitHub Actions：Phase 7 Provider 许可检查点的 Web/Playwright、Analytics、181+46 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29138819196`](https://github.com/wubokai/AI-reserch/actions/runs/29138819196)）；Market 书面权利失败关闭和默认 Mock 无 Key 路径均已验证；
 - Phase 3–7 详细证据见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)、[`phase4-test-matrix.md`](./phase4-test-matrix.md)、[`phase5-test-matrix.md`](./phase5-test-matrix.md)、[`phase6-test-matrix.md`](./phase6-test-matrix.md) 和 [`phase7-test-matrix.md`](./phase7-test-matrix.md)。
 
 ## 当前限制
