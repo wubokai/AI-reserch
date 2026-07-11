@@ -74,7 +74,7 @@ public class OutboxRelayScheduler {
                 row.getString("event_type"),
                 row.getInt("event_version"),
                 row.getString("payload_json"),
-                row.getObject("occurred_at", Instant.class)
+                row.getTimestamp("occurred_at").toInstant()
         ));
         for (PendingEvent event : events) {
             relay(event);
