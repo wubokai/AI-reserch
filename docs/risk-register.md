@@ -143,12 +143,17 @@
 
 - SEC EDGAR：计划使用官方公开接口，作为公司 Filing 主来源。
 - FRED：计划使用官方 API，作为宏观数据来源。
-- Market Data Provider：尚未选择。
-- Fundamental Data Provider：尚未选择。
+- Market Data Provider：Twelve Data 为商务候选，但公开条款不覆盖本项目外部展示与导出；
+  在取得 Redistribution Rights Add-On 或单独书面协议前保持未选择/禁用。
+- Fundamental Data Provider：选择 SEC EDGAR Companyfacts/XBRL；实现须通过 concept、期间、
+  单位、正负号和人工黄金样例 Gate。
 - News Provider：不属于 v1 Must。
 - Analyst Estimates Provider：不属于 v1 Must。
 
 “尚未选择”是有意的架构约束。此前阶段只能依赖领域接口和 Mock，不得在 Controller、Service、Entity 或报告 Schema 中嵌入供应商专有字段。
+
+详细决策与逐项权利见 [`adr/0009-phase7-provider-license-decision.md`](./adr/0009-phase7-provider-license-decision.md)
+和 [`provider-license-matrix.md`](./provider-license-matrix.md)。
 
 ### 4.2 许可评审清单
 

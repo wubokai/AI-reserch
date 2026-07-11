@@ -67,6 +67,30 @@ class RuntimeBoundaryValidatorTest {
                 .hasMessageContaining("real macro provider");
     }
 
+    @Test
+    void realMarketProviderRequiresExplicitStorageAndExportRights() {
+        var environment = new MockEnvironment();
+        environment.setActiveProfiles("development");
+        environment.setProperty("app.providers.market", "twelve-data");
+        var validator = new RuntimeBoundaryValidator(properties(DataMode.REAL), environment);
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("storage and export rights");
+    }
+
+    @Test
+    void confirmedMarketRightsRequireAVersionedDecision() {
+        var environment = new MockEnvironment();
+        environment.setActiveProfiles("development");
+        environment.setProperty("app.providers.market", "twelve-data");
+        environment.setProperty("app.providers.market-license-confirmed", "true");
+        environment.setProperty("app.providers.market-license-policy-version", "contract-2026-07");
+        var validator = new RuntimeBoundaryValidator(properties(DataMode.REAL), environment);
+
+        assertThatNoException().isThrownBy(validator::validate);
+    }
+
     private ApplicationProperties properties(DataMode dataMode) {
         return new ApplicationProperties("ai-quant-research-api", "test", dataMode);
     }

@@ -63,8 +63,12 @@ app:
     base-url: ${ANALYTICS_INTERNAL_BASE_URL:http://localhost:8000}
     timeout: ${ANALYTICS_TIMEOUT:15s}
   providers:
+    market: ${MARKET_DATA_PROVIDER:mock}
+    fundamental: ${FUNDAMENTAL_DATA_PROVIDER:mock}
     filing: ${FILING_DATA_PROVIDER:mock}
     macro: ${MACRO_DATA_PROVIDER:mock}
+    market-license-confirmed: ${MARKET_DATA_LICENSE_CONFIRMED:false}
+    market-license-policy-version: ${MARKET_DATA_LICENSE_POLICY_VERSION:}
     sec:
       data-base-url: ${SEC_DATA_BASE_URL:https://data.sec.gov}
       archives-base-url: ${SEC_ARCHIVES_BASE_URL:https://www.sec.gov}

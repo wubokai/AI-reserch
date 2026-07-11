@@ -8,9 +8,15 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(
+        name = "app.providers.fundamental",
+        havingValue = "mock",
+        matchIfMissing = true
+)
 public class MockFundamentalDataProvider implements FundamentalDataProvider {
 
     private static final List<String> METRIC_ORDER = List.of(

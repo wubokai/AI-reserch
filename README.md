@@ -78,6 +78,8 @@ pnpm dev:web
 
 FRED 检查点将 API 基线提升到 179 个 Surefire 与 46 个 Failsafe/Testcontainers；全仓终验见 [GitHub Actions run 29134411188](https://github.com/wubokai/AI-reserch/actions/runs/29134411188)。
 
+Provider 许可检查点当前为 181 个 Surefire 测试通过。Fundamental 已选择 SEC Companyfacts/XBRL；Market 在取得覆盖持久化、外部展示和报告导出的书面权利前保持禁用，详见 [Provider 许可矩阵](docs/provider-license-matrix.md)。
+
 当前尚未接入真实市场/基本面 Provider，也未在测试或 CI 中发送真实 OpenAI 请求。Phase 6 的真实 Adapter 由本地 HTTP mock 验证；部署只有同时提供 API Key、模型、HMAC secret 和带生效日期的价格版本时才会启用。成功终态仍必须与通过验证的不可变报告和运行 manifest 同事务发布。
 
 ## 数据与模型配置
@@ -103,6 +105,7 @@ FRED Adapter 同样默认关闭。启用需设置 `MACRO_DATA_PROVIDER=fred`、`
 - [量化计算口径](docs/calculation-methodology.md)
 - [LLM、Claim 与 Evidence 设计](docs/llm-design.md)
 - [数据源与许可门禁](docs/data-sources.md)
+- [Phase 7 Provider 许可矩阵](docs/provider-license-matrix.md)
 - [安全与风险登记](docs/security.md)
 - [实时进度](docs/progress.md)
 

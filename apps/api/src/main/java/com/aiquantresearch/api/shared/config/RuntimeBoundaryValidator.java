@@ -47,9 +47,43 @@ public class RuntimeBoundaryValidator {
                     "MOCK data mode cannot enable a real macro provider"
             );
         }
+        String marketProvider = provider("app.providers.market");
+        String fundamentalProvider = provider("app.providers.fundamental");
+        if (applicationProperties.dataMode() == DataMode.MOCK
+                && !"mock".equalsIgnoreCase(marketProvider)) {
+            throw new IllegalStateException(
+                    "MOCK data mode cannot enable a real market provider"
+            );
+        }
+        if (applicationProperties.dataMode() == DataMode.MOCK
+                && !"mock".equalsIgnoreCase(fundamentalProvider)) {
+            throw new IllegalStateException(
+                    "MOCK data mode cannot enable a real fundamental provider"
+            );
+        }
+        if (!"mock".equalsIgnoreCase(marketProvider)) {
+            boolean confirmed = environment.getProperty(
+                    "app.providers.market-license-confirmed",
+                    Boolean.class,
+                    false
+            );
+            String policyVersion = environment.getProperty(
+                    "app.providers.market-license-policy-version"
+            );
+            if (!confirmed || policyVersion == null || policyVersion.isBlank()) {
+                throw new IllegalStateException(
+                        "A real market provider requires confirmed storage and export rights"
+                );
+            }
+        }
     }
 
     private boolean hasProfile(String profile) {
         return Arrays.asList(environment.getActiveProfiles()).contains(profile);
+    }
+
+    private String provider(String property) {
+        String value = environment.getProperty(property);
+        return value == null ? "mock" : value;
     }
 }

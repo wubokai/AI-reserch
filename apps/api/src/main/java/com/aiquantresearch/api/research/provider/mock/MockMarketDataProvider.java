@@ -9,9 +9,11 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "app.providers.market", havingValue = "mock", matchIfMissing = true)
 public class MockMarketDataProvider implements MarketDataProvider {
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);

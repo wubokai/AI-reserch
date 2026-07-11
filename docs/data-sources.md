@@ -64,10 +64,13 @@ Adapter 负责认证、分页、速率限制、字段映射、响应校验和来
 | SEC Filing | Mock 文档 | SEC EDGAR（Phase 7 首检查点已接入，默认关闭） | 主要来源；合规 User-Agent、限流、HTML 清理、原始哈希与来源 URL 已实现 |
 | 宏观 | Mock 序列 | FRED（Phase 7 本地检查点已接入） | 保留频率、单位、realtime vintage、修订边界、effective date 与归属声明 |
 | 行情 | Mock adjusted OHLCV | 供应商待 Phase 7 许可评审 | 必须支持历史保存、展示和导出的合同权利 |
-| 基本面 | Mock 报表 | 供应商待 Phase 7 许可评审 | 必须说明原始/标准化口径与公司行动处理 |
+| 基本面 | Mock 报表 | SEC EDGAR Companyfacts/XBRL（已选择，待 Adapter） | 官方主来源；必须保留 taxonomy/concept/unit/period/accession 并通过黄金样例 |
 | 新闻 | 不启用 | 可选 | 不作为报告完成的硬依赖，不抓取付费墙 |
 
 行情和基本面供应商暂不在 Phase 0 硬编码。Phase 7 选型门禁包括：覆盖率、调整价口径、财务字段定义、历史深度、限流、SLA、成本，以及存储、缓存、派生分析、UI 展示和 PDF 导出的许可。
+
+Phase 7 许可结论：Market 尚未获得覆盖外部展示和报告导出的书面权利，保持 Mock；
+Fundamental 选择 SEC Companyfacts/XBRL。详见[许可矩阵](./provider-license-matrix.md)。
 
 ### 4.1 SEC EDGAR Adapter v1
 

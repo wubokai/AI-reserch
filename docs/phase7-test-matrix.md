@@ -78,3 +78,13 @@ FRED 分段检查点；它们尚不代表 Gate G7 完成，也不启用完整 RE
 - 最终 Web、Analytics、API/Testcontainers、secret scan 与 Compose 全绿。
 
 因此当前状态为“Phase 7 进行中 / SEC 与 FRED 分段检查点已终验”，不是 Gate G7 通过。
+
+## 7. Market/Fundamental 许可决策检查点
+
+- Fundamental 选择 SEC Companyfacts/XBRL；Market 因公开许可不覆盖外部展示和报告导出而
+  保持未选择，Twelve Data 仅作为取得书面 Redistribution 权利后的候选；
+- Mock Market/Fundamental Bean 已改为显式配置条件，不会与未来真实 Adapter 同时注入；
+- 真实 Market 配置缺少 `MARKET_DATA_LICENSE_CONFIRMED=true` 或版本化 policy 时启动失败；
+- Runtime Boundary 新增 2 个测试，全量 API 181 个 Surefire 测试通过；
+- 决策证据见 [`provider-license-matrix.md`](./provider-license-matrix.md) 与
+  [`ADR-0009`](./adr/0009-phase7-provider-license-decision.md)。
