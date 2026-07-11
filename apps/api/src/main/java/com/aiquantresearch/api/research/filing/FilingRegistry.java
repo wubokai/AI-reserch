@@ -62,7 +62,7 @@ public class FilingRegistry {
                     id, source_snapshot_id, external_document_id, accession_number,
                     form_type, filing_date, report_period, title, raw_text_uri,
                     raw_text_hash, cleaned_text_hash, parser_version, is_demo_data
-                ) values (?, ?, ?, ?, ?, ?, ?, ?, null, ?, ?, ?, ?)
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (source_snapshot_id, external_document_id) do nothing
                 """,
                 proposedId,
@@ -73,6 +73,7 @@ public class FilingRegistry {
                 filingDate,
                 nullableDate(filing, "reportPeriod"),
                 title,
+                nullableText(filing, "sourceUrl"),
                 rawHash,
                 cleanedHash,
                 FilingTextProcessor.PARSER_VERSION,

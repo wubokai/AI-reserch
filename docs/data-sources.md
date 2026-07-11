@@ -61,13 +61,25 @@ Adapter 负责认证、分页、速率限制、字段映射、响应校验和来
 | 数据 | MVP | 完整 v1 | 备注 |
 | --- | --- | --- | --- |
 | 证券、行情、基本面、Filing、宏观 | 确定性 Mock Provider | 可替换真实 Adapter | Mock 固定种子与固定 `asOfDate` |
-| SEC Filing | Mock 文档 | SEC EDGAR | 主要来源；需合规 User-Agent、限流与 HTML 清理 |
+| SEC Filing | Mock 文档 | SEC EDGAR（Phase 7 首检查点已接入，默认关闭） | 主要来源；合规 User-Agent、限流、HTML 清理、原始哈希与来源 URL 已实现 |
 | 宏观 | Mock 序列 | FRED | 每个序列保留频率、单位、修订信息与 effective date |
 | 行情 | Mock adjusted OHLCV | 供应商待 Phase 7 许可评审 | 必须支持历史保存、展示和导出的合同权利 |
 | 基本面 | Mock 报表 | 供应商待 Phase 7 许可评审 | 必须说明原始/标准化口径与公司行动处理 |
 | 新闻 | 不启用 | 可选 | 不作为报告完成的硬依赖，不抓取付费墙 |
 
 行情和基本面供应商暂不在 Phase 0 硬编码。Phase 7 选型门禁包括：覆盖率、调整价口径、财务字段定义、历史深度、限流、SLA、成本，以及存储、缓存、派生分析、UI 展示和 PDF 导出的许可。
+
+### 4.1 SEC EDGAR Adapter v1
+
+- 证券代码先通过 SEC 官方 `company_tickers.json` 映射 CIK，再读取 `data.sec.gov/submissions/CIK##########.json`，只下载允许的 10-K、10-Q、8-K、20-F、40-F、6-K 及修订版主文档；
+- `SEC_USER_AGENT` 必须包含应用身份与受监控联系邮箱。实现上限为 1–10 次/秒，默认 8 次/秒，遵守 SEC 当前不超过 10 次/秒的自动访问政策；
+- 生产 URL 只允许 `https://data.sec.gov` 与 `https://www.sec.gov`，拒绝 user-info、非 HTTPS 官方地址、路径穿越和非允许文档标识；Contract Test 可使用 loopback HTTP；
+- JSON/HTML 响应分别验证内容类型、空响应和字节上限。只对 429、502、503、网络错误和超时进行有界重试，不对 4xx、Schema、路径或内容类型错误重试；
+- `rawDataHash` 对 ticker 元数据、submissions JSON 和下载文档的原始字节按长度分隔后计算 SHA-256；规范化 Payload 另算 `normalizedDataHash`；
+- Source Snapshot 保存 provider、schema、retrieved/effective date、官方来源 URL、freshness、原始哈希和访问政策版本；每份 Filing 的官方 URL 保存为 `raw_text_uri`；
+- 官方契约依据：[SEC EDGAR API](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)、[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions) 与 [SEC Rate Control Notice](https://www.sec.gov/filergroup/announcements-old/new-rate-control-limits)。
+
+当前限制：尚未实现 SEC Redis 缓存、熔断器、Provider 状态指标与完整 REAL 研究编排，因此本检查点不关闭 Gate G7。
 
 ## 5. SourceSnapshot
 

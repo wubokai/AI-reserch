@@ -31,6 +31,14 @@ public class RuntimeBoundaryValidator {
         if (production && applicationProperties.dataMode() != DataMode.REAL) {
             throw new IllegalStateException("The production profile requires REAL data mode");
         }
+        String filingProvider = environment.getProperty("app.providers.filing");
+        filingProvider = filingProvider == null ? "mock" : filingProvider;
+        if (applicationProperties.dataMode() == DataMode.MOCK
+                && !"mock".equalsIgnoreCase(filingProvider)) {
+            throw new IllegalStateException(
+                    "MOCK data mode cannot enable a real filing provider"
+            );
+        }
     }
 
     private boolean hasProfile(String profile) {

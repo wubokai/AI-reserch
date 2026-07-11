@@ -13,6 +13,7 @@ import com.aiquantresearch.api.research.provider.FundamentalDataSnapshot;
 import com.aiquantresearch.api.research.provider.MacroDataProvider;
 import com.aiquantresearch.api.research.provider.MarketDataProvider;
 import com.aiquantresearch.api.research.provider.MarketDataSnapshot;
+import com.aiquantresearch.api.research.provider.ProviderAccessException;
 import com.aiquantresearch.api.research.provider.ProviderDataNotFoundException;
 import com.aiquantresearch.api.research.provider.mock.MockFixtureCatalog;
 import com.aiquantresearch.api.research.report.ReportValidator;
@@ -138,10 +139,17 @@ public class Phase3StepExecutor {
                 case GENERATE_REPORT -> generateReport(claim, context);
                 case VALIDATE_REPORT -> validateReport(context);
             };
+        } catch (ProviderAccessException exception) {
+            throw new StepExecutionException(
+                    exception.code(),
+                    exception.getMessage(),
+                    exception.retryable(),
+                    exception
+            );
         } catch (ProviderDataNotFoundException exception) {
             throw new StepExecutionException(
-                    "MOCK_FIXTURE_NOT_FOUND",
-                    "The requested security is outside the Phase 3 Mock coverage",
+                    "PROVIDER_DATA_NOT_FOUND",
+                    "The requested security has no data from the configured provider",
                     false,
                     exception
             );

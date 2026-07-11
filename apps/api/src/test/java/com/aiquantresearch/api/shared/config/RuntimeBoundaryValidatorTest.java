@@ -43,6 +43,18 @@ class RuntimeBoundaryValidatorTest {
         assertThatNoException().isThrownBy(validator::validate);
     }
 
+    @Test
+    void mockModeRejectsRealFilingProvider() {
+        var environment = new MockEnvironment();
+        environment.setActiveProfiles("development");
+        environment.setProperty("app.providers.filing", "sec");
+        var validator = new RuntimeBoundaryValidator(properties(DataMode.MOCK), environment);
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("real filing provider");
+    }
+
     private ApplicationProperties properties(DataMode dataMode) {
         return new ApplicationProperties("ai-quant-research-api", "test", dataMode);
     }

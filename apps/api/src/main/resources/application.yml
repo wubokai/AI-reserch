@@ -62,6 +62,19 @@ app:
   analytics:
     base-url: ${ANALYTICS_INTERNAL_BASE_URL:http://localhost:8000}
     timeout: ${ANALYTICS_TIMEOUT:15s}
+  providers:
+    filing: ${FILING_DATA_PROVIDER:mock}
+    sec:
+      data-base-url: ${SEC_DATA_BASE_URL:https://data.sec.gov}
+      archives-base-url: ${SEC_ARCHIVES_BASE_URL:https://www.sec.gov}
+      company-tickers-url: ${SEC_COMPANY_TICKERS_URL:https://www.sec.gov/files/company_tickers.json}
+      timeout: ${SEC_TIMEOUT:20s}
+      user-agent: ${SEC_USER_AGENT:}
+      max-requests-per-second: ${SEC_MAX_REQUESTS_PER_SECOND:8}
+      max-filings: ${SEC_MAX_FILINGS:6}
+      max-json-bytes: ${SEC_MAX_JSON_BYTES:10000000}
+      max-filing-bytes: ${SEC_MAX_FILING_BYTES:20000000}
+      max-attempts: ${SEC_MAX_ATTEMPTS:3}
   llm:
     base-url: ${OPENAI_BASE_URL:https://api.openai.com}
     timeout: ${OPENAI_TIMEOUT:45s}

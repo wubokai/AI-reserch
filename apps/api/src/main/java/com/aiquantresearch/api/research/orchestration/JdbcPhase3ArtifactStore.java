@@ -8,6 +8,7 @@ import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -189,48 +190,57 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
     @Override
     public StoredSource persistSource(
             QueueClaim claim,
-            String provider,
-            String schemaVersion,
-            String purpose,
-            String externalSourceId,
-            LocalDate effectiveDate,
-            JsonNode payload,
-            boolean primary
+            SourceRegistration registration,
+            JsonNode payload
     ) {
         String contentHash = hashService.hash(payload);
+        String rawDataHash = registration.rawDataHash() == null
+                ? contentHash
+                : registration.rawDataHash();
+        ObjectNode metadata = objectMapper.createObjectNode();
+        metadata.put("snapshotPolicyVersion", "source_snapshot_v2");
+        metadata.put("rawEqualsNormalized", rawDataHash.equals(contentHash));
+        if (registration.licensePolicyVersion() != null) {
+            metadata.put("licensePolicyVersion", registration.licensePolicyVersion());
+        }
+        if (registration.demoData()) {
+            metadata.put("missingPublishedAtReason", "synthetic fixture uses its effective date");
+        }
         UUID proposedId = UUID.randomUUID();
         jdbcTemplate.update("""
                 insert into source_snapshots (
                     id, provider, source_type, external_source_id,
-                    request_fingerprint, retrieved_at, effective_date,
+                    source_url, request_fingerprint, retrieved_at, effective_date,
                     raw_data_hash, normalized_data_hash, payload_json,
                     is_primary_source, freshness_status, is_demo_data, schema_version,
                     metadata_json
-                ) values (?, ?, 'MOCK', ?, ?, ?, ?, ?, ?, ?::jsonb, ?, 'FRESH', true, ?,
-                          jsonb_build_object(
-                              'missingPublishedAtReason',
-                              'synthetic fixture uses its effective date',
-                              'snapshotPolicyVersion', 'source_snapshot_v1',
-                              'rawEqualsNormalized', true
-                          ))
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?::jsonb)
                 on conflict (provider, raw_data_hash, schema_version) do nothing
                 """,
                 proposedId,
-                provider,
-                externalSourceId,
+                registration.provider(),
+                registration.sourceType(),
+                registration.externalSourceId(),
+                registration.sourceUrl(),
                 claim.inputHash(),
-                Timestamp.from(clock.instant()),
-                effectiveDate,
-                contentHash,
+                Timestamp.from(registration.retrievedAt() == null
+                        ? clock.instant()
+                        : registration.retrievedAt()),
+                registration.effectiveDate(),
+                rawDataHash,
                 contentHash,
                 jsonText(payload),
-                primary,
-                schemaVersion
+                registration.primary(),
+                registration.freshnessStatus(),
+                registration.demoData(),
+                registration.schemaVersion(),
+                jsonText(metadata)
         );
         UUID sourceId = jdbcTemplate.queryForObject("""
                 select id from source_snapshots
                  where provider = ? and raw_data_hash = ? and schema_version = ?
-                """, UUID.class, provider, contentHash, schemaVersion);
+                """, UUID.class, registration.provider(), rawDataHash,
+                registration.schemaVersion());
         if (sourceId == null) {
             throw new StepExecutionException(
                     "SOURCE_SNAPSHOT_WRITE_FAILED",
@@ -243,17 +253,18 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                     research_job_id, source_snapshot_id, step_attempt_id, purpose
                 ) values (?, ?, ?, ?)
                 on conflict (research_job_id, source_snapshot_id, purpose) do nothing
-                """, claim.researchJobId(), sourceId, claim.attemptId(), purpose);
+                """, claim.researchJobId(), sourceId, claim.attemptId(),
+                registration.purpose());
         return new StoredSource(
                 sourceId,
-                purpose,
-                externalSourceId,
+                registration.purpose(),
+                registration.externalSourceId(),
                 payload,
                 contentHash,
-                provider,
-                primary,
-                "FRESH",
-                true
+                registration.provider(),
+                registration.primary(),
+                registration.freshnessStatus(),
+                registration.demoData()
         );
     }
 

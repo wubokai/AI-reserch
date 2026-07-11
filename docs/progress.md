@@ -11,7 +11,8 @@
 | Phase 4：完整量化服务 | 完成 | 73 个有序 Metric、确定性 Trend、黄金数据集、完整数值/语义边界、Java/Python 契约和原有 Mock 闭环回归均通过；Gate G4 通过 |
 | Phase 5：Evidence 与 SEC 检索基础 | 完成 | Source Snapshot、日期/数值引用、确定性 Freshness/Confidence/Data Quality、一次安全修复、Filing 清洗/Chunk/GIN 检索、Evidence Drawer 与快照复现均通过；Gate G5 通过 |
 | Phase 6：真实 LLM 安全接入 | 完成 | `ResearchLanguageModel` Mock/Real 双实现、Responses API、6 个严格 Schema、三工具 allowlist、预算预留/结算、调用/失败审计和安全回退已通过；Gate G6 通过 |
-| Phase 7-9 | 未开始 | 下一步按 SEC → FRED → Market → Fundamental 推进真实 Provider 与许可门禁 |
+| Phase 7：真实数据源 | 进行中 | SEC EDGAR Adapter 首检查点已实现：官方主机边界、User-Agent、限流、超时/重试、响应/路径安全、原始哈希、真实 Source Snapshot 与 Filing URL 落库；缓存/熔断/指标、FRED、Market、Fundamental 待完成 |
+| Phase 8-9 | 未开始 | 完整前端产品与发布硬化将在 Gate G7 后推进 |
 
 ## 已验证
 
@@ -19,7 +20,7 @@
 - OpenAPI 3.1 YAML 可解析，本地引用与必需操作完整；
 - LLM/Analytics JSON Schema 是合法 JSON；
 - Web：ESLint、TypeScript、20 个 Vitest、Next.js production build 与 4 个 Playwright 用例通过；闭环 E2E 覆盖创建 → 进度 → 报告/Evidence → Bull/Base/Bear → 三种导出 → 历史重开；
-- API：Java 21 / Spring Boot 3.5，167 个 Surefire 测试通过；Mock Provider、Analytics 契约、Worker、Evidence/Claim 验证、Filing 检索、Responses HTTP mock、严格输出、工具白名单、模型路由和安全回退均有自动化覆盖；
+- API：Java 21 / Spring Boot 3.5，Phase 7 首检查点 175 个 Surefire 测试通过；新增 SEC 本地 HTTP Contract Test 覆盖映射、来源、User-Agent、429 重试、危险路径、错误内容类型、空响应和体积上限，真实来源落库 Testcontainers 测试已编译；
 - PostgreSQL 17：Flyway V1–V8；V8 的 `llm_budget_reservations`、provider/pricing/request 元数据、真实 HTTP 调用计数、原子预留、幂等、超支阻断、结算、失败审计和不可变约束均通过 Testcontainers；
 - Analytics：Ruff、strict mypy、41 个 pytest 通过，branch coverage 93.92%；完整覆盖收益、风险、技术/Trend、基本面、估值与情景；
 - 本地真实服务链路：MU、NVDA、RKLB 完整研究均形成已验证报告；关闭基本面叙事时安全部分完成，关闭宏观时完整完成；所有保留的重要 Claim 都关联同任务 Evidence；
@@ -30,12 +31,13 @@
 - GitHub Actions：Gate G4 的 Web/Playwright、Analytics、API/Testcontainers、secret scan 与 Compose 全部通过（[run `29111976669`](https://github.com/wubokai/AI-reserch/actions/runs/29111976669)）。Compose 在扩展 73 个 Metric 后仍于 3 次轮询到达 `COMPLETED`，并验证 Evidence、报告 v1、历史、三种导出与 Web BFF；
 - GitHub Actions：Gate G5 的 Web/Playwright、Analytics、156+40 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29115859586`](https://github.com/wubokai/AI-reserch/actions/runs/29115859586)）；新增 PostgreSQL 测试覆盖 V7、GIN 检索、Filing/Chunk 不可变和历史 Snapshot 复现；
 - GitHub Actions：Gate G6 的 Web/Playwright、Analytics、167+44 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29118462224`](https://github.com/wubokai/AI-reserch/actions/runs/29118462224)）；新增覆盖 V8、预算/调用数原子 ledger、成功/失败脱敏审计、Responses HTTP mock、结构化输出和安全回退；
-- Phase 3–6 详细证据见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)、[`phase4-test-matrix.md`](./phase4-test-matrix.md)、[`phase5-test-matrix.md`](./phase5-test-matrix.md) 和 [`phase6-test-matrix.md`](./phase6-test-matrix.md)。
+- Phase 3–7 详细证据见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)、[`phase4-test-matrix.md`](./phase4-test-matrix.md)、[`phase5-test-matrix.md`](./phase5-test-matrix.md)、[`phase6-test-matrix.md`](./phase6-test-matrix.md) 和 [`phase7-test-matrix.md`](./phase7-test-matrix.md)。
 
 ## 当前限制
 
 - 本机没有 Docker；Gate G3–G6 的容器、Testcontainers 和 Compose 终验均由 GitHub Actions Linux runner 完成。
 - 普通用户闭环只允许 `dataMode=MOCK`；目标只支持 MU/NVDA/RKLB，基准只支持 SPY/QQQ，深度固定 `STANDARD`，周期固定 `5y`，技术分析必须启用。
 - 基本面开关只控制可选叙事分析步骤；情景计算所需的规范化基本面数据仍会获取。宏观开关关闭时跳过宏观取数。
-- 真实行情和基本面 Provider 尚未选择，这是 Phase 7 前的有意许可决策门。
+- SEC Adapter 已接入但默认关闭；缓存、熔断、状态指标和完整 REAL 编排尚未完成，不能把单一 SEC Adapter 描述为可发布的真实研究闭环。
+- FRED 尚未接入；真实行情和基本面 Provider 尚未选择，这是 Phase 7 的有意许可决策门。
 - 真实 OpenAI Adapter 已接入但未配置生产模型、Key 或价格；当前默认仍只发布确定性 Mock 报告，测试不访问真实外部模型。

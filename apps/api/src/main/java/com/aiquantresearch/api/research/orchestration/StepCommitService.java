@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -246,18 +247,56 @@ public class StepCommitService {
             boolean primary,
             ArrayNode artifactIds
     ) {
-        var source = artifactStore.persistSource(
-                claim,
-                provider,
-                schemaVersion,
+        boolean demoData = payload.has("demoData")
+                ? payload.path("demoData").asBoolean()
+                : payload.path("watermark").asText().contains("DEMO DATA");
+        String resolvedProvider = text(payload, "provider", provider);
+        String resolvedSchema = text(payload, "schemaVersion", schemaVersion);
+        String rawDataHash = nullableText(payload, "rawDataHash");
+        String sourceUrl = nullableText(payload, "sourceUrl");
+        String retrievedAtText = nullableText(payload, "retrievedAt");
+        String freshnessStatus = text(payload, "freshnessStatus", "FRESH");
+        SourceRegistration registration = new SourceRegistration(
+                resolvedProvider,
+                demoData ? "MOCK" : sourceType(purpose),
+                resolvedSchema,
                 purpose,
                 externalId,
+                sourceUrl,
+                retrievedAtText == null ? null : Instant.parse(retrievedAtText),
                 effectiveDate,
-                payload,
-                primary
+                rawDataHash,
+                primary,
+                freshnessStatus,
+                demoData,
+                nullableText(payload, "licensePolicyVersion")
+        );
+        var source = artifactStore.persistSource(
+                claim,
+                registration,
+                payload
         );
         artifactIds.add(source.id().toString());
         return source;
+    }
+
+    private static String sourceType(String purpose) {
+        return switch (purpose) {
+            case "FILING" -> "SEC_FILING";
+            case "MACRO" -> "GOVERNMENT_DATA";
+            case "MARKET_DATA", "BENCHMARK_DATA" -> "MARKET_DATA_PROVIDER";
+            default -> "OTHER";
+        };
+    }
+
+    private static String text(JsonNode payload, String field, String fallback) {
+        String value = payload.path(field).asText();
+        return value.isBlank() ? fallback : value;
+    }
+
+    private static String nullableText(JsonNode payload, String field) {
+        String value = payload.path(field).asText();
+        return value.isBlank() ? null : value;
     }
 
     private static LocalDate date(JsonNode payload, String field) {

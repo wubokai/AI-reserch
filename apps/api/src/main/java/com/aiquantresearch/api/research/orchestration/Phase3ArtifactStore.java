@@ -3,7 +3,6 @@ package com.aiquantresearch.api.research.orchestration;
 import com.aiquantresearch.api.research.llm.LlmCallAudit;
 import com.aiquantresearch.api.research.worker.QueueClaim;
 import com.fasterxml.jackson.databind.JsonNode;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,13 +25,8 @@ public interface Phase3ArtifactStore {
 
     StoredSource persistSource(
             QueueClaim claim,
-            String provider,
-            String schemaVersion,
-            String purpose,
-            String externalSourceId,
-            LocalDate effectiveDate,
-            JsonNode payload,
-            boolean primary
+            SourceRegistration registration,
+            JsonNode payload
     );
 
     List<StoredQuantResult> persistQuantMetrics(

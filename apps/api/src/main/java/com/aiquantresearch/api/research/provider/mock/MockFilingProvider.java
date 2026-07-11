@@ -3,9 +3,16 @@ package com.aiquantresearch.api.research.provider.mock;
 import com.aiquantresearch.api.research.provider.FilingDocument;
 import com.aiquantresearch.api.research.provider.FilingProvider;
 import com.aiquantresearch.api.research.provider.FilingSnapshot;
+import java.time.ZoneOffset;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(
+        name = "app.providers.filing",
+        havingValue = "mock",
+        matchIfMissing = true
+)
 public class MockFilingProvider implements FilingProvider {
 
     private final MockFixtureCatalog catalog;
@@ -29,11 +36,19 @@ public class MockFilingProvider implements FilingProvider {
                 ))
                 .toList();
         return new FilingSnapshot(
+                "MOCK_FILINGS_V1",
+                "mock_filings_v1",
                 manifest.fixtureVersion(),
                 fixture.symbol(),
                 manifest.asOfDate(),
+                manifest.asOfDate().atStartOfDay().toInstant(ZoneOffset.UTC),
+                null,
+                null,
                 documents,
-                manifest.watermark()
+                manifest.watermark(),
+                true,
+                "FRESH",
+                "mock_fixture_license_v1"
         );
     }
 
