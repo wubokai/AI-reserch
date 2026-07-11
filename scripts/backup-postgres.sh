@@ -57,7 +57,7 @@ docker compose \
 
 mv "${temporary}" "${destination}"
 sha256sum "${destination}" > "${destination}.sha256"
-git -C "${ROOT_DIR}" rev-parse HEAD > "${destination}.commit"
+(cd "${ROOT_DIR}" && git rev-parse HEAD) > "${destination}.commit"
 
 if [[ -n "${BACKUP_REMOTE:-}" ]]; then
   command -v rclone >/dev/null 2>&1 || {
