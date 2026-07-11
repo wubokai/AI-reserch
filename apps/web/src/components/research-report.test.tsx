@@ -57,10 +57,12 @@ describe("ResearchReport source attribution", () => {
 
     render(<ResearchReport researchId={phase3ResearchId} version={1} />, { wrapper });
 
-    expect(await screen.findByText("数据来源与归属")).toBeInTheDocument();
+    expect(await screen.findByText("这些数据来自哪里")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 分析总结" })).toBeInTheDocument();
     expect(screen.getByText(attribution)).toBeInTheDocument();
-    expect(screen.getByText("Policy fred_api_terms_2025-02-18")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "打开官方来源" }))
+    expect(screen.getByText("fred_api_terms_2025-02-18")).toBeInTheDocument();
+    expect(screen.getByText("报告依据（1 条）")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "查看官方资料" }))
       .toHaveAttribute("href", "https://fred.stlouisfed.org/fred/");
     expect(screen.queryByText(DEMO_DATA_NOTICE)).not.toBeInTheDocument();
   });

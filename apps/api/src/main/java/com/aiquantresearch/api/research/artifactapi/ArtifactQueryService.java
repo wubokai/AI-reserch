@@ -224,7 +224,7 @@ public class ArtifactQueryService {
                 && hasConfiguration("OPENAI_REPORT_MODEL");
         Instant lastSuccess = configured ? latestLlmSuccess() : null;
         String name = environment.getProperty("OPENAI_BASE_URL", "")
-                .contains("lanyapi.com") ? "LanYi" : "OpenAI";
+                .contains("lanyiapi.com") ? "LanYi" : "OpenAI";
         return new ArtifactApiResponses.ProviderStatus(
                 name,
                 List.of("LLM"),

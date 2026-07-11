@@ -33,7 +33,7 @@ if [[ "${missing}" -ne 0 ]]; then
   exit 1
 fi
 
-[[ "${OPENAI_BASE_URL}" == "https://lanyapi.com/v1/" ]] || {
+[[ "${OPENAI_BASE_URL}" == "https://lanyiapi.com/v1/" ]] || {
   echo "OPENAI_BASE_URL must be the reviewed LanYi v1 endpoint" >&2
   exit 1
 }

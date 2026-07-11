@@ -15,7 +15,7 @@ class LlmPropertiesSecurityTest {
         assertThatNoException().isThrownBy(() ->
                 LlmProperties.validateBaseUrl(URI.create("http://127.0.0.1:8089")));
         assertThatNoException().isThrownBy(() ->
-                LlmProperties.validateBaseUrl(URI.create("https://lanyapi.com/v1/")));
+                LlmProperties.validateBaseUrl(URI.create("https://lanyiapi.com/v1/")));
     }
 
     @Test
@@ -30,10 +30,10 @@ class LlmPropertiesSecurityTest {
                 URI.create("https://api.openai.com.attacker.invalid")
         )).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> LlmProperties.validateBaseUrl(
-                URI.create("https://lanyapi.com.attacker.invalid/v1")
+                URI.create("https://lanyiapi.com.attacker.invalid/v1")
         )).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> LlmProperties.validateBaseUrl(
-                URI.create("https://lanyapi.com/admin")
+                URI.create("https://lanyiapi.com/admin")
         )).isInstanceOf(IllegalArgumentException.class);
     }
 }

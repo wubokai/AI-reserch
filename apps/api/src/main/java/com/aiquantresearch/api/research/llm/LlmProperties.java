@@ -63,7 +63,7 @@ public record LlmProperties(
         boolean official = "api.openai.com".equalsIgnoreCase(host)
                 && "https".equalsIgnoreCase(uri.getScheme())
                 && (uri.getPort() == -1 || uri.getPort() == 443);
-        boolean approvedLanYi = "lanyapi.com".equalsIgnoreCase(host)
+        boolean approvedLanYi = "lanyiapi.com".equalsIgnoreCase(host)
                 && "https".equalsIgnoreCase(uri.getScheme())
                 && (uri.getPort() == -1 || uri.getPort() == 443)
                 && approvedApiPath(uri.getPath());
@@ -77,7 +77,7 @@ public record LlmProperties(
     }
 
     public String providerName() {
-        return "lanyapi.com".equalsIgnoreCase(baseUrl.getHost()) ? "LANYI" : "OPENAI";
+        return "lanyiapi.com".equalsIgnoreCase(baseUrl.getHost()) ? "LANYI" : "OPENAI";
     }
 
     private static boolean approvedApiPath(String path) {

@@ -105,7 +105,7 @@ class ArtifactQueryServiceTest {
                 .withProperty("FRED_API_KEY", "configured")
                 .withProperty("OPENAI_API_KEY", "configured")
                 .withProperty("OPENAI_REPORT_MODEL", "gpt-5.5")
-                .withProperty("OPENAI_BASE_URL", "https://lanyapi.com/v1/");
+                .withProperty("OPENAI_BASE_URL", "https://lanyiapi.com/v1/");
         var realService = new ArtifactQueryService(
                 jdbc,
                 new ObjectMapper().findAndRegisterModules(),

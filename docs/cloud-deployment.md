@@ -8,6 +8,9 @@
 浏览器不直接访问 Java API、PostgreSQL 或 Redis。Web BFF 每次请求生成 60 秒 HS256 Bearer JWT，API 校验
 issuer、audience、签名、有效期和 owner email。所有宿主端口只绑定 `127.0.0.1`。
 
+共享服务器若已有服务占用默认端口，可在 `.env.production` 中设置 `WEB_HOST_PORT`、`API_HOST_PORT` 和
+`ANALYTICS_HOST_PORT`；只改变宿主机回环端口，不改变容器间通信，也不得把绑定地址改成公网 IP。
+
 首选 Oracle Cloud Always Free Ampere A1（2 OCPU/12 GB 免费额度内），因为五容器在 1 GB Micro 上余量
 不足；若所选区域没有免费容量，使用 Hetzner 4 GB shared VPS 作为付费后备。部署文件保持标准
 ARM64/AMD64 Docker 兼容，不绑定云厂商。

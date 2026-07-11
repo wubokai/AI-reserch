@@ -7,7 +7,7 @@
 ## 已确认决定
 
 - Market：Tiingo Individual Starter，仅限项目负责人个人内部使用，禁止再分发。
-- LLM endpoint：LanYi `https://lanyapi.com/v1/`，模型 `gpt-5.5`、reasoning `xhigh`；第三方处理风险已接受。
+- LLM endpoint：LanYi `https://lanyiapi.com/v1/`，模型 `gpt-5.5`、reasoning `xhigh`；第三方处理风险已接受。
 - 部署：24 小时云主机 + Tailscale 私网，不公开 Funnel，不设置公共域名。
 - 保留：R3，Research/Evidence 1095 天、独立 Provider raw 365 天、备份 90 天。
 - SEC 联系邮箱：`bw2754@nyu.edu`。
