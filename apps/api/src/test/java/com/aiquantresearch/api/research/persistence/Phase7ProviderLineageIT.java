@@ -49,7 +49,7 @@ class Phase7ProviderLineageIT extends PostgresRedisIntegrationTestSupport {
                     id, user_id, symbol_input, query, locale, request_json,
                     status, progress, current_step, data_mode, created_by, updated_by
                 ) values (?, ?, 'MU', 'Validate real provider lineage', 'en-US', '{}'::jsonb,
-                          'QUEUED', 0, 'FETCH_FILINGS', 'REAL', ?, ?)
+                          'QUEUED', 0, 'RESOLVE_SECURITY', 'REAL', ?, ?)
                 """, researchId, ownerId, ownerId, ownerId);
     }
 
