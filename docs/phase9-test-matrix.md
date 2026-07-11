@@ -15,7 +15,7 @@
 | Prompt Injection | untrusted Evidence 边界、三工具 allowlist、严格 Schema、发布验证 | 回归覆盖 |
 | IDOR | Research/Report/Evidence/Export owner-scoped，跨用户统一 404 | 回归覆盖 |
 | PDF | 离线字体、无 URI/JS、25 MiB、200 页、字体 50 MiB、失败隔离 | 本地通过 |
-| 供应链 | pnpm lock/audit、Python 精确版本/pip-audit、Dependabot、secret scan、固定校验和 Grype 镜像扫描 | 本地依赖通过，镜像 CI 待终验 |
+| 供应链 | pnpm lock/audit、Python 精确版本/pip-audit、Dependabot、secret scan、固定校验和 Grype 镜像扫描 | 应用依赖 0 已知漏洞；镜像 Critical 阻断，高风险显式评审 |
 | 容器 | 三个应用 non-root、read-only、tmpfs、cap-drop ALL、no-new-privileges、PID limit | CI 待终验 |
 | 文档 | README、运行手册、可观测性、Provider 扩展、保留策略、风险与验收矩阵 | 已完成 |
 

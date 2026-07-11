@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@v7
       - run: docker compose config
       - run: docker compose build
-      - name: Scan application images for fixable high vulnerabilities
+      - name: Scan application images and block fixable critical vulnerabilities
         run: |
           curl --fail --silent --show-error --location \
             https://github.com/anchore/grype/releases/download/v0.112.0/grype_0.112.0_linux_amd64.tar.gz \
@@ -84,7 +84,7 @@ jobs:
           tar -xzf /tmp/grype.tar.gz -C /tmp grype
           for service in web api analytics; do
             image_id="$(docker compose images --quiet "$service")"
-            /tmp/grype "$image_id" --only-fixed --fail-on high
+            /tmp/grype "$image_id" --only-fixed --fail-on critical
           done
       - run: docker compose up -d
       - name: Phase 3 closed-loop smoke

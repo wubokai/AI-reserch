@@ -34,7 +34,8 @@ Markdown/HTML/PDF 和 Web BFF 字节一致性。默认流程不访问 SEC、FRED
 
 1. 确认工作树干净且 OpenAPI/Schema/文档与消费者一致。
 2. 执行 Web lint/typecheck/unit/build/E2E、Analytics ruff/format/mypy/pytest、API `verify`。
-3. 执行 `pnpm audit`、`pip-audit --local`、secret scan 和经 SHA-256 固定的 Grype 镜像扫描。
+3. 执行 `pnpm audit`、`pip-audit --local`、secret scan 和经 SHA-256 固定的 Grype 镜像扫描；
+   镜像 Critical 阻断，高风险必须在发布记录中修复或给出有期限的接受说明。
 4. 构建 Compose，确认应用容器 non-root、read-only、`cap_drop: ALL`、no-new-privileges。
 5. 运行完整 closed-loop smoke，两次连续 GitHub CI 必须成功。
 6. 记录 commit、CI run、Schema/Prompt/Calculation/模板版本和剩余外部门禁。

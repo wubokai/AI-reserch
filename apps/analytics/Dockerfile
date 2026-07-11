@@ -11,7 +11,9 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
 
-RUN python -m pip install .
+RUN python -m pip install --upgrade pip \
+    && python -m pip install . \
+    && python -m pip uninstall --yes pip setuptools wheel
 
 USER 65532:65532
 
