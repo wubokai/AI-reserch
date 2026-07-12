@@ -492,9 +492,13 @@ public class DeterministicMockReportGenerator {
                             ? "固定演示数据不代表真实市场、公司或宏观状况。"
                             : "Fixed demo data does not represent real market, company, or macro conditions.");
         } else {
-            limitations.add(chinese
-                    ? "数据来自已注册的真实外部数据源，仍可能存在延迟、修订或覆盖缺口。"
-                    : "Registered real-provider data may still have delays, revisions, or coverage gaps.");
+            limitations
+                    .add(chinese
+                            ? "数据来自已注册的真实外部数据源，仍可能存在延迟、修订或覆盖缺口。"
+                            : "Registered real-provider data may still have delays, revisions, or coverage gaps.")
+                    .add(chinese
+                            ? "Bull/Base/Bear 使用 deterministic_scenario_policy_v1 固定透明假设，仅用于敏感性分析，不是价格预测。"
+                            : "Bull/Base/Bear uses transparent deterministic_scenario_policy_v1 assumptions for sensitivity analysis, not a price forecast.");
         }
         optionalUnavailableMetrics.stream()
                 .limit(28)

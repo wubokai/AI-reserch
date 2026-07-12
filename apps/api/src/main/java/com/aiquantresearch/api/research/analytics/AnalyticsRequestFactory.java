@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -92,7 +94,7 @@ public class AnalyticsRequestFactory {
             item.put("name", metric.name());
             item.put("value", decimal(metric.value()));
             item.put("unit", metric.unit());
-            item.put("periodType", metric.periodType());
+            item.put("periodType", analyticsPeriodType(metric.periodType()));
             item.put("periodEndDate", metric.periodEndDate().toString());
             item.put("sourceSnapshotId", snapshotId);
         }
@@ -108,10 +110,16 @@ public class AnalyticsRequestFactory {
         Map<String, FundamentalMetric> byName = snapshot.metrics().stream().collect(
                 Collectors.toUnmodifiableMap(FundamentalMetric::name, Function.identity())
         );
-        if (snapshot.scenarios().size() != 3
-                || !byName.keySet().containsAll(
+        if (!byName.keySet().containsAll(
                         java.util.Set.of("revenue", "netDebt", "dilutedShares")
                 )) {
+            return objectMapper.nullNode();
+        }
+        List<ScenarioAssumption> assumptions = snapshot.scenarios();
+        if (assumptions.isEmpty()) {
+            assumptions = deterministicRealDataScenarios(byName);
+        }
+        if (assumptions.size() != 3) {
             return objectMapper.nullNode();
         }
         ObjectNode result = objectMapper.createObjectNode();
@@ -122,7 +130,7 @@ public class AnalyticsRequestFactory {
         result.put("currency", "USD");
         result.putArray("sourceSnapshotIds").add(marketSnapshotId).add(snapshotId);
         ArrayNode scenarios = result.putArray("scenarios");
-        for (ScenarioAssumption scenario : snapshot.scenarios()) {
+        for (ScenarioAssumption scenario : assumptions) {
             ObjectNode item = scenarios.addObject();
             item.put("name", scenario.name());
             item.put("revenueGrowth", decimal(scenario.revenueGrowth()));
@@ -131,6 +139,60 @@ public class AnalyticsRequestFactory {
             item.put("probability", decimal(scenario.probability()));
         }
         return result;
+    }
+
+    private static List<ScenarioAssumption> deterministicRealDataScenarios(
+            Map<String, FundamentalMetric> byName
+    ) {
+        FundamentalMetric profit = byName.get("ebitda");
+        if (profit == null) {
+            profit = byName.get("operatingIncome");
+        }
+        BigDecimal revenue = byName.get("revenue").value();
+        BigDecimal baseMargin = profit == null || revenue.signum() == 0
+                ? new BigDecimal("0.20")
+                : profit.value().divide(revenue, 8, RoundingMode.HALF_EVEN);
+        baseMargin = clamp(baseMargin, new BigDecimal("-0.50"), new BigDecimal("0.80"));
+        BigDecimal bullMargin = clamp(
+                baseMargin.add(new BigDecimal("0.05")),
+                new BigDecimal("-0.50"),
+                new BigDecimal("0.80")
+        );
+        BigDecimal bearMargin = clamp(
+                baseMargin.subtract(new BigDecimal("0.10")),
+                new BigDecimal("-0.50"),
+                new BigDecimal("0.80")
+        );
+        return List.of(
+                new ScenarioAssumption(
+                        "BULL", new BigDecimal("0.20"), bullMargin,
+                        new BigDecimal("25"), new BigDecimal("0.25")
+                ),
+                new ScenarioAssumption(
+                        "BASE", new BigDecimal("0.08"), baseMargin,
+                        new BigDecimal("20"), new BigDecimal("0.50")
+                ),
+                new ScenarioAssumption(
+                        "BEAR", new BigDecimal("-0.10"), bearMargin,
+                        new BigDecimal("12"), new BigDecimal("0.25")
+                )
+        );
+    }
+
+    private static String analyticsPeriodType(String periodType) {
+        return switch (periodType) {
+            case "FY", "ANNUAL" -> "ANNUAL";
+            case "Q1", "Q2", "Q3", "Q4", "QUARTER" -> "QUARTER";
+            case "TTM" -> "TTM";
+            case "POINT_IN_TIME" -> "POINT_IN_TIME";
+            default -> throw new IllegalArgumentException(
+                    "Unsupported fundamental period type: " + periodType
+            );
+        };
+    }
+
+    private static BigDecimal clamp(BigDecimal value, BigDecimal minimum, BigDecimal maximum) {
+        return value.max(minimum).min(maximum);
     }
 
     private static String decimal(BigDecimal value) {
