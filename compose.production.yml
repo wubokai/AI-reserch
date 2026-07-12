@@ -29,5 +29,6 @@ services:
   web:
     restart: unless-stopped
     environment:
+      DATA_MODE: REAL
       SERVICE_JWT_HMAC_SECRET: ${SERVICE_JWT_HMAC_SECRET:?SERVICE_JWT_HMAC_SECRET is required}
       SERVICE_JWT_EMAIL: ${SERVICE_JWT_EMAIL:?SERVICE_JWT_EMAIL is required}
