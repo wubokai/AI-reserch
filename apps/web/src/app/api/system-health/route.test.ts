@@ -45,10 +45,36 @@ describe("GET /api/system-health", () => {
 
     expect(payload.status).toBe("UP");
     expect(payload.services).toMatchObject({
-      web: { status: "UP" },
+      web: { status: "UP", dataMode: "MOCK" },
       api: { status: "UP", dataMode: "MOCK" },
       analytics: { status: "UP" },
     });
+  });
+
+  it("让 Web 状态跟随已验证的 REAL API 模式", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          status: "UP",
+          version: "1.0.0",
+          timestamp: "2026-07-12T00:00:00Z",
+          dataMode: "REAL",
+          components: {
+            database: { status: "UP", critical: true, latencyMs: 2 },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ status: "ok", service: "analytics", version: "0.1.0" }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await GET();
+    const payload = systemHealthResponseSchema.parse(await response.json());
+
+    expect(payload.services.web.dataMode).toBe("REAL");
+    expect(payload.services.api.dataMode).toBe("REAL");
   });
 
   it("保留 API DEGRADED 状态而不误判为 DOWN", async () => {

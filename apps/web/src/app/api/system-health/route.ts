@@ -93,7 +93,7 @@ export async function GET() {
       status: "UP",
       service: "web",
       version: process.env.npm_package_version ?? "0.1.0",
-      dataMode: "MOCK",
+      dataMode: api.dataMode ?? "MOCK",
     },
     api,
     analytics,
