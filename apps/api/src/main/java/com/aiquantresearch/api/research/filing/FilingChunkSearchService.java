@@ -43,12 +43,14 @@ public class FilingChunkSearchService {
                        ) as rank
                   from filing_chunks fc
                   join filings f on f.id = fc.filing_id
+                  join filing_source_snapshot_links filing_link
+                    on filing_link.filing_id = f.id
                   join research_source_links rsl
-                    on rsl.source_snapshot_id = f.source_snapshot_id
+                    on rsl.source_snapshot_id = filing_link.source_snapshot_id
                    and rsl.purpose = 'FILING'
                   join evidence_items e
                     on e.research_job_id = rsl.research_job_id
-                   and e.source_snapshot_id = f.source_snapshot_id
+                   and e.source_snapshot_id = filing_link.source_snapshot_id
                  where rsl.research_job_id = ?
                    and fc.search_vector @@ websearch_to_tsquery('english', ?)
                  order by rank desc, f.filing_date desc,

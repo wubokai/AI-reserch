@@ -52,7 +52,7 @@ class SecCompanyFactsFundamentalProviderTest {
                 .collect(Collectors.toMap(FundamentalMetric::name, Function.identity()));
 
         assertThat(snapshot.provider()).isEqualTo("SEC_EDGAR_XBRL");
-        assertThat(snapshot.schemaVersion()).isEqualTo("sec_companyfacts_normalized_v1");
+        assertThat(snapshot.schemaVersion()).isEqualTo("sec_companyfacts_normalized_v2");
         assertThat(snapshot.symbol()).isEqualTo("MU");
         assertThat(snapshot.asOfDate()).isEqualTo(LocalDate.parse("2026-05-31"));
         assertThat(snapshot.demoData()).isFalse();
@@ -119,6 +119,45 @@ class SecCompanyFactsFundamentalProviderTest {
 
         assertThat(provider(2).fetch("MU").metrics()).hasSize(8);
         assertThat(calls).hasValue(2);
+    }
+
+    @Test
+    void derivesNetDebtFromCurrentAndNoncurrentDebtWhenAggregateTagIsAbsent()
+            throws Exception {
+        byte[] payload = """
+                {"cik":123,"facts":{"us-gaap":{
+                  "LongTermDebt":{"units":{"USD":[
+                    {"end":"2023-12-31","val":1000,"accn":"0000000123-24-000001",
+                     "fp":"FY","form":"10-K","filed":"2024-02-01"}
+                  ]}},
+                  "LongTermDebtCurrent":{"units":{"USD":[
+                    {"end":"2026-03-31","val":10,"accn":"0000000123-26-000001",
+                     "fp":"Q1","form":"10-Q","filed":"2026-05-01"}
+                  ]}},
+                  "LongTermDebtNoncurrent":{"units":{"USD":[
+                    {"end":"2026-03-31","val":90,"accn":"0000000123-26-000001",
+                     "fp":"Q1","form":"10-Q","filed":"2026-05-01"}
+                  ]}},
+                  "CashAndCashEquivalentsAtCarryingValue":{"units":{"USD":[
+                    {"end":"2026-03-31","val":40,"accn":"0000000123-26-000001",
+                     "fp":"Q1","form":"10-Q","filed":"2026-05-01"}
+                  ]}}
+                }}}
+                """.getBytes(StandardCharsets.UTF_8);
+        start(exchange -> route(exchange, payload));
+
+        var snapshot = provider(1).fetch("MU");
+        FundamentalMetric netDebt = snapshot.metrics().stream()
+                .filter(metric -> "netDebt".equals(metric.name()))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(netDebt.value()).isEqualByComparingTo("60");
+        assertThat(netDebt.componentConcepts()).containsExactly(
+                "LongTermDebtCurrent",
+                "LongTermDebtNoncurrent",
+                "CashAndCashEquivalentsAtCarryingValue"
+        );
     }
 
     private SecCompanyFactsFundamentalProvider provider(int maxAttempts) {

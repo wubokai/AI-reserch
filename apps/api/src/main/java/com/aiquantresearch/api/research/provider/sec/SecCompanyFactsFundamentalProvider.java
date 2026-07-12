@@ -45,8 +45,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvider {
 
     static final String PROVIDER = "SEC_EDGAR_XBRL";
-    static final String SCHEMA_VERSION = "sec_companyfacts_normalized_v1";
-    static final String MAPPING_VERSION = "us_gaap_fundamentals_v1";
+    static final String SCHEMA_VERSION = "sec_companyfacts_normalized_v2";
+    static final String MAPPING_VERSION = "us_gaap_fundamentals_v2";
     static final String LICENSE_POLICY_VERSION = "sec_public_edgar_2025_04_08";
 
     private static final Pattern ACCESSION = Pattern.compile("^[0-9]{10}-[0-9]{2}-[0-9]{6}$");
@@ -200,10 +200,46 @@ public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvid
         deriveSum(metrics, warnings, "ebitda", operatingIncome,
                 annual(root, List.of("DepreciationDepletionAndAmortization"), "USD", asOf),
                 "USD");
-        deriveDifference(metrics, warnings, "netDebt", instant(root, TOTAL_DEBT, "USD", asOf),
+        deriveDifference(metrics, warnings, "netDebt", totalDebt(root, asOf),
                 instant(root, List.of("CashAndCashEquivalentsAtCarryingValue"), "USD", asOf),
                 "USD", true);
         return List.copyOf(metrics);
+    }
+
+    private Optional<Fact> totalDebt(JsonNode root, LocalDate asOf) {
+        Optional<Fact> direct = instant(root, TOTAL_DEBT, "USD", asOf);
+        Optional<Fact> current = instant(
+                root, List.of("LongTermDebtCurrent"), "USD", asOf
+        );
+        Optional<Fact> noncurrent = instant(
+                root, List.of("LongTermDebtNoncurrent"), "USD", asOf
+        );
+        Optional<Fact> splitDebt = Optional.empty();
+        if (samePeriod(current, noncurrent)) {
+            Fact left = current.orElseThrow();
+            Fact right = noncurrent.orElseThrow();
+            splitDebt = Optional.of(new Fact(
+                    left.concept() + "+" + right.concept(),
+                    "USD",
+                    null,
+                    left.end(),
+                    left.value().add(right.value()),
+                    java.util.Objects.equals(left.accession(), right.accession())
+                            ? left.accession()
+                            : null,
+                    left.filed().isAfter(right.filed()) ? left.filed() : right.filed(),
+                    left.form(),
+                    left.fiscalPeriod()
+            ));
+        }
+        Optional<Fact> faceAmount = instant(
+                root, List.of("DebtInstrumentFaceAmount"), "USD", asOf
+        );
+        return java.util.stream.Stream.of(direct, faceAmount, splitDebt)
+                .flatMap(Optional::stream)
+                .max(Comparator.comparing(Fact::end)
+                        .thenComparing(Fact::filed)
+                        .thenComparing(fact -> fact.concept().contains("+")));
     }
 
     private static void addDirect(
@@ -290,10 +326,15 @@ public class SecCompanyFactsFundamentalProvider implements FundamentalDataProvid
         metrics.add(new FundamentalMetric(
                 name, value, unit, periodType, left.end(), "us-gaap",
                 MAPPING_VERSION + ":" + name,
-                left.accession().equals(right.accession()) ? left.accession() : null,
+                java.util.Objects.equals(left.accession(), right.accession())
+                        ? left.accession()
+                        : null,
                 left.filed().isAfter(right.filed()) ? left.filed() : right.filed(),
                 true,
-                List.of(left.concept(), right.concept())
+                java.util.stream.Stream.concat(
+                        java.util.Arrays.stream(left.concept().split("\\+")),
+                        java.util.Arrays.stream(right.concept().split("\\+"))
+                ).toList()
         ));
     }
 

@@ -389,11 +389,15 @@ public class ArtifactQueryService {
                        f.is_demo_data
                   from filing_chunks fc
                   join filings f on f.id = fc.filing_id
-                  join research_source_links rsl on rsl.source_snapshot_id = f.source_snapshot_id
+                  join filing_source_snapshot_links filing_link
+                    on filing_link.filing_id = f.id
+                  join research_source_links rsl
+                    on rsl.source_snapshot_id = filing_link.source_snapshot_id
+                   and rsl.purpose = 'FILING'
                   join research_jobs r on r.id = rsl.research_job_id
                   join evidence_items e
                     on e.research_job_id = r.id
-                   and e.source_snapshot_id = f.source_snapshot_id
+                   and e.source_snapshot_id = filing_link.source_snapshot_id
                  where r.id = ? and r.user_id = ? and r.deleted_at is null
                    and r.data_mode <> 'MIXED_TEST'
                    and fc.search_vector @@ websearch_to_tsquery('english', ?)

@@ -1,7 +1,7 @@
 # SEC Companyfacts/XBRL 标准化与数据质量规则
 
 最后更新：2026-07-11  
-Mapping Version：`us_gaap_fundamentals_v1`
+Mapping Version：`us_gaap_fundamentals_v2`
 
 ## 1. 数据集与 Grain
 

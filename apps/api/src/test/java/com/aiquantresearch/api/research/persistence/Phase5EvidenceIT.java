@@ -70,11 +70,17 @@ class Phase5EvidenceIT extends PostgresRedisIntegrationTestSupport {
         assertThat(jdbc.queryForList("""
                 select table_name from information_schema.tables
                  where table_schema = 'public'
-                   and table_name in ('filings', 'filing_chunks')
+                   and table_name in (
+                     'filings', 'filing_chunks', 'filing_source_snapshot_links'
+                   )
                  order by table_name
                 """))
                 .extracting(row -> row.get("table_name"))
-                .containsExactly("filing_chunks", "filings");
+                .containsExactly(
+                        "filing_chunks",
+                        "filing_source_snapshot_links",
+                        "filings"
+                );
         assertThat(jdbc.queryForObject("""
                 select count(*) from pg_indexes
                  where schemaname = 'public'
@@ -96,6 +102,7 @@ class Phase5EvidenceIT extends PostgresRedisIntegrationTestSupport {
                   "asOfDate": "2025-10-01",
                   "filings": [{
                     "documentId": "mock-mu-10k-2025",
+                    "accessionNumber": "0000000001-25-000001",
                     "formType": "10-K",
                     "filingDate": "2025-10-01",
                     "title": "Synthetic annual filing",
@@ -149,6 +156,29 @@ class Phase5EvidenceIT extends PostgresRedisIntegrationTestSupport {
                     assertThat(item.excerpt()).contains("Supply concentration");
                     assertThat(item.citationLocator()).contains("chunk=0:chars=");
                 });
+
+        UUID refreshedSourceId = insertSource("MOCK_FILINGS_REFRESHED", snapshot, "OTHER");
+        filingRegistry.register(new StoredSource(
+                refreshedSourceId,
+                "FILING",
+                "MU",
+                snapshot,
+                sha256(snapshot.toString()),
+                "MOCK_FILINGS_REFRESHED",
+                true,
+                "FRESH",
+                true
+        ), snapshot);
+        assertThat(jdbc.queryForObject("""
+                select count(*) from filings
+                 where accession_number = '0000000001-25-000001'
+                """, Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("""
+                select count(*)
+                  from filing_source_snapshot_links link
+                  join filings filing on filing.id = link.filing_id
+                 where filing.accession_number = '0000000001-25-000001'
+                """, Integer.class)).isEqualTo(2);
 
         UUID reportId = publishReportBoundTo(sourceId, evidenceId);
         String originalContentHash = jdbc.queryForObject(

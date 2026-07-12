@@ -5,6 +5,7 @@ import com.aiquantresearch.api.research.orchestration.StoredSource;
 import com.aiquantresearch.api.research.worker.StepExecutionException;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -67,18 +68,19 @@ public class FilingRegistry {
         String rawHash = hashService.hashText(rawHtml);
         String cleanedHash = hashService.hashText(processed.cleanedText());
         UUID proposedId = UUID.randomUUID();
-        jdbc.update("""
+        String accessionNumber = nullableText(filing, "accessionNumber");
+        int inserted = jdbc.update("""
                 insert into filings (
                     id, source_snapshot_id, external_document_id, accession_number,
                     form_type, filing_date, report_period, title, raw_text_uri,
                     raw_text_hash, cleaned_text_hash, parser_version, is_demo_data
                 ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                on conflict (source_snapshot_id, external_document_id) do nothing
+                on conflict do nothing
                 """,
                 proposedId,
                 source.id(),
                 externalId,
-                nullableText(filing, "accessionNumber"),
+                accessionNumber,
                 formType,
                 filingDate,
                 nullableDate(filing, "reportPeriod"),
@@ -91,16 +93,44 @@ public class FilingRegistry {
                         : FilingTextProcessor.PARSER_VERSION,
                 source.demoData()
         );
-        UUID filingId = jdbc.queryForObject("""
-                select id from filings
-                 where source_snapshot_id = ? and external_document_id = ?
-                """, UUID.class, source.id(), externalId);
-        if (filingId == null) {
+        List<FilingIdentity> identities = accessionNumber == null
+                ? jdbc.query("""
+                        select id, raw_text_hash from filings
+                         where source_snapshot_id = ? and external_document_id = ?
+                        """, (row, ignored) -> new FilingIdentity(
+                        row.getObject("id", UUID.class),
+                        row.getString("raw_text_hash")
+                ), source.id(), externalId)
+                : jdbc.query("""
+                        select id, raw_text_hash from filings
+                         where accession_number = ?
+                        """, (row, ignored) -> new FilingIdentity(
+                        row.getObject("id", UUID.class),
+                        row.getString("raw_text_hash")
+                ), accessionNumber);
+        if (identities.size() != 1) {
             throw new StepExecutionException(
                     "FILING_REGISTRY_WRITE_FAILED",
                     "The immutable filing record could not be registered",
                     true
             );
+        }
+        FilingIdentity identity = identities.getFirst();
+        if (!identity.rawTextHash().equals(rawHash)) {
+            throw new StepExecutionException(
+                    "FILING_IMMUTABILITY_CONFLICT",
+                    "A filing accession resolved to different immutable source content",
+                    false
+            );
+        }
+        UUID filingId = identity.id();
+        jdbc.update("""
+                insert into filing_source_snapshot_links (filing_id, source_snapshot_id)
+                values (?, ?)
+                on conflict do nothing
+                """, filingId, source.id());
+        if (inserted == 0) {
+            return;
         }
         for (FilingTextProcessor.FilingChunk chunk : processed.chunks()) {
             jdbc.update("""
@@ -149,5 +179,8 @@ public class FilingRegistry {
         return value.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
+    }
+
+    private record FilingIdentity(UUID id, String rawTextHash) {
     }
 }
