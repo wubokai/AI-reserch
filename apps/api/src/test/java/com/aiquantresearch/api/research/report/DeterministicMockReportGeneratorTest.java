@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.aiquantresearch.api.research.orchestration.ResearchExecutionContext;
 import com.aiquantresearch.api.research.orchestration.StoredQuantResult;
+import com.aiquantresearch.api.research.orchestration.StoredSource;
 import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -110,6 +111,36 @@ class DeterministicMockReportGeneratorTest {
         );
         assertThat(validation.valid()).as(validation.warnings().toString()).isTrue();
         assertThat(validation.warnings()).isEmpty();
+    }
+
+    @Test
+    void reusesDeterministicScenarioPolicyWhenRealProviderHasNoScenarioPayload() {
+        ResearchExecutionContext base = fixture.context();
+        ResearchExecutionContext real = new ResearchExecutionContext(
+                base.researchId(), base.ownerId(), base.symbol(), base.securityType(),
+                base.locale(), DataMode.REAL, base.request()
+        );
+        List<StoredSource> realSources = fixture.sources().stream().map(source -> {
+            if (!"FUNDAMENTALS".equals(source.purpose())) {
+                return source;
+            }
+            ObjectNode payload = source.payload().deepCopy();
+            payload.putArray("scenarios");
+            return new StoredSource(
+                    source.id(), source.purpose(), source.externalSourceId(), payload,
+                    source.contentHash(), "SEC_EDGAR_XBRL", true, "FRESH", false
+            );
+        }).toList();
+
+        JsonNode report = generator.generate(
+                real, realSources, fixture.quantResults(), fixture.evidence(), 1
+        );
+
+        assertThat(report.path("scenarioAnalysis").path("scenarios"))
+                .extracting(node -> node.path("name").asText())
+                .containsExactly("BULL", "BASE", "BEAR");
+        assertThat(report.path("scenarioAnalysis").path("scenarios").get(1)
+                .path("probability").asText()).isEqualTo("0.5");
     }
 
     @Test

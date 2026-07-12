@@ -1,9 +1,11 @@
 package com.aiquantresearch.api.research.report;
 
+import com.aiquantresearch.api.research.analytics.DeterministicScenarioPolicy;
 import com.aiquantresearch.api.research.orchestration.ResearchExecutionContext;
 import com.aiquantresearch.api.research.orchestration.StoredEvidence;
 import com.aiquantresearch.api.research.orchestration.StoredQuantResult;
 import com.aiquantresearch.api.research.orchestration.StoredSource;
+import com.aiquantresearch.api.research.provider.ScenarioAssumption;
 import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -538,9 +540,25 @@ public class DeterministicMockReportGenerator {
             StoredQuantResult bearPrice,
             StoredQuantResult weightedPrice
     ) {
-        Map<String, JsonNode> assumptions = new LinkedHashMap<>();
+        Map<String, ScenarioAssumption> assumptions = new LinkedHashMap<>();
         for (JsonNode assumption : fundamentals.payload().path("scenarios")) {
-            assumptions.put(assumption.path("name").asText().toUpperCase(Locale.ROOT), assumption);
+            ScenarioAssumption parsed = new ScenarioAssumption(
+                    assumption.path("name").asText().toUpperCase(Locale.ROOT),
+                    decimalValue(assumption.path("revenueGrowth"), "scenario revenue growth"),
+                    decimalValue(assumption.path("targetEbitdaMargin"), "scenario EBITDA margin"),
+                    decimalValue(assumption.path("evToEbitdaMultiple"), "scenario multiple"),
+                    decimalValue(assumption.path("probability"), "scenario probability")
+            );
+            assumptions.put(parsed.name(), parsed);
+        }
+        if (assumptions.isEmpty()) {
+            BigDecimal revenue = fundamentalMetric(fundamentals.payload(), "revenue");
+            BigDecimal profit = optionalFundamentalMetric(fundamentals.payload(), "ebitda");
+            if (profit == null) {
+                profit = optionalFundamentalMetric(fundamentals.payload(), "operatingIncome");
+            }
+            DeterministicScenarioPolicy.create(revenue, profit)
+                    .forEach(item -> assumptions.put(item.name(), item));
         }
         if (!assumptions.keySet().containsAll(SCENARIO_ORDER) || assumptions.size() != 3) {
             throw new IllegalArgumentException("Exactly BULL, BASE, and BEAR assumptions are required");
@@ -557,7 +575,7 @@ public class DeterministicMockReportGenerator {
         );
         for (String scenarioName : SCENARIO_ORDER) {
             String lowerName = scenarioName.toLowerCase(Locale.ROOT);
-            JsonNode assumption = assumptions.get(scenarioName);
+            ScenarioAssumption assumption = assumptions.get(scenarioName);
             StoredQuantResult rawPrice = requireMetric(
                     quantByMetric,
                     "scenario_" + lowerName + "_raw_implied_price"
@@ -568,10 +586,10 @@ public class DeterministicMockReportGenerator {
             );
             ObjectNode scenario = scenarios.addObject();
             scenario.put("name", scenarioName);
-            scenario.put("probability", decimalField(assumption, "probability"));
-            scenario.put("revenueGrowth", decimalField(assumption, "revenueGrowth"));
-            scenario.put("targetEbitdaMargin", decimalField(assumption, "targetEbitdaMargin"));
-            scenario.put("evToEbitdaMultiple", decimalField(assumption, "evToEbitdaMultiple"));
+            scenario.put("probability", decimal(assumption.probability()));
+            scenario.put("revenueGrowth", decimal(assumption.revenueGrowth()));
+            scenario.put("targetEbitdaMargin", decimal(assumption.targetEbitdaMargin()));
+            scenario.put("evToEbitdaMultiple", decimal(assumption.evToEbitdaMultiple()));
             scenario.put("impliedEquityValue", decimal(rawPrice.value().multiply(dilutedShares)));
             scenario.put("impliedPrice", decimal(displayedPrice.get(scenarioName).value()));
             scenario.put("upsideDownside", decimal(upside.value()));
@@ -700,6 +718,14 @@ public class DeterministicMockReportGenerator {
             return decimalValue(metrics.path(name), "fundamental metric " + name);
         }
         throw new IllegalArgumentException("Required fundamental metric is unavailable: " + name);
+    }
+
+    private static BigDecimal optionalFundamentalMetric(JsonNode payload, String name) {
+        try {
+            return fundamentalMetric(payload, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private static String decimalField(JsonNode node, String field) {
