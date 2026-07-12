@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -107,11 +108,7 @@ public class ResearchQueryService {
                 .filter(error -> error != null)
                 .findFirst()
                 .orElse(null);
-        List<String> warnings = switch (research.getDataMode()) {
-            case MOCK -> List.of(MOCK_WARNING);
-            case MIXED_TEST -> List.of(MIXED_TEST_WARNING);
-            case REAL -> List.of();
-        };
+        List<String> warnings = researchWarnings(research.getDataMode(), steps, attempts);
         return new ResearchDetailView(
                 toItem(research),
                 readRequest(research),
@@ -277,6 +274,59 @@ public class ResearchQueryService {
                         .computeIfAbsent(attempt.getResearchStepId(), ignored -> new ArrayList<>())
                         .add(attempt));
         return result;
+    }
+
+    private List<String> researchWarnings(
+            DataMode dataMode,
+            List<ResearchStepEntity> steps,
+            Map<UUID, List<StepAttemptEntity>> attempts
+    ) {
+        LinkedHashSet<String> warnings = new LinkedHashSet<>();
+        switch (dataMode) {
+            case MOCK -> warnings.add(MOCK_WARNING);
+            case MIXED_TEST -> warnings.add(MIXED_TEST_WARNING);
+            case REAL -> {
+                // REAL has no mode warning.
+            }
+        }
+        steps.stream()
+                .sorted(Comparator.comparingInt(ResearchStepEntity::getSequenceNo))
+                .map(step -> latestAttempt(attempts.get(step.getId())))
+                .filter(attempt -> attempt != null && attempt.getOutputManifestJson() != null)
+                .forEach(attempt -> addManifestWarnings(
+                        warnings,
+                        attempt.getOutputManifestJson()
+                ));
+        return List.copyOf(warnings);
+    }
+
+    private void addManifestWarnings(LinkedHashSet<String> warnings, String manifestJson) {
+        try {
+            var manifest = objectMapper.readTree(manifestJson);
+            var storedWarnings = manifest.path("warnings");
+            if (storedWarnings.isMissingNode() || storedWarnings.isNull()) {
+                return;
+            }
+            if (!storedWarnings.isArray()) {
+                throw new ResearchApplicationException(
+                        "RESEARCH_STEP_MANIFEST_INVALID",
+                        "A stored step manifest has an invalid warning collection",
+                        false
+                );
+            }
+            storedWarnings.forEach(warning -> {
+                String value = warning.asText();
+                if (!value.isBlank()) {
+                    warnings.add(value);
+                }
+            });
+        } catch (JsonProcessingException exception) {
+            throw new ResearchApplicationException(
+                    "RESEARCH_STEP_MANIFEST_INVALID",
+                    "A stored step manifest is invalid",
+                    false
+            );
+        }
     }
 
     private static Instant latestObservedUpdate(

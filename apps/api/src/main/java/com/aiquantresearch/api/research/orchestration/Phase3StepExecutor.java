@@ -6,10 +6,12 @@ import com.aiquantresearch.api.research.analytics.AnalyticsServiceException;
 import com.aiquantresearch.api.research.domain.StepType;
 import com.aiquantresearch.api.research.domain.ReportDepth;
 import com.aiquantresearch.api.research.domain.ResearchPeriod;
+import com.aiquantresearch.api.research.filing.FilingTextProcessor;
 import com.aiquantresearch.api.research.llm.OpenAiResponseException;
 import com.aiquantresearch.api.research.llm.ResearchLanguageModelRequest;
 import com.aiquantresearch.api.research.llm.ResearchLanguageModelRouter;
 import com.aiquantresearch.api.research.provider.FilingProvider;
+import com.aiquantresearch.api.research.provider.FilingSnapshot;
 import com.aiquantresearch.api.research.provider.FundamentalDataProvider;
 import com.aiquantresearch.api.research.provider.FundamentalDataSnapshot;
 import com.aiquantresearch.api.research.provider.MacroDataProvider;
@@ -31,6 +33,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -132,11 +135,7 @@ public class Phase3StepExecutor {
                 case FETCH_FUNDAMENTALS -> StepExecutionResult.complete(
                         objectMapper.valueToTree(fundamentalDataProvider.fetch(context.symbol()))
                 );
-                case FETCH_FILINGS -> StepExecutionResult.complete(
-                        objectMapper.valueToTree(filingProvider.fetch(context.symbol()).limitedTo(
-                                reportDepth(context).maxFilings()
-                        ))
-                );
+                case FETCH_FILINGS -> fetchFilings(context);
                 case FETCH_MACRO_DATA -> StepExecutionResult.complete(
                         objectMapper.valueToTree(macroDataProvider.fetch())
                 );
@@ -248,10 +247,73 @@ public class Phase3StepExecutor {
         if (reference.periodStart().isAfter(start)) {
             start = reference.periodStart();
         }
+        MarketDataSnapshot selectedTarget = target.within(start, end);
+        MarketDataSnapshot selectedReference = reference.within(start, end);
+        boolean shorterThanRequested = MarketHistoryPolicy.isShorterThanRequested(
+                requestedStart,
+                start
+        );
+        ObjectNode targetPayload = objectMapper.valueToTree(selectedTarget);
+        ObjectNode referencePayload = objectMapper.valueToTree(selectedReference);
+        annotateCoverage(targetPayload, requestedStart, end, shorterThanRequested);
+        annotateCoverage(referencePayload, requestedStart, end, shorterThanRequested);
         ObjectNode output = objectMapper.createObjectNode();
-        output.set("target", objectMapper.valueToTree(target.within(start, end)));
-        output.set("benchmark", objectMapper.valueToTree(reference.within(start, end)));
-        return StepExecutionResult.complete(output);
+        output.set("target", targetPayload);
+        output.set("benchmark", referencePayload);
+        return new StepExecutionResult(
+                output,
+                shorterThanRequested,
+                shorterThanRequested
+                        ? List.of("MARKET_HISTORY_SHORTER_THAN_REQUESTED")
+                        : List.of()
+        );
+    }
+
+    private StepExecutionResult fetchFilings(ResearchExecutionContext context) {
+        FilingSnapshot snapshot = filingProvider.fetch(context.symbol()).limitedTo(
+                reportDepth(context).maxFilings()
+        );
+        ObjectNode payload = objectMapper.valueToTree(snapshot);
+        boolean bounded = false;
+        JsonNode filingNodes = payload.path("filings");
+        for (int index = 0; index < snapshot.filings().size(); index++) {
+            var document = snapshot.filings().get(index);
+            boolean documentBounded = FilingTextProcessor.requiresBoundedProcessing(
+                    document.contentHtml()
+            );
+            bounded = bounded || documentBounded;
+            if (filingNodes.isArray() && filingNodes.get(index) instanceof ObjectNode filingNode) {
+                filingNode.put(
+                        "contentProcessingStatus",
+                        documentBounded ? "BOUNDED" : "COMPLETE"
+                );
+                if (documentBounded) {
+                    filingNode.put(
+                            "processedCharacterLimit",
+                            FilingTextProcessor.maximumSourceCharacters()
+                    );
+                }
+            }
+        }
+        return new StepExecutionResult(
+                payload,
+                bounded,
+                bounded ? List.of("FILING_CONTENT_TRUNCATED") : List.of()
+        );
+    }
+
+    private static void annotateCoverage(
+            ObjectNode payload,
+            LocalDate requestedStart,
+            LocalDate requestedEnd,
+            boolean shorterThanRequested
+    ) {
+        payload.put("requestedPeriodStart", requestedStart.toString());
+        payload.put("requestedPeriodEnd", requestedEnd.toString());
+        payload.put(
+                "coverageStatus",
+                shorterThanRequested ? "SHORTER_THAN_REQUESTED" : "COMPLETE"
+        );
     }
 
     private StepExecutionResult validateData(ResearchExecutionContext context) {
@@ -259,9 +321,10 @@ public class Phase3StepExecutor {
         StoredSource benchmark = requireSource(context.researchId(), "BENCHMARK_DATA");
         MarketDataSnapshot target = tree(market.payload(), MarketDataSnapshot.class);
         MarketDataSnapshot reference = tree(benchmark.payload(), MarketDataSnapshot.class);
-        int minimumObservations = minimumMarketObservations(context);
-        if (target.prices().size() < minimumObservations
-                || reference.prices().size() < minimumObservations) {
+        if (!MarketHistoryPolicy.hasMinimumObservations(
+                target.prices().size(),
+                reference.prices().size()
+        )) {
             throw new StepExecutionException(
                     "MARKET_DATA_INCOMPLETE",
                     "The requested market series is incomplete for deterministic analysis",
@@ -333,21 +396,6 @@ public class Phase3StepExecutor {
                     "The requested research period is outside the supported boundary",
                     false
             );
-        };
-    }
-
-    private static int minimumMarketObservations(ResearchExecutionContext context) {
-        if (!context.request().path("startDate").asText().isBlank()) {
-            return 200;
-        }
-        ResearchPeriod period = ResearchPeriod.fromValue(
-                context.request().path("period").asText("5y")
-        );
-        return switch (period) {
-            case ONE_YEAR -> 220;
-            case THREE_YEARS -> 700;
-            case FIVE_YEARS -> 1_200;
-            case TEN_YEARS, MAX -> Integer.MAX_VALUE;
         };
     }
 
@@ -554,7 +602,9 @@ public class Phase3StepExecutor {
                         false
                 );
             }
-            List<String> repairWarnings = new java.util.ArrayList<>();
+            List<String> repairWarnings = new java.util.ArrayList<>(
+                    upstreamWarnings(context.researchId())
+            );
             repairWarnings.add("REPORT_REPAIRED_ONCE");
             repair.prunedClaimIds().stream()
                     .map(id -> "REPORT_UNSAFE_CLAIM_PRUNED:" + id)
@@ -565,11 +615,39 @@ public class Phase3StepExecutor {
                     repairWarnings
             );
         }
-        return new StepExecutionResult(
-                validation.report(),
-                validation.partial(),
+        List<String> warnings = mergeWarnings(
+                upstreamWarnings(context.researchId()),
                 validation.warnings()
         );
+        return new StepExecutionResult(
+                validation.report(),
+                validation.partial() || !warnings.isEmpty(),
+                warnings
+        );
+    }
+
+    List<String> upstreamWarnings(UUID researchId) {
+        List<String> warnings = jdbcTemplate.query("""
+                select warning.value
+                  from research_steps step
+                  join step_attempts attempt
+                    on attempt.research_step_id = step.id
+                  cross join lateral jsonb_array_elements_text(
+                    coalesce(attempt.output_manifest_json -> 'warnings', '[]'::jsonb)
+                  ) with ordinality as warning(value, position)
+                 where step.research_job_id = ?
+                   and attempt.status = 'SUCCEEDED'
+                   and attempt.output_hash = step.successful_output_hash
+                 order by step.sequence_no, attempt.attempt_number, warning.position
+                """, (row, ignored) -> row.getString("value"), researchId);
+        return mergeWarnings(warnings, List.of());
+    }
+
+    private static List<String> mergeWarnings(List<String> first, List<String> second) {
+        LinkedHashSet<String> merged = new LinkedHashSet<>();
+        merged.addAll(first);
+        merged.addAll(second);
+        return List.copyOf(merged);
     }
 
     private StoredSource requireSource(UUID researchId, String purpose) {

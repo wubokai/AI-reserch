@@ -41,6 +41,8 @@ describe("ResearchForm", () => {
       .toBeChecked();
     expect(screen.getByRole("checkbox", { name: "量化与技术" }))
       .toBeDisabled();
+    expect(screen.getByText(/上市历史不足时自动按实际可用区间计算/))
+      .toBeInTheDocument();
   });
 
   it("提交不含 dataMode 的请求并跳转到持久任务", async () => {

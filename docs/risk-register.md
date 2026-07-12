@@ -140,7 +140,7 @@
 | 只支持 MU/NVDA/RKLB 目标与 SPY/QQQ 基准 | 创建边界失败关闭；不把基准当目标，不对其他 symbol 伪造覆盖 | Phase 7 |
 | MIXED_TEST 只用于自动化集成测试 | 禁止用户任务选择该模式，禁止生成用户可见报告或导出 | 始终保持 |
 | 研究深度被当作装饰字段 | QUICK/STANDARD/DEEP 分别限制 Filing、Evidence、Calculation 和 LLM 工具轮次 | 已关闭 |
-| 周期只有 5y | 已支持 1y/3y/5y 与最长五年的显式日期范围；不足 200 个交易日失败关闭 | 已关闭 |
+| 新上市证券无法覆盖所选周期 | 已支持 1y/3y/5y 与最长五年的显式日期范围；标的与基准自动对齐实际可用区间并显示限制，少于 200 个共同交易日才失败关闭 | 已关闭 |
 | 技术分析必须启用 | UI 锁定必选；API 对 false 返回 `INVALID_REQUEST`，保持 Phase 3 full-analysis 契约唯一 | 完整 v1 |
 | 基本面/宏观开关是受控降级而非任意 DAG | 基本面 false 只跳过叙事，情景数据仍获取并发布带 warning 的安全 partial；宏观 false 只跳过宏观取数 | Phase 8 |
 | 无真实登录页 | dev-demo profile；仍检查资源所有权 | 后续 Should |

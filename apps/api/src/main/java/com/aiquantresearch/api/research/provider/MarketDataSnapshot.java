@@ -1,9 +1,11 @@
 package com.aiquantresearch.api.research.provider;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDate;
 import java.time.Instant;
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record MarketDataSnapshot(
         String provider,
         String schemaVersion,

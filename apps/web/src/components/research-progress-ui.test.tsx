@@ -89,4 +89,34 @@ describe("ResearchProgress phase 8 states", () => {
     await userEvent.click(await screen.findByRole("button", { name: "取消任务" }));
     await waitFor(() => expect(screen.getByText("取消请求已接受。")).toBeInTheDocument());
   });
+
+  it("用易懂中文解释不可重试的数据不足错误", async () => {
+    const failedStatus = {
+      ...status("RUNNING_QUANT_ANALYSIS"),
+      status: "FAILED",
+      progress: 55,
+      currentStep: null,
+      error: { code: "MARKET_DATA_INCOMPLETE", message: "The requested market series is incomplete for deterministic analysis", retryable: false, failedStep: "VALIDATE_DATA" },
+      steps: [{ step: "VALIDATE_DATA", status: "FAILED", attemptCount: 1, durationMs: 80, retryable: false, startedAt: now, completedAt: now, error: { code: "MARKET_DATA_INCOMPLETE", message: "The requested market series is incomplete for deterministic analysis", retryable: false, failedStep: "VALIDATE_DATA" } }],
+      updatedAt: now,
+    };
+    const failedDetail = {
+      ...detail("RUNNING_QUANT_ANALYSIS"),
+      status: "FAILED",
+      progress: 55,
+      currentStep: null,
+      completedAt: now,
+      lastError: failedStatus.error,
+    };
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async (input) => Response.json(
+      String(input).endsWith("/status") ? failedStatus : failedDetail,
+    )));
+
+    render(<ResearchProgress researchId={phase3ResearchId} />, { wrapper });
+
+    expect(await screen.findByText("可用行情太少")).toBeInTheDocument();
+    expect(screen.getAllByText(/不足 200 个有效交易日/)).toHaveLength(2);
+    expect(screen.getByText("检查数据完整性")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "重试任务" })).not.toBeInTheDocument();
+  });
 });

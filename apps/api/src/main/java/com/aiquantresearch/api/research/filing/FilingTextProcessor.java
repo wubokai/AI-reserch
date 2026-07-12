@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class FilingTextProcessor {
 
-    public static final String PARSER_VERSION = "filing_parser_v1";
-    private static final int MAX_SOURCE_CHARACTERS = 2_000_000;
+    public static final String PARSER_VERSION = "filing_parser_v2";
+    private static final int MAX_SOURCE_CHARACTERS = 3_000_000;
     private static final int CHUNK_CHARACTERS = 1_800;
     private static final int CHUNK_OVERLAP = 180;
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
@@ -30,10 +30,11 @@ public class FilingTextProcessor {
         if (html == null || html.isBlank()) {
             throw new IllegalArgumentException("Filing HTML must not be blank");
         }
-        if (html.length() > MAX_SOURCE_CHARACTERS) {
-            throw new IllegalArgumentException("Filing HTML exceeds the Phase 5 safety limit");
-        }
-        Document document = Jsoup.parse(html);
+        boolean truncated = requiresBoundedProcessing(html);
+        String boundedHtml = truncated
+                ? html.substring(0, safeBoundary(html, MAX_SOURCE_CHARACTERS))
+                : html;
+        Document document = Jsoup.parse(boundedHtml);
         document.select("script,style,noscript,iframe,object,embed,svg,form").remove();
         List<String> lines = blockLines(document);
         List<FilingSection> sections = sections(lines);
@@ -43,7 +44,32 @@ public class FilingTextProcessor {
                 .orElseThrow(() -> new IllegalArgumentException("Filing has no usable text"));
         List<FilingChunk> chunks = new ArrayList<>();
         sections.forEach(section -> chunks.addAll(chunks(section)));
-        return new ProcessedFiling(cleanedText, sections, List.copyOf(chunks));
+        return new ProcessedFiling(
+                cleanedText,
+                sections,
+                List.copyOf(chunks),
+                truncated,
+                html.length(),
+                boundedHtml.length()
+        );
+    }
+
+    public static boolean requiresBoundedProcessing(String html) {
+        return html != null && html.length() > MAX_SOURCE_CHARACTERS;
+    }
+
+    public static int maximumSourceCharacters() {
+        return MAX_SOURCE_CHARACTERS;
+    }
+
+    private static int safeBoundary(String value, int proposedEnd) {
+        int end = Math.min(value.length(), proposedEnd);
+        if (end > 0 && end < value.length()
+                && Character.isHighSurrogate(value.charAt(end - 1))
+                && Character.isLowSurrogate(value.charAt(end))) {
+            return end - 1;
+        }
+        return end;
     }
 
     private static List<String> blockLines(Document document) {
@@ -149,7 +175,10 @@ public class FilingTextProcessor {
     public record ProcessedFiling(
             String cleanedText,
             List<FilingSection> sections,
-            List<FilingChunk> chunks
+            List<FilingChunk> chunks,
+            boolean truncated,
+            int sourceCharacterCount,
+            int processedCharacterCount
     ) {
     }
 

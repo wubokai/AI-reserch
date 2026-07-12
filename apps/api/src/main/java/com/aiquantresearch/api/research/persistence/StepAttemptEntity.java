@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "step_attempts")
@@ -41,6 +43,10 @@ public class StepAttemptEntity {
 
     @Column(name = "output_hash", length = 64)
     private String outputHash;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "output_manifest_json", columnDefinition = "jsonb")
+    private String outputManifestJson;
 
     @Column(name = "worker_id", nullable = false, updatable = false, length = 128)
     private String workerId;
@@ -222,6 +228,10 @@ public class StepAttemptEntity {
 
     public String getOutputHash() {
         return outputHash;
+    }
+
+    public String getOutputManifestJson() {
+        return outputManifestJson;
     }
 
     public String getWorkerId() {

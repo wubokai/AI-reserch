@@ -44,12 +44,21 @@ class FilingTextProcessorTest {
     }
 
     @Test
-    void rejectsBlankOrUnboundedInput() {
+    void rejectsBlankAndBoundsOversizedInput() {
         assertThatThrownBy(() -> processor.process(" "))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> processor.process("x".repeat(2_000_001)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("safety limit");
+
+        String html = "<html><body><p>" + "x".repeat(
+                FilingTextProcessor.maximumSourceCharacters() + 1
+        ) + "</p></body></html>";
+        FilingTextProcessor.ProcessedFiling result = processor.process(html);
+
+        assertThat(result.truncated()).isTrue();
+        assertThat(result.sourceCharacterCount()).isEqualTo(html.length());
+        assertThat(result.processedCharacterCount())
+                .isLessThanOrEqualTo(FilingTextProcessor.maximumSourceCharacters());
+        assertThat(result.cleanedText()).isNotBlank();
+        assertThat(result.chunks()).isNotEmpty();
     }
 
     @Test

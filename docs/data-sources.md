@@ -84,6 +84,7 @@ SEC XBRL 的标准 concept、期间选择、修订去重、派生公式与 NOT_A
 - JSON/HTML 响应分别验证内容类型、空响应和字节上限。只对 429、502、503、网络错误和超时进行有界重试，不对 4xx、Schema、路径或内容类型错误重试；
 - `rawDataHash` 对 ticker 元数据、submissions JSON 和下载文档的原始字节按长度分隔后计算 SHA-256；规范化 Payload 另算 `normalizedDataHash`；
 - Source Snapshot 保存 provider、schema、retrieved/effective date、官方来源 URL、freshness、原始哈希和访问政策版本；每份 Filing 的官方 URL 保存为 `raw_text_uri`；
+- Filing 原始响应仍按完整 payload 计算哈希；正文索引器 `filing_parser_v2` 最多处理 300 万字符，超过时使用确定性有界前缀、记录 `_bounded` parser version，并向报告传递 `FILING_CONTENT_TRUNCATED`。未处理文本不得成为 Evidence，单份超大公告不再拖垮整项研究；
 - 官方契约依据：[SEC EDGAR API](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)、[SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions) 与 [SEC Rate Control Notice](https://www.sec.gov/filergroup/announcements-old/new-rate-control-limits)。
 
 后续检查点已补齐 Tiingo/SEC/FRED/XBRL 共用 Redis 缓存、熔断器、Provider 指标与 provider-neutral

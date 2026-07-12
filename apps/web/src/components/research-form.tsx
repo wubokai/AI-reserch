@@ -228,6 +228,7 @@ export function ResearchForm() {
               <option value="3y">3 年</option>
               <option value="5y">5 年</option>
             </select>
+            <span className="mt-2 block text-[10px] leading-4 text-[#657b71]">上市历史不足时自动按实际可用区间计算；少于 200 个交易日才会停止。</span>
           </label>
           <label className="block">
             <span className="mb-2 block text-xs font-medium text-[#b8c8c0]">研究深度</span>

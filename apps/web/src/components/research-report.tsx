@@ -14,6 +14,7 @@ import {
   RESEARCH_DISCLAIMER,
   evidencePageSchema,
   evidenceSearchResponseSchema,
+  researchDetailSchema,
   reportVersionResponseSchema,
   type Claim,
   type Evidence,
@@ -199,6 +200,10 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
     queryKey: ["research", researchId, "evidence"],
     queryFn: () => fetchApi(`/api/research/${researchId}/evidence?size=100`, evidencePageSchema),
   });
+  const detail = useQuery({
+    queryKey: ["research", researchId, "detail"],
+    queryFn: () => fetchApi(`/api/research/${researchId}`, researchDetailSchema),
+  });
   const evidenceById = useMemo(
     () => new Map(evidence.data?.items.map((item) => [item.evidenceId, item]) ?? []),
     [evidence.data],
@@ -262,6 +267,7 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
         </div>
         <div className="mt-5 border-t border-[#1b2c25] pt-4"><ReportVersionNav currentVersion={version} researchId={researchId} /></div>
         {document.dataMode !== "REAL" ? <p className="mt-6 rounded-lg border border-amber-300/20 bg-amber-300/[0.05] px-4 py-3 text-xs font-semibold tracking-[0.06em] text-amber-100">{DEMO_DATA_NOTICE}</p> : null}
+        {detail.data?.warnings.length ? <div className="mt-6 rounded-lg border border-amber-300/20 bg-amber-300/[0.05] p-4 text-xs text-amber-100"><p className="font-semibold">本报告的数据范围提示</p><ul className="mt-2 space-y-2 leading-5">{detail.data.warnings.map((warning) => <li key={`${warning.code}-${warning.message}`}>• {warning.message}</li>)}</ul></div> : null}
       </section>
 
       <AiAnalysisSummary report={document} />

@@ -44,12 +44,70 @@ export function pollIntervalForStatus(status: ResearchStatus | undefined) {
   return status && terminalStatuses.has(status) ? false : 2_000;
 }
 
+const stepLabels: Record<string, string> = {
+  RESOLVE_SECURITY: "识别公司与证券",
+  FETCH_MARKET_DATA: "获取股票行情",
+  FETCH_FUNDAMENTALS: "获取财务数据",
+  FETCH_FILINGS: "获取公司公告",
+  FETCH_MACRO_DATA: "获取宏观数据",
+  VALIDATE_DATA: "检查数据完整性",
+  RUN_QUANT_ANALYSIS: "计算量化指标",
+  ANALYZE_FUNDAMENTALS: "分析财务表现",
+  BUILD_EVIDENCE: "整理报告依据",
+  GENERATE_REPORT: "生成 AI 报告",
+  VALIDATE_REPORT: "检查报告可靠性",
+};
+
+const stepStatusLabels: Record<string, string> = {
+  PENDING: "等待中",
+  RUNNING: "进行中",
+  SUCCEEDED: "已完成",
+  FAILED: "失败",
+  SKIPPED: "已跳过",
+  CANCELLED: "已取消",
+};
+
 function stepLabel(step: string) {
-  return step
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  return stepLabels[step] ?? step;
+}
+
+type ResearchError = { code: string; message: string; retryable: boolean };
+
+export function readableResearchError(error: ResearchError) {
+  const known: Record<string, { title: string; message: string }> = {
+    MARKET_DATA_INCOMPLETE: {
+      title: "可用行情太少",
+      message: "这只证券目前不足 200 个有效交易日，无法可靠计算长期风险指标。等待积累更多历史后再分析。",
+    },
+    PROVIDER_DATA_NOT_FOUND: {
+      title: "数据源暂未覆盖这家公司",
+      message: "公司可以被搜索到，但当前免费数据源没有提供完成报告所需的数据。",
+    },
+    REAL_SECURITY_MASTER_MISSING: {
+      title: "还没有收录这只证券",
+      message: "证券主数据尚未同步到系统，请稍后重新搜索或确认代码是否正确。",
+    },
+    FILING_CONTENT_INVALID: {
+      title: "公司公告无法安全解析",
+      message: "SEC 公告格式异常，系统没有使用无法核验的内容继续生成报告。",
+    },
+    SEC_RESPONSE_TOO_LARGE: {
+      title: "SEC 返回的文件过大",
+      message: "公告超过下载安全边界，系统已停止处理，避免不完整内容被误当作证据。",
+    },
+    LLM_INPUT_TOO_LARGE: {
+      title: "报告依据超过 AI 输入上限",
+      message: "已获取的数据过多，系统尚未压缩到安全输入范围。可以改用快速或标准研究深度。",
+    },
+    UNEXPECTED_WORKER_ERROR: {
+      title: "分析流程遇到未分类错误",
+      message: "系统已安全停止，没有发布可能不可靠的报告。该错误需要检查后台日志。",
+    },
+  };
+  return known[error.code] ?? {
+    title: "分析暂未完成",
+    message: error.message || "系统已安全停止，请根据错误代码检查原因。",
+  };
 }
 
 export function ResearchProgress({ researchId }: { researchId: string }) {
@@ -99,7 +157,9 @@ export function ResearchProgress({ researchId }: { researchId: string }) {
   const research = detail.data;
   const terminal = terminalStatuses.has(snapshot.status);
   const canCancel = !terminal && !snapshot.cancellationRequested;
-  const canRetry = snapshot.status === "FAILED" || snapshot.status === "PARTIALLY_COMPLETED";
+  const canRetry = (snapshot.status === "FAILED" || snapshot.status === "PARTIALLY_COMPLETED")
+    && Boolean(snapshot.error?.retryable
+      || snapshot.steps.some((step) => step.status === "FAILED" && step.retryable));
   const reportVersion = research.latestReportVersion;
   const longestDuration = Math.max(1, ...snapshot.steps.map((step) => step.durationMs ?? 0));
 
@@ -133,7 +193,10 @@ export function ResearchProgress({ researchId }: { researchId: string }) {
           <p className="mt-3 text-[11px] text-[#657b71]">已完成 {snapshot.completedSteps} / {snapshot.totalSteps} 个持久步骤；活动任务每 2 秒刷新。</p>
         </div>
 
-        {snapshot.error ? <div className="mt-5 rounded-lg border border-rose-300/20 bg-rose-300/[0.05] p-4 text-xs text-rose-100" role="alert"><p className="font-semibold">{snapshot.error.code}</p><p className="mt-2 leading-5">{snapshot.error.message}</p></div> : null}
+        {snapshot.error ? (() => {
+          const copy = readableResearchError(snapshot.error);
+          return <div className="mt-5 rounded-lg border border-rose-300/20 bg-rose-300/[0.05] p-4 text-xs text-rose-100" role="alert"><p className="font-semibold">{copy.title}</p><p className="mt-2 leading-5">{copy.message}</p><p className="mt-3 text-[10px] text-rose-100/55">错误代码：{snapshot.error.code}</p></div>;
+        })() : null}
         {cancel.isError || retry.isError ? <p className="mt-4 text-xs text-rose-200" role="alert">{errorMessage(cancel.error ?? retry.error)}</p> : null}
         {cancel.isSuccess ? <p className="mt-4 text-xs text-emerald-200" role="status">取消请求已接受。</p> : null}
         {retry.isSuccess ? <p className="mt-4 text-xs text-emerald-200" role="status">重试任务已进入队列。</p> : null}
@@ -154,8 +217,8 @@ export function ResearchProgress({ researchId }: { researchId: string }) {
           {snapshot.steps.map((step, index) => (
             <li className="grid gap-3 px-5 py-4 sm:grid-cols-[36px_minmax(0,1fr)_120px] sm:items-center sm:px-6" key={step.step}>
               <span className="grid size-7 place-items-center rounded-full border border-[#294137] text-[10px] text-[#8da59a]">{index + 1}</span>
-              <div><p className="text-xs font-semibold text-[#dce8e2]">{stepLabel(step.step)}</p><p className="mt-1 text-[11px] text-[#647b70]">尝试 {step.attemptCount}{step.durationMs !== null && step.durationMs !== undefined ? ` · ${step.durationMs} ms` : ""}</p>{step.durationMs ? <div className="mt-2 h-1.5 max-w-xs rounded bg-[#172820]"><div className="h-full rounded bg-emerald-300/60" style={{ width: `${Math.max(4, (step.durationMs / longestDuration) * 100)}%` }} /></div> : null}{step.error ? <p className="mt-2 text-[11px] text-rose-200">{step.error.code}: {step.error.message}</p> : null}</div>
-              <span className="w-fit rounded border border-[#294137] px-2 py-1 text-[10px] text-[#8fa69b] sm:justify-self-end">{step.status}</span>
+              <div><p className="text-xs font-semibold text-[#dce8e2]">{stepLabel(step.step)}</p><p className="mt-1 text-[11px] text-[#647b70]">尝试 {step.attemptCount}{step.durationMs !== null && step.durationMs !== undefined ? ` · ${step.durationMs} ms` : ""}</p>{step.durationMs ? <div className="mt-2 h-1.5 max-w-xs rounded bg-[#172820]"><div className="h-full rounded bg-emerald-300/60" style={{ width: `${Math.max(4, (step.durationMs / longestDuration) * 100)}%` }} /></div> : null}{step.error ? <p className="mt-2 text-[11px] text-rose-200">{readableResearchError(step.error).message}<span className="ml-1 text-rose-200/50">（{step.error.code}）</span></p> : null}</div>
+              <span className="w-fit rounded border border-[#294137] px-2 py-1 text-[10px] text-[#8fa69b] sm:justify-self-end">{stepStatusLabels[step.status] ?? step.status}</span>
             </li>
           ))}
         </ol>

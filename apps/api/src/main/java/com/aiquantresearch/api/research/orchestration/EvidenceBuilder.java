@@ -72,13 +72,28 @@ public class EvidenceBuilder {
                         : "Provider-sourced adjusted OHLCV series ending "
                                 + source.payload().path("periodEnd").asText("unknown")
                                 + " under the recorded internal-use license policy.";
+                if ("SHORTER_THAN_REQUESTED".equals(
+                        source.payload().path("coverageStatus").asText()
+                )) {
+                    summary += " Available history is shorter than the requested period; "
+                            + "all calculations use the recorded effective interval only.";
+                }
                 value.put("symbol", symbol);
                 value.put("asOfDate", source.payload().path("periodEnd").asText());
+                value.put("periodStart", source.payload().path("periodStart").asText());
+                value.put("periodEnd", source.payload().path("periodEnd").asText());
                 value.put(
                         "latestAdjustedClose",
                         last.path("adjustedClose").asText(last.path("close").asText())
                 );
                 value.put("sampleSize", prices.size());
+                for (String field : List.of(
+                        "requestedPeriodStart", "requestedPeriodEnd", "coverageStatus"
+                )) {
+                    if (source.payload().hasNonNull(field)) {
+                        value.set(field, source.payload().path(field));
+                    }
+                }
                 if (source.payload().hasNonNull("priceAdjustment")) {
                     value.set("priceAdjustment", source.payload().path("priceAdjustment"));
                 }
@@ -110,7 +125,8 @@ public class EvidenceBuilder {
                     ObjectNode metadata = filings.addObject();
                     for (String field : List.of(
                             "documentId", "accessionNumber", "formType", "filingDate",
-                            "reportPeriod", "title", "summary"
+                            "reportPeriod", "title", "summary", "contentProcessingStatus",
+                            "processedCharacterLimit"
                     )) {
                         if (document.hasNonNull(field)) {
                             metadata.set(field, document.path(field));

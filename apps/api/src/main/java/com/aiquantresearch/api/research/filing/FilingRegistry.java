@@ -53,7 +53,17 @@ public class FilingRegistry {
             rawHtml = "<html><body><h1>" + escape(title) + "</h1><p>"
                     + escape(required(filing, "summary")) + "</p></body></html>";
         }
-        FilingTextProcessor.ProcessedFiling processed = processor.process(rawHtml);
+        FilingTextProcessor.ProcessedFiling processed;
+        try {
+            processed = processor.process(rawHtml);
+        } catch (IllegalArgumentException exception) {
+            throw new StepExecutionException(
+                    "FILING_CONTENT_INVALID",
+                    "A filing document could not be normalized within the safety boundary",
+                    false,
+                    exception
+            );
+        }
         String rawHash = hashService.hashText(rawHtml);
         String cleanedHash = hashService.hashText(processed.cleanedText());
         UUID proposedId = UUID.randomUUID();
@@ -76,7 +86,9 @@ public class FilingRegistry {
                 nullableText(filing, "sourceUrl"),
                 rawHash,
                 cleanedHash,
-                FilingTextProcessor.PARSER_VERSION,
+                processed.truncated()
+                        ? FilingTextProcessor.PARSER_VERSION + "_bounded"
+                        : FilingTextProcessor.PARSER_VERSION,
                 source.demoData()
         );
         UUID filingId = jdbc.queryForObject("""
