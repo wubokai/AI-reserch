@@ -748,6 +748,16 @@ public class DeterministicMockReportGenerator {
             List<StoredSource> sources,
             List<StoredEvidence> evidence
     ) {
+        var latestEvidenceDate = evidence.stream()
+                .map(item -> item.value().path("asOfDate").asText())
+                .filter(value -> !value.isBlank())
+                .map(DeterministicMockReportGenerator::parseDate)
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder());
+        if (latestEvidenceDate.isPresent()) {
+            return latestEvidenceDate.orElseThrow().toString();
+        }
+
         List<String> candidates = new ArrayList<>();
         sources.stream()
                 .filter(item -> "MARKET_DATA".equals(item.purpose()))
@@ -756,10 +766,6 @@ public class DeterministicMockReportGenerator {
                 .forEach(candidates::add);
         sources.stream()
                 .map(item -> item.payload().path("asOfDate").asText())
-                .filter(value -> !value.isBlank())
-                .forEach(candidates::add);
-        evidence.stream()
-                .map(item -> item.value().path("asOfDate").asText())
                 .filter(value -> !value.isBlank())
                 .forEach(candidates::add);
         for (String requestField : List.of("asOfDate", "periodEnd", "endDate")) {

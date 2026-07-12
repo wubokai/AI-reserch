@@ -85,6 +85,8 @@ class DeterministicMockReportGeneratorTest {
     @Test
     void generatesZeroCostRealProviderReportWithoutDemoWatermark() {
         ResearchExecutionContext base = fixture.context();
+        ObjectNode request = base.request().deepCopy();
+        request.put("asOfDate", "2023-12-30");
         ResearchExecutionContext real = new ResearchExecutionContext(
                 base.researchId(),
                 base.ownerId(),
@@ -92,7 +94,7 @@ class DeterministicMockReportGeneratorTest {
                 base.securityType(),
                 base.locale(),
                 DataMode.REAL,
-                base.request()
+                request
         );
 
         JsonNode report = generator.generate(
@@ -100,6 +102,7 @@ class DeterministicMockReportGeneratorTest {
         );
 
         assertThat(report.path("dataMode").asText()).isEqualTo("REAL");
+        assertThat(report.path("asOfDate").asText()).isEqualTo(ReportTestFixture.AS_OF_DATE);
         assertThat(report.toString())
                 .contains(DeterministicMockReportGenerator.REAL_DATA_LABEL)
                 .doesNotContain(
