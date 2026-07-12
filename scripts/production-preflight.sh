@@ -15,10 +15,7 @@ source "${ENV_FILE}"
 set +a
 
 required=(
-  POSTGRES_PASSWORD SERVICE_JWT_HMAC_SECRET OPENAI_API_KEY
-  OPENAI_REPORT_MODEL OPENAI_SAFETY_HMAC_SECRET OPENAI_PRICING_VERSION
-  OPENAI_PRICING_EFFECTIVE_FROM OPENAI_INPUT_USD_PER_MILLION_TOKENS
-  OPENAI_CACHED_INPUT_USD_PER_MILLION_TOKENS OPENAI_OUTPUT_USD_PER_MILLION_TOKENS
+  POSTGRES_PASSWORD SERVICE_JWT_HMAC_SECRET
   TIINGO_API_KEY FRED_API_KEY SEC_USER_AGENT SERVICE_JWT_EMAIL
 )
 
@@ -31,6 +28,31 @@ for name in "${required[@]}"; do
 done
 if [[ "${missing}" -ne 0 ]]; then
   exit 1
+fi
+
+if [[ -z "${OPENAI_API_KEY:-}" && -z "${OPENAI_REPORT_MODEL:-}" ]]; then
+  [[ "${RESEARCH_MAX_LLM_CALLS:-}" =~ ^0+$ ]] || {
+    echo "Zero-cost deterministic mode requires RESEARCH_MAX_LLM_CALLS=0" >&2
+    exit 1
+  }
+  [[ "${RESEARCH_MAX_LLM_COST_USD:-}" =~ ^0+(\.0+)?$ ]] || {
+    echo "Zero-cost deterministic mode requires RESEARCH_MAX_LLM_COST_USD=0" >&2
+    exit 1
+  }
+else
+  llm_required=(
+    OPENAI_API_KEY OPENAI_REPORT_MODEL OPENAI_SAFETY_HMAC_SECRET
+    OPENAI_PRICING_VERSION OPENAI_PRICING_EFFECTIVE_FROM
+    OPENAI_INPUT_USD_PER_MILLION_TOKENS
+    OPENAI_CACHED_INPUT_USD_PER_MILLION_TOKENS
+    OPENAI_OUTPUT_USD_PER_MILLION_TOKENS
+  )
+  for name in "${llm_required[@]}"; do
+    if [[ -z "${!name:-}" ]]; then
+      echo "Missing required LLM production value: ${name}" >&2
+      exit 1
+    fi
+  done
 fi
 
 [[ "${OPENAI_BASE_URL}" == "https://lanyiapi.com/v1/" ]] || {

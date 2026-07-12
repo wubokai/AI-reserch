@@ -31,3 +31,29 @@ Path(sys.argv[2]).write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 
 "${ROOT_DIR}/scripts/production-preflight.sh" "${TEMP_ENV}"
+
+python3 - "${TEMP_ENV}" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+zero_cost = {
+    "OPENAI_API_KEY": "",
+    "OPENAI_REPORT_MODEL": "",
+    "OPENAI_VALIDATION_MODEL": "",
+    "OPENAI_PRICING_VERSION": "",
+    "OPENAI_PRICING_EFFECTIVE_FROM": "",
+    "OPENAI_INPUT_USD_PER_MILLION_TOKENS": "",
+    "OPENAI_CACHED_INPUT_USD_PER_MILLION_TOKENS": "",
+    "OPENAI_OUTPUT_USD_PER_MILLION_TOKENS": "",
+    "RESEARCH_MAX_LLM_COST_USD": "0",
+    "RESEARCH_MAX_LLM_CALLS": "0",
+}
+lines = []
+for line in path.read_text(encoding="utf-8").splitlines():
+    name = line.split("=", 1)[0]
+    lines.append(f"{name}={zero_cost[name]}" if name in zero_cost else line)
+path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
+"${ROOT_DIR}/scripts/production-preflight.sh" "${TEMP_ENV}"
