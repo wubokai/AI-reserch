@@ -18,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,6 +46,7 @@ public class FredMacroDataProvider implements MacroDataProvider {
     static final String LICENSE_POLICY_VERSION = "fred_api_terms_reviewed_2026_07_10";
     static final String ATTRIBUTION = "This product uses the FRED® API but is not endorsed or "
             + "certified by the Federal Reserve Bank of St. Louis.";
+    private static final ZoneId FRED_VINTAGE_ZONE = ZoneId.of("America/Chicago");
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
@@ -95,7 +97,7 @@ public class FredMacroDataProvider implements MacroDataProvider {
     }
 
     private MacroDataSnapshot fetchLive() {
-        LocalDate vintageDate = LocalDate.now(clock);
+        LocalDate vintageDate = LocalDate.now(clock.withZone(FRED_VINTAGE_ZONE));
         List<byte[]> rawParts = new ArrayList<>();
         List<MacroSeries> series = properties.seriesIds().stream()
                 .map(seriesId -> series(seriesId, vintageDate, rawParts))

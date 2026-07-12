@@ -83,6 +83,22 @@ class FredMacroDataProviderTest {
     }
 
     @Test
+    void usesFredCentralDateAcrossUtcMidnight() throws Exception {
+        start(this::route);
+
+        Clock afterUtcMidnight = Clock.fixed(
+                Instant.parse("2026-07-12T00:30:00Z"), ZoneOffset.UTC
+        );
+        var snapshot = provider(1, afterUtcMidnight).fetch();
+
+        assertThat(snapshot.vintageDate()).isEqualTo(LocalDate.parse("2026-07-11"));
+        assertThat(queries).hasSize(2).allSatisfy(query -> {
+            assertThat(query).contains("realtime_start=2026-07-11");
+            assertThat(query).contains("realtime_end=2026-07-11");
+        });
+    }
+
+    @Test
     void httpFailureNeverExposesApiKeyOrResponseBody() throws Exception {
         start(exchange -> respond(
                 exchange,
@@ -103,6 +119,13 @@ class FredMacroDataProviderTest {
     }
 
     private FredMacroDataProvider provider(int maxAttempts) {
+        return provider(
+                maxAttempts,
+                Clock.fixed(Instant.parse("2026-07-10T12:00:00Z"), ZoneOffset.UTC)
+        );
+    }
+
+    private FredMacroDataProvider provider(int maxAttempts, Clock clock) {
         String base = "http://127.0.0.1:" + server.getAddress().getPort();
         FredProperties properties = new FredProperties(
                 URI.create(base),
@@ -120,7 +143,7 @@ class FredMacroDataProviderTest {
                 WebClient.builder(),
                 new ObjectMapper().findAndRegisterModules(),
                 properties,
-                Clock.fixed(Instant.parse("2026-07-10T12:00:00Z"), ZoneOffset.UTC)
+                clock
         );
     }
 
