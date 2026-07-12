@@ -4,6 +4,7 @@ import com.aiquantresearch.api.research.orchestration.ResearchExecutionContext;
 import com.aiquantresearch.api.research.orchestration.StoredEvidence;
 import com.aiquantresearch.api.research.orchestration.StoredQuantResult;
 import com.aiquantresearch.api.research.orchestration.StoredSource;
+import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -32,6 +33,9 @@ public class DeterministicMockReportGenerator {
     public static final String DEMO_WATERMARK = "DEMO DATA — NOT REAL MARKET DATA";
     public static final String DISCLAIMER = DEMO_WATERMARK
             + ". Research use only; not investment advice.";
+    public static final String REAL_DATA_LABEL = "REAL PROVIDER DATA";
+    public static final String REAL_DISCLAIMER = REAL_DATA_LABEL
+            + ". Research use only; not investment advice.";
 
     private static final List<String> SCENARIO_ORDER = List.of("BULL", "BASE", "BEAR");
     private static final Pattern ISO_DATE = Pattern.compile("\\b\\d{4}-\\d{2}-\\d{2}\\b");
@@ -59,6 +63,7 @@ public class DeterministicMockReportGenerator {
         if (!List.of("zh-CN", "en-US").contains(context.locale())) {
             throw new IllegalArgumentException("Unsupported report locale: " + context.locale());
         }
+        boolean demoData = context.dataMode() == DataMode.MOCK;
 
         List<StoredSource> orderedSources = sources.stream()
                 .sorted(Comparator.comparing(StoredSource::purpose)
@@ -157,7 +162,7 @@ public class DeterministicMockReportGenerator {
         report.put(
                 "title",
                 context.symbol() + (chinese ? " 证据驱动研究报告 — " : " evidence-backed report — ")
-                        + DEMO_WATERMARK
+                        + (demoData ? DEMO_WATERMARK : REAL_DATA_LABEL)
         );
         report.put("symbol", context.symbol());
         report.put("securityType", context.securityType());
@@ -173,9 +178,14 @@ public class DeterministicMockReportGenerator {
                         claims.fact(
                                 "overview_snapshot",
                                 chinese
-                                        ? "本报告基于截至 " + asOfDate + " 的本地合成市场快照。"
-                                        : "This report uses a local synthetic market snapshot as of "
-                                                + asOfDate + ".",
+                                        ? demoData
+                                                ? "本报告基于截至 " + asOfDate + " 的本地合成市场快照。"
+                                                : "本报告基于截至 " + asOfDate + " 的已注册真实数据源快照。"
+                                        : demoData
+                                                ? "This report uses a local synthetic market snapshot as of "
+                                                        + asOfDate + "."
+                                                : "This report uses registered real-provider snapshots as of "
+                                                        + asOfDate + ".",
                                 "MATERIAL",
                                 marketEvidence
                         ),
@@ -190,8 +200,11 @@ public class DeterministicMockReportGenerator {
                                 maxDrawdown
                         )
                 ),
-                chinese ? DEMO_WATERMARK + "；结论置信度由证据质量规则确定。"
-                        : DEMO_WATERMARK + "; confidence is derived from the evidence-quality policy."
+                chinese
+                        ? (demoData ? DEMO_WATERMARK : REAL_DATA_LABEL)
+                                + "；结论置信度由证据质量规则确定。"
+                        : (demoData ? DEMO_WATERMARK : REAL_DATA_LABEL)
+                                + "; confidence is derived from the evidence-quality policy."
         ));
         sections.add(section(
                 "company_overview",
@@ -472,11 +485,17 @@ public class DeterministicMockReportGenerator {
         qualityAssessment.staleEvidenceIds().forEach(staleEvidenceIds::add);
         dataQuality.putArray("sourceConflicts");
         ArrayNode limitations = dataQuality.putArray("limitations");
-        limitations
-                .add(DEMO_WATERMARK)
-                .add(chinese
-                        ? "固定演示数据不代表真实市场、公司或宏观状况。"
-                        : "Fixed demo data does not represent real market, company, or macro conditions.");
+        if (demoData) {
+            limitations
+                    .add(DEMO_WATERMARK)
+                    .add(chinese
+                            ? "固定演示数据不代表真实市场、公司或宏观状况。"
+                            : "Fixed demo data does not represent real market, company, or macro conditions.");
+        } else {
+            limitations.add(chinese
+                    ? "数据来自已注册的真实外部数据源，仍可能存在延迟、修订或覆盖缺口。"
+                    : "Registered real-provider data may still have delays, revisions, or coverage gaps.");
+        }
         optionalUnavailableMetrics.stream()
                 .limit(28)
                 .map(name -> "Optional quant metric unavailable: " + name)
@@ -495,7 +514,13 @@ public class DeterministicMockReportGenerator {
         ));
         report.put(
                 "disclaimer",
-                chinese ? DISCLAIMER + " 本报告仅供研究演示，不构成投资建议。" : DISCLAIMER
+                demoData
+                        ? chinese
+                                ? DISCLAIMER + " 本报告仅供研究演示，不构成投资建议。"
+                                : DISCLAIMER
+                        : chinese
+                                ? REAL_DISCLAIMER + " 本报告仅供个人研究，不构成投资建议。"
+                                : REAL_DISCLAIMER
         );
         return report;
     }

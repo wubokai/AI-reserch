@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.aiquantresearch.api.research.orchestration.ResearchExecutionContext;
 import com.aiquantresearch.api.research.orchestration.StoredQuantResult;
+import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
@@ -77,6 +78,37 @@ class DeterministicMockReportGeneratorTest {
         );
         assertThat(validation.valid()).as(validation.warnings().toString()).isTrue();
         assertThat(validation.partial()).isFalse();
+        assertThat(validation.warnings()).isEmpty();
+    }
+
+    @Test
+    void generatesZeroCostRealProviderReportWithoutDemoWatermark() {
+        ResearchExecutionContext base = fixture.context();
+        ResearchExecutionContext real = new ResearchExecutionContext(
+                base.researchId(),
+                base.ownerId(),
+                base.symbol(),
+                base.securityType(),
+                base.locale(),
+                DataMode.REAL,
+                base.request()
+        );
+
+        JsonNode report = generator.generate(
+                real, fixture.sources(), fixture.quantResults(), fixture.evidence(), 1
+        );
+
+        assertThat(report.path("dataMode").asText()).isEqualTo("REAL");
+        assertThat(report.toString())
+                .contains(DeterministicMockReportGenerator.REAL_DATA_LABEL)
+                .doesNotContain(DeterministicMockReportGenerator.DEMO_WATERMARK);
+        assertThat(report.path("disclaimer").asText())
+                .contains("not investment advice", "不构成投资建议");
+
+        ReportValidationResult validation = new ReportValidator().validate(
+                report, fixture.quantResults(), fixture.evidence(), real
+        );
+        assertThat(validation.valid()).as(validation.warnings().toString()).isTrue();
         assertThat(validation.warnings()).isEmpty();
     }
 

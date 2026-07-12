@@ -2,6 +2,7 @@ package com.aiquantresearch.api.research.llm;
 
 import com.aiquantresearch.api.research.application.CanonicalHashService;
 import com.aiquantresearch.api.research.report.DeterministicMockReportGenerator;
+import com.aiquantresearch.api.shared.domain.DataMode;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import org.springframework.stereotype.Component;
@@ -27,7 +28,14 @@ public class MockResearchLanguageModel implements ResearchLanguageModel {
 
     @Override
     public ResearchLanguageModelResult generateReport(ResearchLanguageModelRequest request) {
-        return deterministic(request, "MOCK", MODEL_NAME, null, false);
+        boolean realData = request.context().dataMode() == DataMode.REAL;
+        return deterministic(
+                request,
+                realData ? "DETERMINISTIC_ZERO_COST" : "MOCK",
+                realData ? "deterministic-real-report-v1" : MODEL_NAME,
+                null,
+                false
+        );
     }
 
     public ResearchLanguageModelResult safeFallback(
@@ -84,7 +92,9 @@ public class MockResearchLanguageModel implements ResearchLanguageModel {
                         null,
                         true,
                         null,
-                        "mock_zero_cost_v1",
+                        "MOCK".equals(provider)
+                                ? "mock_zero_cost_v1"
+                                : "deterministic_zero_cost_v1",
                         null,
                         0
                 ),

@@ -123,7 +123,11 @@ public class ReportValidator {
             warn(warnings, "DATA_MODE_CONTEXT_MISMATCH", "$.dataMode");
         }
         validateAsOfDate(report, evidence, warnings);
-        validateDemoDisclosure(report, warnings);
+        if (context.dataMode() == com.aiquantresearch.api.shared.domain.DataMode.MOCK) {
+            validateDemoDisclosure(report, warnings);
+        } else {
+            validateRealDisclosure(report, warnings);
+        }
 
         Set<String> claimIds = new HashSet<>();
         int materialClaims = 0;
@@ -833,6 +837,19 @@ public class ReportValidator {
         String disclaimer = report.path("disclaimer").asText();
         if (!disclaimer.contains(DeterministicMockReportGenerator.DEMO_WATERMARK)) {
             warn(warnings, "DEMO_DISCLAIMER_MISSING", "$.disclaimer");
+        }
+        if (!disclaimer.toLowerCase(java.util.Locale.ROOT).contains("not investment advice")) {
+            warn(warnings, "INVESTMENT_ADVICE_DISCLAIMER_MISSING", "$.disclaimer");
+        }
+    }
+
+    private static void validateRealDisclosure(JsonNode report, List<String> warnings) {
+        if (report.toString().contains(DeterministicMockReportGenerator.DEMO_WATERMARK)) {
+            warn(warnings, "REAL_REPORT_CONTAINS_DEMO_WATERMARK", "$");
+        }
+        String disclaimer = report.path("disclaimer").asText();
+        if (!disclaimer.contains(DeterministicMockReportGenerator.REAL_DATA_LABEL)) {
+            warn(warnings, "REAL_DATA_DISCLOSURE_MISSING", "$.disclaimer");
         }
         if (!disclaimer.toLowerCase(java.util.Locale.ROOT).contains("not investment advice")) {
             warn(warnings, "INVESTMENT_ADVICE_DISCLAIMER_MISSING", "$.disclaimer");
