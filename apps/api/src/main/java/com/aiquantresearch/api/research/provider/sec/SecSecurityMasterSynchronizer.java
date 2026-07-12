@@ -39,7 +39,8 @@ public class SecSecurityMasterSynchronizer {
             do update set company_name = excluded.company_name,
                           cik = excluded.cik,
                           active = true,
-                          updated_at = statement_timestamp()
+                          updated_at = statement_timestamp(),
+                          row_version = securities.row_version + 1
             """;
 
     private final WebClient webClient;
