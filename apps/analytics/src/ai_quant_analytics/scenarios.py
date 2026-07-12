@@ -115,10 +115,7 @@ def calculate_scenario_metrics(  # noqa: C901 - mirrors the documented scenario 
             upside_downside = implied_price / current_price - Decimal(1)
             weighted_value += implied_price * probability
             scenario_warnings: tuple[AnalyticsWarning, ...] = ()
-            if (
-                valuation_method == "EV_EBITDA"
-                and forecast_ebitda <= 0
-            ):
+            if valuation_method == "EV_EBITDA" and forecast_ebitda <= 0:
                 scenario_warnings = (
                     warning(
                         "NON_POSITIVE_FORECAST_EBITDA",
