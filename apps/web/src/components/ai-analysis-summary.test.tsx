@@ -13,6 +13,7 @@ describe("buildReportSummary", () => {
     expect(summary.weightedChange).toBeCloseTo(-0.0175, 6);
     expect(summary.futureView).toContain("基准情景的权重最高");
     expect(summary.currentSituation).toContain("数据可靠度为 92%");
+    expect(summary.currentSituation).toContain("当前市场价格为 US$100.00");
     expect(summary.currentSituation).toContain("US$105.75");
     expect(summary.opportunity).toContain("乐观情况下参考值");
     expect(summary.risk).toContain("谨慎情况下参考值");

@@ -343,6 +343,8 @@ export const reportScenarioSchema = z.object({
   revenueGrowth: decimalValueSchema,
   targetEbitdaMargin: decimalValueSchema,
   evToEbitdaMultiple: decimalValueSchema,
+  valuationMethod: z.enum(["EV_EBITDA", "EV_REVENUE"]).optional(),
+  valuationMultiple: decimalValueSchema.optional(),
   impliedEquityValue: decimalValueSchema,
   impliedPrice: decimalValueSchema,
   upsideDownside: decimalValueSchema,
@@ -351,6 +353,7 @@ export const reportScenarioSchema = z.object({
 export const scenarioAnalysisSchema = z.object({
   calculationId: publicIdSchema,
   currency: z.string().length(3).optional(),
+  currentPrice: decimalValueSchema.optional(),
   scenarios: z.array(reportScenarioSchema).length(3),
   weightedImpliedPrice: decimalValueSchema,
   summaryClaims: z.array(claimSchema),

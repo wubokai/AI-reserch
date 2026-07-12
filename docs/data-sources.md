@@ -77,6 +77,7 @@ SEC XBRL 的标准 concept、期间选择、修订去重、派生公式与 NOT_A
 
 ### 4.1 SEC EDGAR Adapter v1
 
+- 生产 API 每 24 小时从 SEC 官方 `company_tickers_exchange.json` 同步一次活跃公司证券主数据，启动后立即首轮同步；搜索不再局限于早期预置的 MU/NVDA/RKLB，新增公司仍须由 Tiingo 行情与 SEC 数据实际覆盖才能完成研究；
 - 证券代码先通过 SEC 官方 `company_tickers.json` 映射 CIK，再读取 `data.sec.gov/submissions/CIK##########.json`，只下载允许的 10-K、10-Q、8-K、20-F、40-F、6-K 及修订版主文档；
 - `SEC_USER_AGENT` 必须包含应用身份与受监控联系邮箱。Filing 与 Companyfacts Adapter 共用同一个进程级 Governor，而非各自计数；聚合实现上限为 1–10 次/秒，默认 8 次/秒，遵守 SEC 当前不超过 10 次/秒的自动访问政策；
 - 生产 URL 只允许 `https://data.sec.gov` 与 `https://www.sec.gov`，拒绝 user-info、非 HTTPS 官方地址、路径穿越和非允许文档标识；Contract Test 可使用 loopback HTTP；

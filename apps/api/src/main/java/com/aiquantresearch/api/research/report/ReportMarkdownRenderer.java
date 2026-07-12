@@ -39,14 +39,18 @@ public class ReportMarkdownRenderer {
         }
 
         output.append("## Scenario analysis\n\n");
-        output.append("| Scenario | Probability | Revenue growth | EBITDA margin | EV/EBITDA | Implied equity value | Implied price | Upside/downside |\n");
-        output.append("|---|---:|---:|---:|---:|---:|---:|---:|\n");
+        output.append("**Current market price:** ")
+                .append(md(report.path("scenarioAnalysis").path("currentPrice").asText()))
+                .append("\n\n");
+        output.append("| Scenario | Probability | Revenue growth | EBITDA margin | Valuation method | Valuation multiple | Implied equity value | Implied price | Upside/downside |\n");
+        output.append("|---|---:|---:|---:|---|---:|---:|---:|---:|\n");
         for (JsonNode scenario : report.path("scenarioAnalysis").path("scenarios")) {
             output.append("| ").append(md(scenario.path("name").asText()))
                     .append(" | ").append(md(scenario.path("probability").asText()))
                     .append(" | ").append(md(scenario.path("revenueGrowth").asText()))
                     .append(" | ").append(md(scenario.path("targetEbitdaMargin").asText()))
-                    .append(" | ").append(md(scenario.path("evToEbitdaMultiple").asText()))
+                    .append(" | ").append(md(scenario.path("valuationMethod").asText()))
+                    .append(" | ").append(md(scenario.path("valuationMultiple").asText()))
                     .append(" | ").append(md(scenario.path("impliedEquityValue").asText()))
                     .append(" | ").append(md(scenario.path("impliedPrice").asText()))
                     .append(" | ").append(md(scenario.path("upsideDownside").asText()))

@@ -102,6 +102,12 @@ class AnalyticsRequestFactoryTest {
                 .containsExactly("BULL", "BASE", "BEAR");
         assertThat(request.path("scenarioInput").path("scenarios").get(1)
                 .path("targetEbitdaMargin").asText()).isEqualTo("0.3");
+        assertThat(request.path("scenarioInput").path("scenarios"))
+                .allSatisfy(node -> {
+                    assertThat(node.path("valuationMethod").asText())
+                            .isEqualTo("EV_EBITDA");
+                    assertThat(node.path("valuationMultiple").asText()).isNotBlank();
+                });
     }
 
     private static FundamentalMetric metric(

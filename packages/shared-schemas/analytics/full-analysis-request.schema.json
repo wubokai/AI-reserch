@@ -111,6 +111,13 @@
         "evToEbitdaMultiple": {
           "$ref": "#/$defs/decimal"
         },
+        "valuationMethod": {
+          "type": "string",
+          "enum": ["EV_EBITDA", "EV_REVENUE"]
+        },
+        "valuationMultiple": {
+          "$ref": "#/$defs/decimal"
+        },
         "probability": {
           "$ref": "#/$defs/decimal"
         }
@@ -120,6 +127,8 @@
         "revenueGrowth",
         "targetEbitdaMargin",
         "evToEbitdaMultiple",
+        "valuationMethod",
+        "valuationMultiple",
         "probability"
       ]
     },

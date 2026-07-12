@@ -600,10 +600,18 @@ public class ReportValidator {
         String path = "$.scenarioAnalysis";
         exactFields(
                 scenarioAnalysis,
-                Set.of("calculationId", "scenarios", "weightedImpliedPrice", "summaryClaims"),
+                Set.of(
+                        "calculationId", "currentPrice", "scenarios",
+                        "weightedImpliedPrice", "summaryClaims"
+                ),
                 path,
                 warnings
         );
+        if (!isDecimal(scenarioAnalysis.path("currentPrice"))
+                || new BigDecimal(scenarioAnalysis.path("currentPrice").asText())
+                .signum() <= 0) {
+            warn(warnings, "SCENARIO_CURRENT_PRICE_INVALID", path + ".currentPrice");
+        }
         String calculationId = scenarioAnalysis.path("calculationId").asText();
         if (!CALCULATION_ID.matcher(calculationId).matches()
                 || !calculations.containsKey(calculationId)) {
@@ -633,8 +641,8 @@ public class ReportValidator {
                         scenario,
                         Set.of(
                                 "name", "probability", "revenueGrowth", "targetEbitdaMargin",
-                                "evToEbitdaMultiple", "impliedEquityValue", "impliedPrice",
-                                "upsideDownside"
+                                "evToEbitdaMultiple", "valuationMethod", "valuationMultiple",
+                                "impliedEquityValue", "impliedPrice", "upsideDownside"
                         ),
                         scenarioPath,
                         warnings
@@ -645,12 +653,17 @@ public class ReportValidator {
                 }
                 for (String field : List.of(
                         "probability", "revenueGrowth", "targetEbitdaMargin",
-                        "evToEbitdaMultiple", "impliedEquityValue", "impliedPrice",
-                        "upsideDownside"
+                        "evToEbitdaMultiple", "valuationMultiple", "impliedEquityValue",
+                        "impliedPrice", "upsideDownside"
                 )) {
                     if (!isDecimal(scenario.path(field))) {
                         warn(warnings, "SCENARIO_DECIMAL_INVALID", scenarioPath + "." + field);
                     }
+                }
+                if (!Set.of("EV_EBITDA", "EV_REVENUE")
+                        .contains(scenario.path("valuationMethod").asText())) {
+                    warn(warnings, "SCENARIO_VALUATION_METHOD_INVALID",
+                            scenarioPath + ".valuationMethod");
                 }
                 if (isDecimal(scenario.path("probability"))) {
                     probabilitySum = probabilitySum.add(

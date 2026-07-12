@@ -148,6 +148,12 @@ class DeterministicMockReportGeneratorTest {
                 .containsExactly("BULL", "BASE", "BEAR");
         assertThat(report.path("scenarioAnalysis").path("scenarios").get(1)
                 .path("probability").asText()).isEqualTo("0.5");
+        assertThat(report.path("scenarioAnalysis").path("currentPrice").asText())
+                .isEqualTo("100");
+        assertThat(report.path("scenarioAnalysis").path("scenarios"))
+                .allSatisfy(node ->
+                        assertThat(node.path("valuationMethod").asText())
+                                .isEqualTo("EV_REVENUE"));
     }
 
     @Test

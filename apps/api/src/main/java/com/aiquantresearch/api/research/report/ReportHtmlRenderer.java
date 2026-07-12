@@ -54,9 +54,11 @@ public class ReportHtmlRenderer {
             html.append("</section>");
         }
 
-        html.append("<section><h2>Scenario analysis</h2><table><thead><tr>")
+        html.append("<section><h2>Scenario analysis</h2><p class=\"weighted\">Current market price: ")
+                .append(escape(report.path("scenarioAnalysis").path("currentPrice").asText()))
+                .append("</p><table><thead><tr>")
                 .append("<th>Scenario</th><th>Probability</th><th>Revenue growth</th>")
-                .append("<th>EBITDA margin</th><th>EV/EBITDA</th>")
+                .append("<th>EBITDA margin</th><th>Valuation method</th><th>Multiple</th>")
                 .append("<th>Equity value</th><th>Implied price</th><th>Upside/downside</th>")
                 .append("</tr></thead><tbody>");
         for (JsonNode scenario : report.path("scenarioAnalysis").path("scenarios")) {
@@ -65,7 +67,8 @@ public class ReportHtmlRenderer {
                     .append(cell(scenario.path("probability")))
                     .append(cell(scenario.path("revenueGrowth")))
                     .append(cell(scenario.path("targetEbitdaMargin")))
-                    .append(cell(scenario.path("evToEbitdaMultiple")))
+                    .append(cell(scenario.path("valuationMethod")))
+                    .append(cell(scenario.path("valuationMultiple")))
                     .append(cell(scenario.path("impliedEquityValue")))
                     .append(cell(scenario.path("impliedPrice")))
                     .append(cell(scenario.path("upsideDownside")))

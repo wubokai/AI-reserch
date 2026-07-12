@@ -302,11 +302,13 @@ STRONG_UPTREND、UPTREND、RANGE、DOWNTREND、STRONG_DOWNTREND、INSUFFICIENT_D
 
 ## 10. 情景分析默认模型
 
-MVP 使用单一、透明的 EBITDA 情景模型：
+使用透明的企业价值情景模型：盈利公司采用 EV/EBITDA，未盈利公司采用 EV/Revenue；报告必须
+明确显示使用的方法、倍数和当前市场价格：
 
 1. Forecast Revenue = Base Revenue × (1 + Revenue Growth)。
 2. Forecast EBITDA = Forecast Revenue × Target EBITDA Margin。
-3. Implied Enterprise Value = Forecast EBITDA × EV/EBITDA Multiple。
+3. `EV_EBITDA`：Implied Enterprise Value = Forecast EBITDA × Valuation Multiple；
+   `EV_REVENUE`：Implied Enterprise Value = Forecast Revenue × Valuation Multiple。
 4. Implied Equity Value = Implied Enterprise Value - Net Debt。
 5. Raw Implied Price = Implied Equity Value / Diluted Share Count。
 6. Implied Price = max(0, Raw Implied Price)，同时保留原始值用于限制说明。

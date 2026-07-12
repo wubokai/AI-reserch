@@ -14,6 +14,7 @@ public record SecEdgarProperties(
         @NotNull URI dataBaseUrl,
         @NotNull URI archivesBaseUrl,
         @NotNull URI companyTickersUrl,
+        @NotNull URI companyTickersExchangeUrl,
         @NotNull Duration timeout,
         String userAgent,
         @Min(1) @Max(10) int maxRequestsPerSecond,

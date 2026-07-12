@@ -152,3 +152,27 @@ def test_negative_scenario_equity_preserves_raw_value_and_floors_display(
     assert metrics["scenario_bear_implied_price"]["warnings"][0]["code"] == (
         "NON_POSITIVE_FORECAST_EBITDA"
     )
+
+
+def test_unprofitable_company_uses_revenue_multiple_without_zero_price(
+    client: TestClient,
+) -> None:
+    scenario_input = make_scenario_input()
+    scenarios = scenario_input["scenarios"]
+    assert isinstance(scenarios, list)
+    for scenario in scenarios:
+        scenario["targetEbitdaMargin"] = "-0.25"
+        scenario["valuationMethod"] = "EV_REVENUE"
+        scenario["valuationMultiple"] = "2"
+
+    response = client.post(
+        "/analytics/v1/scenarios",
+        json=make_payload([100, 101], scenario_input=scenario_input),
+    )
+    metrics = {metric["name"]: metric for metric in response.json()["metrics"]}
+
+    assert response.status_code == 200
+    assert metrics["scenario_bull_implied_price"]["value"] == "230.0000"
+    assert metrics["scenario_base_implied_price"]["value"] == "210.0000"
+    assert metrics["scenario_bear_implied_price"]["value"] == "190.0000"
+    assert metrics["scenario_bear_implied_price"]["warnings"] == []

@@ -1657,6 +1657,8 @@ components:
         - revenueGrowth
         - targetEbitdaMargin
         - evToEbitdaMultiple
+        - valuationMethod
+        - valuationMultiple
         - impliedEquityValue
         - impliedPrice
         - upsideDownside
@@ -1676,6 +1678,12 @@ components:
         evToEbitdaMultiple:
           type: string
           pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
+        valuationMethod:
+          type: string
+          enum: [EV_EBITDA, EV_REVENUE]
+        valuationMultiple:
+          type: string
+          pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
         impliedEquityValue:
           type: string
           pattern: '^-?[0-9]+(?:\.[0-9]+)?$'
@@ -1689,11 +1697,14 @@ components:
     ScenarioAnalysis:
       type: object
       additionalProperties: false
-      required: [calculationId, scenarios, weightedImpliedPrice, summaryClaims]
+      required: [calculationId, currentPrice, scenarios, weightedImpliedPrice, summaryClaims]
       properties:
         calculationId:
           type: string
           pattern: '^calc_[A-Za-z0-9_-]{1,64}$'
+        currentPrice:
+          type: string
+          pattern: '^[0-9]+(?:\.[0-9]+)?$'
         scenarios:
           type: array
           minItems: 3

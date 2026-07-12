@@ -81,6 +81,7 @@ app:
       data-base-url: ${SEC_DATA_BASE_URL:https://data.sec.gov}
       archives-base-url: ${SEC_ARCHIVES_BASE_URL:https://www.sec.gov}
       company-tickers-url: ${SEC_COMPANY_TICKERS_URL:https://www.sec.gov/files/company_tickers.json}
+      company-tickers-exchange-url: ${SEC_COMPANY_TICKERS_EXCHANGE_URL:https://www.sec.gov/files/company_tickers_exchange.json}
       timeout: ${SEC_TIMEOUT:20s}
       user-agent: ${SEC_USER_AGENT:}
       max-requests-per-second: ${SEC_MAX_REQUESTS_PER_SECOND:8}

@@ -1,4 +1,4 @@
-"""Transparent Bull, Base, and Bear EV/EBITDA scenario calculations."""
+"""Transparent Bull, Base, and Bear enterprise-value scenario calculations."""
 
 # Domain errors intentionally pass stable machine-code string literals.
 # ruff: noqa: EM101
@@ -51,7 +51,7 @@ def calculate_scenario_metrics(  # noqa: C901 - mirrors the documented scenario 
         )
 
     probabilities: list[Decimal] = []
-    parsed: dict[ScenarioName, tuple[Decimal, Decimal, Decimal, Decimal]] = {}
+    parsed: dict[ScenarioName, tuple[Decimal, Decimal, Decimal, Decimal, str]] = {}
     for name in ScenarioName:
         scenario = scenarios_by_name[name]
         growth = decimal_from_string(
@@ -62,9 +62,10 @@ def calculate_scenario_metrics(  # noqa: C901 - mirrors the documented scenario 
             scenario.target_ebitda_margin,
             f"scenarioInput.scenarios.{name.value}.targetEbitdaMargin",
         )
+        raw_multiple = scenario.valuation_multiple or scenario.ev_to_ebitda_multiple
         multiple = decimal_from_string(
-            scenario.ev_to_ebitda_multiple,
-            f"scenarioInput.scenarios.{name.value}.evToEbitdaMultiple",
+            raw_multiple,
+            f"scenarioInput.scenarios.{name.value}.valuationMultiple",
         )
         probability = decimal_from_string(
             scenario.probability,
@@ -78,14 +79,14 @@ def calculate_scenario_metrics(  # noqa: C901 - mirrors the documented scenario 
         if multiple < 0:
             raise AnalyticsDomainError(
                 "INVALID_SCENARIO_MULTIPLE",
-                "Scenario EV/EBITDA multiples must not be negative.",
+                "Scenario valuation multiples must not be negative.",
             )
         if not Decimal(0) <= probability <= Decimal(1):
             raise AnalyticsDomainError(
                 "INVALID_SCENARIO_PROBABILITY",
                 "Each scenario probability must be between 0 and 1.",
             )
-        parsed[name] = growth, margin, multiple, probability
+        parsed[name] = growth, margin, multiple, probability, scenario.valuation_method
         probabilities.append(probability)
     if abs(sum(probabilities, start=Decimal(0)) - Decimal(1)) > Decimal("1e-8"):
         raise AnalyticsDomainError(
@@ -100,17 +101,24 @@ def calculate_scenario_metrics(  # noqa: C901 - mirrors the documented scenario 
     with localcontext() as context:
         context.prec = 50
         for name in ScenarioName:
-            growth, margin, multiple, probability = parsed[name]
+            growth, margin, multiple, probability, valuation_method = parsed[name]
             forecast_revenue = base_revenue * (Decimal(1) + growth)
             forecast_ebitda = forecast_revenue * margin
-            enterprise_value = forecast_ebitda * multiple
+            enterprise_value = (
+                forecast_revenue * multiple
+                if valuation_method == "EV_REVENUE"
+                else forecast_ebitda * multiple
+            )
             equity_value = enterprise_value - net_debt
             raw_price = equity_value / diluted_shares
             implied_price = max(Decimal(0), raw_price)
             upside_downside = implied_price / current_price - Decimal(1)
             weighted_value += implied_price * probability
             scenario_warnings: tuple[AnalyticsWarning, ...] = ()
-            if forecast_ebitda <= 0:
+            if (
+                valuation_method == "EV_EBITDA"
+                and forecast_ebitda <= 0
+            ):
                 scenario_warnings = (
                     warning(
                         "NON_POSITIVE_FORECAST_EBITDA",

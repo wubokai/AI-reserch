@@ -50,10 +50,11 @@ export const phase3CanonicalReport: CanonicalResearchReport = {
   scenarioAnalysis: {
     calculationId: "calc_scenario_01",
     currency: "USD",
+    currentPrice: "100",
     scenarios: [
-      { name: "BULL", probability: "0.25", revenueGrowth: "0.18", targetEbitdaMargin: "0.34", evToEbitdaMultiple: "12", impliedEquityValue: "150000000000", impliedPrice: "145", upsideDownside: "0.30" },
-      { name: "BASE", probability: "0.50", revenueGrowth: "0.10", targetEbitdaMargin: "0.28", evToEbitdaMultiple: "10", impliedEquityValue: "112000000000", impliedPrice: "108", upsideDownside: "0.02" },
-      { name: "BEAR", probability: "0.25", revenueGrowth: "-0.05", targetEbitdaMargin: "0.18", evToEbitdaMultiple: "7", impliedEquityValue: "65000000000", impliedPrice: "62", upsideDownside: "-0.41" },
+      { name: "BULL", probability: "0.25", revenueGrowth: "0.18", targetEbitdaMargin: "0.34", evToEbitdaMultiple: "12", valuationMethod: "EV_EBITDA", valuationMultiple: "12", impliedEquityValue: "150000000000", impliedPrice: "145", upsideDownside: "0.30" },
+      { name: "BASE", probability: "0.50", revenueGrowth: "0.10", targetEbitdaMargin: "0.28", evToEbitdaMultiple: "10", valuationMethod: "EV_EBITDA", valuationMultiple: "10", impliedEquityValue: "112000000000", impliedPrice: "108", upsideDownside: "0.02" },
+      { name: "BEAR", probability: "0.25", revenueGrowth: "-0.05", targetEbitdaMargin: "0.18", evToEbitdaMultiple: "7", valuationMethod: "EV_EBITDA", valuationMultiple: "7", impliedEquityValue: "65000000000", impliedPrice: "62", upsideDownside: "-0.41" },
     ],
     weightedImpliedPrice: "105.75",
     summaryClaims: [{ ...calculationClaim, id: "cl_scenario_01", statement: "概率加权隐含情景值为 105.75 美元。" }],

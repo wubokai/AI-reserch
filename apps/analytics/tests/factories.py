@@ -88,6 +88,8 @@ def make_scenario_input() -> dict[str, object]:
                 "revenueGrowth": "0.20",
                 "targetEbitdaMargin": "0.20",
                 "evToEbitdaMultiple": "10",
+                "valuationMethod": "EV_EBITDA",
+                "valuationMultiple": "10",
                 "probability": "0.20",
             },
             {
@@ -95,6 +97,8 @@ def make_scenario_input() -> dict[str, object]:
                 "revenueGrowth": "0.10",
                 "targetEbitdaMargin": "0.15",
                 "evToEbitdaMultiple": "8",
+                "valuationMethod": "EV_EBITDA",
+                "valuationMultiple": "8",
                 "probability": "0.50",
             },
             {
@@ -102,6 +106,8 @@ def make_scenario_input() -> dict[str, object]:
                 "revenueGrowth": "0",
                 "targetEbitdaMargin": "0.10",
                 "evToEbitdaMultiple": "5",
+                "valuationMethod": "EV_EBITDA",
+                "valuationMultiple": "5",
                 "probability": "0.30",
             },
         ],

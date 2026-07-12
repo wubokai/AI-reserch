@@ -214,6 +214,13 @@
         "evToEbitdaMultiple": {
           "$ref": "#/$defs/decimal"
         },
+        "valuationMethod": {
+          "type": "string",
+          "enum": ["EV_EBITDA", "EV_REVENUE"]
+        },
+        "valuationMultiple": {
+          "$ref": "#/$defs/decimal"
+        },
         "impliedEquityValue": {
           "$ref": "#/$defs/decimal"
         },
@@ -230,6 +237,8 @@
         "revenueGrowth",
         "targetEbitdaMargin",
         "evToEbitdaMultiple",
+        "valuationMethod",
+        "valuationMultiple",
         "impliedEquityValue",
         "impliedPrice",
         "upsideDownside"
@@ -329,6 +338,9 @@
           "type": "string",
           "pattern": "^calc_[A-Za-z0-9_-]{1,64}$"
         },
+        "currentPrice": {
+          "$ref": "#/$defs/decimal"
+        },
         "scenarios": {
           "type": "array",
           "minItems": 3,
@@ -386,6 +398,7 @@
       },
       "required": [
         "calculationId",
+        "currentPrice",
         "scenarios",
         "weightedImpliedPrice",
         "summaryClaims"

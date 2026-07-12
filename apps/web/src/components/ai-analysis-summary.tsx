@@ -61,15 +61,26 @@ export function buildReportSummary(report: CanonicalResearchReport) {
       ? "存在下跌压力"
       : "更可能震荡";
   const currency = report.scenarioAnalysis.currency ?? "USD";
+  const currentPrice = report.scenarioAnalysis.currentPrice === undefined
+    ? null
+    : Number(report.scenarioAnalysis.currentPrice);
   const weightedImpliedPrice = Number(report.scenarioAnalysis.weightedImpliedPrice);
-  const currentSituation = `数据可靠度为 ${formatUnsignedPercent(report.dataQuality.score)}。综合三种情景后的参考值为 ${formatMoney(weightedImpliedPrice, currency)}，加权潜在变动为 ${formatPercent(weightedChange)}，因此当前前景判断为“${directionLabel}”。`;
+  const currentPriceText = currentPrice === null
+    ? ""
+    : `当前市场价格为 ${formatMoney(currentPrice, currency)}；`;
+  const currentSituation = `数据可靠度为 ${formatUnsignedPercent(report.dataQuality.score)}。${currentPriceText}综合三种情景后的参考值为 ${formatMoney(weightedImpliedPrice, currency)}，加权潜在变动为 ${formatPercent(weightedChange)}，因此当前前景判断为“${directionLabel}”。`;
   const futureView = dominantScenario
     ? `${scenarioNames[dominantScenario.name]}情景的权重最高（${formatUnsignedPercent(Number(dominantScenario.probability))}）。该情景对应 ${formatMoney(Number(dominantScenario.impliedPrice), currency)}，相对情景变动为 ${formatPercent(Number(dominantScenario.upsideDownside))}。`
     : "情景数据不足，暂时无法判断未来方向。";
   const bullScenario = scenarios.find((scenario) => scenario.name === "BULL");
   const bearScenario = scenarios.find((scenario) => scenario.name === "BEAR");
+  const bullMethod = bullScenario?.valuationMethod === "EV_REVENUE"
+    ? `EV/收入倍数 ${Number(bullScenario.valuationMultiple ?? bullScenario.evToEbitdaMultiple).toFixed(1)}×`
+    : bullScenario
+      ? `经营利润率 ${formatUnsignedPercent(Number(bullScenario.targetEbitdaMargin))}、EV/EBITDA 倍数 ${Number(bullScenario.valuationMultiple ?? bullScenario.evToEbitdaMultiple).toFixed(1)}×`
+      : "";
   const opportunity = bullScenario
-    ? `乐观情况下参考值为 ${formatMoney(Number(bullScenario.impliedPrice), currency)}，可能变动 ${formatPercent(Number(bullScenario.upsideDownside))}；关键假设是收入增长 ${formatUnsignedPercent(Number(bullScenario.revenueGrowth))}、经营利润率达到 ${formatUnsignedPercent(Number(bullScenario.targetEbitdaMargin))}。`
+    ? `乐观情况下参考值为 ${formatMoney(Number(bullScenario.impliedPrice), currency)}，可能变动 ${formatPercent(Number(bullScenario.upsideDownside))}；关键假设是收入增长 ${formatUnsignedPercent(Number(bullScenario.revenueGrowth))}、${bullMethod}。`
     : "暂未识别出有足够证据支持的主要机会。";
   const risk = bearScenario
     ? `谨慎情况下参考值为 ${formatMoney(Number(bearScenario.impliedPrice), currency)}，可能变动 ${formatPercent(Number(bearScenario.upsideDownside))}；若收入增长和利润率走弱，下行风险会明显增加。`

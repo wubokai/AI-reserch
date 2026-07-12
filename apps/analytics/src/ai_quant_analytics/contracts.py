@@ -124,6 +124,14 @@ class ScenarioAssumption(StrictApiModel):
     revenue_growth: DecimalString = Field(alias="revenueGrowth")
     target_ebitda_margin: DecimalString = Field(alias="targetEbitdaMargin")
     ev_to_ebitda_multiple: DecimalString = Field(alias="evToEbitdaMultiple")
+    valuation_method: Literal["EV_EBITDA", "EV_REVENUE"] = Field(
+        default="EV_EBITDA",
+        alias="valuationMethod",
+    )
+    valuation_multiple: DecimalString | None = Field(
+        default=None,
+        alias="valuationMultiple",
+    )
     probability: DecimalString
 
 

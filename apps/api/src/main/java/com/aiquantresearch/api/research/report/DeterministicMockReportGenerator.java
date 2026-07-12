@@ -460,6 +460,7 @@ public class DeterministicMockReportGenerator {
         report.set(
                 "scenarioAnalysis",
                 scenarioAnalysis(
+                        market,
                         fundamentals,
                         quantByMetric,
                         claims,
@@ -502,8 +503,8 @@ public class DeterministicMockReportGenerator {
                             ? "数据来自已注册的真实外部数据源，仍可能存在延迟、修订或覆盖缺口。"
                             : "Registered real-provider data may still have delays, revisions, or coverage gaps.")
                     .add(chinese
-                            ? "Bull/Base/Bear 使用 deterministic_scenario_policy_v1 固定透明假设，仅用于敏感性分析，不是价格预测。"
-                            : "Bull/Base/Bear uses transparent deterministic_scenario_policy_v1 assumptions for sensitivity analysis, not a price forecast.");
+                            ? "Bull/Base/Bear 使用 deterministic_scenario_policy_v2：盈利公司采用 EV/EBITDA，未盈利公司采用 EV/收入，仅用于敏感性分析，不是价格预测。"
+                            : "Bull/Base/Bear uses deterministic_scenario_policy_v2: EV/EBITDA for profitable companies and EV/revenue for unprofitable companies; it is sensitivity analysis, not a price forecast.");
         }
         optionalUnavailableMetrics.stream()
                 .limit(28)
@@ -535,6 +536,7 @@ public class DeterministicMockReportGenerator {
     }
 
     private ObjectNode scenarioAnalysis(
+            StoredSource market,
             StoredSource fundamentals,
             Map<String, StoredQuantResult> quantByMetric,
             ClaimFactory claims,
@@ -550,7 +552,13 @@ public class DeterministicMockReportGenerator {
                     decimalValue(assumption.path("revenueGrowth"), "scenario revenue growth"),
                     decimalValue(assumption.path("targetEbitdaMargin"), "scenario EBITDA margin"),
                     decimalValue(assumption.path("evToEbitdaMultiple"), "scenario multiple"),
-                    decimalValue(assumption.path("probability"), "scenario probability")
+                    decimalValue(assumption.path("probability"), "scenario probability"),
+                    assumption.path("valuationMethod").asText("EV_EBITDA"),
+                    assumption.hasNonNull("valuationMultiple")
+                            ? decimalValue(assumption.path("valuationMultiple"),
+                                    "scenario valuation multiple")
+                            : decimalValue(assumption.path("evToEbitdaMultiple"),
+                                    "scenario multiple")
             );
             assumptions.put(parsed.name(), parsed);
         }
@@ -560,7 +568,17 @@ public class DeterministicMockReportGenerator {
             if (profit == null) {
                 profit = optionalFundamentalMetric(fundamentals.payload(), "operatingIncome");
             }
-            DeterministicScenarioPolicy.create(revenue, profit)
+            BigDecimal dilutedShares = fundamentalMetric(
+                    fundamentals.payload(), "dilutedShares"
+            );
+            BigDecimal netDebt = fundamentalMetric(fundamentals.payload(), "netDebt");
+            DeterministicScenarioPolicy.create(
+                    revenue,
+                    profit,
+                    latestAdjustedClose(market.payload()),
+                    dilutedShares,
+                    netDebt
+            )
                     .forEach(item -> assumptions.put(item.name(), item));
         }
         if (!assumptions.keySet().containsAll(SCENARIO_ORDER) || assumptions.size() != 3) {
@@ -570,6 +588,7 @@ public class DeterministicMockReportGenerator {
 
         ObjectNode analysis = objectMapper.createObjectNode();
         analysis.put("calculationId", weightedPrice.publicId());
+        analysis.put("currentPrice", decimal(latestAdjustedClose(market.payload())));
         ArrayNode scenarios = analysis.putArray("scenarios");
         Map<String, StoredQuantResult> displayedPrice = Map.of(
                 "BULL", bullPrice,
@@ -593,6 +612,8 @@ public class DeterministicMockReportGenerator {
             scenario.put("revenueGrowth", decimal(assumption.revenueGrowth()));
             scenario.put("targetEbitdaMargin", decimal(assumption.targetEbitdaMargin()));
             scenario.put("evToEbitdaMultiple", decimal(assumption.evToEbitdaMultiple()));
+            scenario.put("valuationMethod", assumption.valuationMethod());
+            scenario.put("valuationMultiple", decimal(assumption.valuationMultiple()));
             scenario.put("impliedEquityValue", decimal(rawPrice.value().multiply(dilutedShares)));
             scenario.put("impliedPrice", decimal(displayedPrice.get(scenarioName).value()));
             scenario.put("upsideDownside", decimal(upside.value()));
@@ -620,6 +641,17 @@ public class DeterministicMockReportGenerator {
                 weightedPrice
         ));
         return analysis;
+    }
+
+    private static BigDecimal latestAdjustedClose(JsonNode marketPayload) {
+        JsonNode prices = marketPayload.path("prices");
+        if (!prices.isArray() || prices.isEmpty()) {
+            throw new IllegalArgumentException("Market source has no price observations");
+        }
+        return decimalValue(
+                prices.get(prices.size() - 1).path("adjustedClose"),
+                "latest adjusted close"
+        );
     }
 
     private List<ObjectNode> calculationClaims(

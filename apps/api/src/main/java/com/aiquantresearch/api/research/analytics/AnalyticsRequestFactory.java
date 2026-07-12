@@ -122,7 +122,10 @@ public class AnalyticsRequestFactory {
             }
             assumptions = DeterministicScenarioPolicy.create(
                     byName.get("revenue").value(),
-                    profit == null ? null : profit.value()
+                    profit == null ? null : profit.value(),
+                    market.prices().getLast().adjustedClose(),
+                    byName.get("dilutedShares").value(),
+                    byName.get("netDebt").value()
             );
         }
         if (assumptions.size() != 3) {
@@ -142,6 +145,8 @@ public class AnalyticsRequestFactory {
             item.put("revenueGrowth", decimal(scenario.revenueGrowth()));
             item.put("targetEbitdaMargin", decimal(scenario.targetEbitdaMargin()));
             item.put("evToEbitdaMultiple", decimal(scenario.evToEbitdaMultiple()));
+            item.put("valuationMethod", scenario.valuationMethod());
+            item.put("valuationMultiple", decimal(scenario.valuationMultiple()));
             item.put("probability", decimal(scenario.probability()));
         }
         return result;

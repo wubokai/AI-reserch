@@ -285,13 +285,14 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
           <section className="rounded-xl border border-[#20342b] bg-[#0c1713] p-5 sm:p-6">
             <h2 className="text-xl font-semibold text-white">未来三种可能情景</h2>
             <p className="mt-2 text-xs leading-5 text-[#789085]">把未来拆成乐观、基准和谨慎三种情况，帮助理解机会与下行风险；不是价格承诺。</p>
+            {document.scenarioAnalysis.currentPrice !== undefined ? <p className="mt-4 text-sm text-[#a9beb4]">当前市场价格：<span className="font-semibold text-white">{money(document.scenarioAnalysis.currentPrice, currency)}</span></p> : null}
             <div className="mt-5 grid gap-3 lg:grid-cols-3">
               {document.scenarioAnalysis.scenarios.map((scenario) => (
                 <article className="rounded-lg border border-[#294137] bg-[#09130f] p-4" key={scenario.name}>
                   <div className="flex items-center justify-between"><h3 className="text-sm font-bold text-emerald-100">{scenarioLabels[scenario.name]}</h3><span className="text-xs text-[#8da59a]">发生权重 {percent(scenario.probability)}</span></div>
                   <p className="mt-4 text-2xl font-semibold text-white">{money(scenario.impliedPrice, currency)}</p>
                   <p className={`mt-1 text-xs ${Number(scenario.upsideDownside) >= 0 ? "text-emerald-200" : "text-rose-200"}`}>可能变动 {percent(scenario.upsideDownside)}</p>
-                  <dl className="mt-4 grid grid-cols-2 gap-y-2 text-[11px]"><dt className="text-[#647b70]">收入增长</dt><dd className="text-right text-[#dce8e2]">{percent(scenario.revenueGrowth)}</dd><dt className="text-[#647b70]">经营利润率</dt><dd className="text-right text-[#dce8e2]">{percent(scenario.targetEbitdaMargin)}</dd><dt className="text-[#647b70]">估值倍数</dt><dd className="text-right text-[#dce8e2]">{decimal(scenario.evToEbitdaMultiple, { maximumFractionDigits: 1 })}×</dd><dt className="text-[#647b70]">公司股权价值</dt><dd className="text-right text-[#dce8e2]">{money(scenario.impliedEquityValue, currency)}</dd></dl>
+                  <dl className="mt-4 grid grid-cols-2 gap-y-2 text-[11px]"><dt className="text-[#647b70]">收入增长</dt><dd className="text-right text-[#dce8e2]">{percent(scenario.revenueGrowth)}</dd><dt className="text-[#647b70]">EBITDA 利润率</dt><dd className="text-right text-[#dce8e2]">{percent(scenario.targetEbitdaMargin)}</dd><dt className="text-[#647b70]">估值方法</dt><dd className="text-right text-[#dce8e2]">{scenario.valuationMethod === "EV_REVENUE" ? "EV/收入" : "EV/EBITDA"}</dd><dt className="text-[#647b70]">估值倍数</dt><dd className="text-right text-[#dce8e2]">{decimal(scenario.valuationMultiple ?? scenario.evToEbitdaMultiple, { maximumFractionDigits: 1 })}×</dd><dt className="text-[#647b70]">公司股权价值</dt><dd className="text-right text-[#dce8e2]">{money(scenario.impliedEquityValue, currency)}</dd></dl>
                 </article>
               ))}
             </div>

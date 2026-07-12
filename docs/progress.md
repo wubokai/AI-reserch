@@ -58,5 +58,5 @@
   部署仍被许可门禁禁止。
 - 生产方案已固定为 LanYi 精确 host allowlist、60 秒 Web→API Bearer JWT、R3 1095/365/90 天策略、
   加密备份和 Oracle Always Free/Hetzner 后备的 Tailscale 私有云部署。
-- REAL security master 已预置 MU/NVDA/RKLB/SPY/QQQ；其他证券仍需显式注册，缺失或歧义不会回退 Mock。
+- REAL security master 保留 MU/NVDA/RKLB/SPY/QQQ 启动种子，并在生产环境从 SEC 官方 exchange ticker catalog 每日同步公司证券；缺失、歧义或 Tiingo/SEC 无覆盖时明确失败，不回退 Mock。
 - LanYi Adapter 已接入但尚未配置旋转后的生产 Key和准确价格；当前默认仍发布确定性 Mock 报告，测试不访问真实外部模型。

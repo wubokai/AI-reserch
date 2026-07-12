@@ -127,6 +127,7 @@ class SecCompanyFactsFundamentalProviderTest {
                 URI.create(base),
                 URI.create(base),
                 URI.create(base + "/files/company_tickers.json"),
+                URI.create(base + "/files/company_tickers_exchange.json"),
                 Duration.ofSeconds(2),
                 USER_AGENT,
                 10,

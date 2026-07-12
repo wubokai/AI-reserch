@@ -7,6 +7,26 @@ public record ScenarioAssumption(
         BigDecimal revenueGrowth,
         BigDecimal targetEbitdaMargin,
         BigDecimal evToEbitdaMultiple,
-        BigDecimal probability
+        BigDecimal probability,
+        String valuationMethod,
+        BigDecimal valuationMultiple
 ) {
+
+    public ScenarioAssumption(
+            String name,
+            BigDecimal revenueGrowth,
+            BigDecimal targetEbitdaMargin,
+            BigDecimal evToEbitdaMultiple,
+            BigDecimal probability
+    ) {
+        this(
+                name,
+                revenueGrowth,
+                targetEbitdaMargin,
+                evToEbitdaMultiple,
+                probability,
+                "EV_EBITDA",
+                evToEbitdaMultiple
+        );
+    }
 }
