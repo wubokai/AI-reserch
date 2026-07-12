@@ -1,6 +1,10 @@
 import { ShieldIcon } from "@/components/icons";
 
-export function DemoBanner() {
+export function DemoBanner({ dataMode = "MOCK" }: { dataMode?: "REAL" | "MOCK" }) {
+  if (dataMode === "REAL") {
+    return null;
+  }
+
   return (
     <aside
       aria-label="演示数据提示"

@@ -12,4 +12,10 @@ describe("DemoBanner", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("dataMode: MOCK")).toBeInTheDocument();
   });
+
+  it("真实数据运行环境不显示演示横幅", () => {
+    const { container } = render(<DemoBanner dataMode="REAL" />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
 });
