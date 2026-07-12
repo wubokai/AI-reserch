@@ -124,7 +124,7 @@ Authorization header 发送，原始响应 hash、复权语义、attribution 与
 单次 Research 的执行时钟从首个活动阶段开始，默认最多 15 分钟；可用
 `RESEARCH_MAX_EXECUTION_MINUTES` 在 1–1440 分钟内调整。Worker 会在阶段投影、步骤执行和原子发布边界前检查该预算；到期任务以 `RESEARCH_EXECUTION_BUDGET_EXCEEDED` 失败，过期结果不会发布。
 
-研究周期支持 `1y`、`3y`、`5y`，也可通过 API 成对提供最长五年的 `startDate/endDate`。新上市或重新上市证券若无法覆盖所选周期，系统会把标的与基准对齐到实际可用区间并显示限制提示；实际共同样本少于 200 个交易日时仍会失败关闭，不补零、不外推历史。研究深度支持 `QUICK`、`STANDARD`、`DEEP`：它们依次扩大 Filing、Evidence、确定性计算输入和 LLM 工具轮次预算，但永远不能突破部署环境的全局安全/成本上限。
+研究周期支持 `1y`、`3y`、`5y`，也可通过 API 成对提供最长五年的 `startDate/endDate`。新上市或重新上市证券若无法覆盖所选周期，系统会把标的与基准对齐到实际可用区间并显示限制提示；请求起点后的 7 个自然日仅视为周末/休市日容差，不误报历史不足。实际共同样本少于 200 个交易日时仍会失败关闭，不补零、不外推历史。研究深度支持 `QUICK`、`STANDARD`、`DEEP`：它们依次扩大 Filing、Evidence、确定性计算输入和 LLM 工具轮次预算，但永远不能突破部署环境的全局安全/成本上限。
 
 SEC Adapter 默认关闭。启用时必须同时显式设置 `FILING_DATA_PROVIDER=sec`、`DATA_MODE=REAL` 和包含应用名称及受监控联系邮箱的 `SEC_USER_AGENT`。请求只允许官方 SEC 主机（测试仅允许 loopback），全局速率上限不超过 10 次/秒，并有超时、响应体大小、内容类型、重试次数和文档路径边界。Phase 7 完成前，其他 Provider 仍为 Mock，因此这不是可发布的完整 REAL 研究闭环。
 

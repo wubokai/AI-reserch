@@ -5,6 +5,7 @@ import java.time.LocalDate;
 final class MarketHistoryPolicy {
 
     static final int MINIMUM_OBSERVATIONS = 200;
+    private static final int MARKET_CALENDAR_GRACE_DAYS = 7;
 
     private MarketHistoryPolicy() {
     }
@@ -15,6 +16,6 @@ final class MarketHistoryPolicy {
     }
 
     static boolean isShorterThanRequested(LocalDate requestedStart, LocalDate effectiveStart) {
-        return effectiveStart.isAfter(requestedStart);
+        return effectiveStart.isAfter(requestedStart.plusDays(MARKET_CALENDAR_GRACE_DAYS));
     }
 }

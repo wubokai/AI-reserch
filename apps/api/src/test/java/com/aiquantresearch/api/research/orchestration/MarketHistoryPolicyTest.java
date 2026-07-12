@@ -29,5 +29,13 @@ class MarketHistoryPolicyTest {
                 requestedStart,
                 requestedStart
         )).isFalse();
+        assertThat(MarketHistoryPolicy.isShorterThanRequested(
+                requestedStart,
+                requestedStart.plusDays(7)
+        )).isFalse();
+        assertThat(MarketHistoryPolicy.isShorterThanRequested(
+                requestedStart,
+                requestedStart.plusDays(8)
+        )).isTrue();
     }
 }
