@@ -22,7 +22,7 @@
 - LLM/Analytics JSON Schema 是合法 JSON；
 - Web：ESLint、TypeScript、33 个 Vitest、Next.js production build 与既有 5 个 Playwright 用例通过；新增生产 BFF JWT 覆盖；
 - API：Java 21 / Spring Boot 3.5，242 个 Surefire 本地通过，历史 50 个 Failsafe/Testcontainers 等待本次主干 CI 复验；新增 Tiingo、LanYi allowlist、Bearer、REAL/Demo 隔离和 R3 retention 覆盖；
-- PostgreSQL 17：Flyway V1–V12；V10 增加真实 security master，V11 修正 raw/normalized snapshot identity，V12 增加 legal hold 与 R3 retention 索引；
+- PostgreSQL 17：Flyway V1–V13；V10 增加真实 security master，V11 修正 raw/normalized snapshot identity，V12 增加 legal hold 与 R3 retention 索引，V13 允许同一 SEC CIK 对应多个证券类别；
 - Analytics：Ruff、strict mypy、41 个 pytest 通过，branch coverage 93.92%；完整覆盖收益、风险、技术/Trend、基本面、估值与情景；
 - 供应链：`pnpm audit` 与 Python `pip-audit --local` 均为 0 已知漏洞；PostCSS 已提升到修复版本，Dependabot 覆盖 npm/pip/Maven/Actions；
 - 本地真实服务链路：MU、NVDA、RKLB 完整研究均形成已验证报告；关闭基本面叙事时安全部分完成，关闭宏观时完整完成；所有保留的重要 Claim 都关联同任务 Evidence；
