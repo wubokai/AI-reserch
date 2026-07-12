@@ -32,13 +32,13 @@ export function ResearchHistory() {
   });
 
   return (
-    <section className="rounded-xl border border-[#20342b] bg-[#0c1713]">
-      <div className="grid gap-4 border-b border-[#1b2c25] p-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_140px_190px_150px_150px] sm:p-6">
+    <section className="surface-card">
+      <div className="soft-section m-3 grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_140px_190px_150px_150px]">
         <label className="relative">
           <span className="sr-only">搜索历史研究</span>
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#60786d]" />
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#94a3b8]" />
           <input
-            className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] pl-10 pr-3 text-xs text-white placeholder:text-[#52685e]"
+            className="h-10 w-full rounded-lg border border-[#cbd5e1] bg-[#f8fafc] pl-10 pr-3 text-xs text-slate-950 placeholder:text-[#94a3b8]"
             onChange={(event) => {
               setPage(0);
               setQuery(event.target.value);
@@ -47,11 +47,11 @@ export function ResearchHistory() {
             value={query}
           />
         </label>
-        <label><span className="sr-only">按证券筛选</span><input aria-label="按证券筛选" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs uppercase text-white" maxLength={10} onChange={(event) => { setPage(0); setSymbol(event.target.value); }} placeholder="Ticker" value={symbol} /></label>
+        <label><span className="sr-only">按证券筛选</span><input aria-label="按证券筛选" className="h-10 w-full rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 text-xs uppercase text-slate-950" maxLength={10} onChange={(event) => { setPage(0); setSymbol(event.target.value); }} placeholder="Ticker" value={symbol} /></label>
         <label>
           <span className="sr-only">按状态筛选</span>
           <select
-            className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]"
+            className="h-10 w-full rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 text-xs text-[#1f2937]"
             onChange={(event) => {
               setPage(0);
               setStatus(event.target.value);
@@ -64,28 +64,28 @@ export function ResearchHistory() {
             ))}
           </select>
         </label>
-        <label><span className="sr-only">开始日期</span><input aria-label="开始日期" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" onChange={(event) => { setPage(0); setFrom(event.target.value); }} type="date" value={from} /></label>
-        <label><span className="sr-only">结束日期</span><input aria-label="结束日期" className="h-10 w-full rounded-lg border border-[#294137] bg-[#09120f] px-3 text-xs text-[#d8e5de]" onChange={(event) => { setPage(0); setTo(event.target.value); }} type="date" value={to} /></label>
+        <label><span className="sr-only">开始日期</span><input aria-label="开始日期" className="h-10 w-full rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 text-xs text-[#1f2937]" onChange={(event) => { setPage(0); setFrom(event.target.value); }} type="date" value={from} /></label>
+        <label><span className="sr-only">结束日期</span><input aria-label="结束日期" className="h-10 w-full rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 text-xs text-[#1f2937]" onChange={(event) => { setPage(0); setTo(event.target.value); }} type="date" value={to} /></label>
       </div>
 
-      {research.isPending ? <p className="p-6 text-xs text-[#789085]">正在读取研究历史…</p> : null}
-      {research.isError ? <p className="p-6 text-xs text-rose-200" role="alert">研究历史暂时不可用。</p> : null}
-      {research.data?.items.length === 0 ? <p className="p-6 text-xs text-[#789085]">没有符合条件的研究任务。</p> : null}
-      <div className="divide-y divide-[#192a23]">
+      {research.isPending ? <p className="p-6 text-xs text-[#64748b]">正在读取研究历史…</p> : null}
+      {research.isError ? <p className="p-6 text-xs text-rose-600" role="alert">研究历史暂时不可用。</p> : null}
+      {research.data?.items.length === 0 ? <p className="p-6 text-xs text-[#64748b]">没有符合条件的研究任务。</p> : null}
+      <div className="space-y-1 px-2 pb-2">
         {research.data?.items.map((item) => (
-          <article className="grid gap-4 p-5 sm:grid-cols-[90px_minmax(0,1fr)_160px] sm:items-center sm:p-6" key={item.researchId}>
-            <span className="w-fit rounded-md border border-[#294137] bg-[#101f19] px-3 py-2 text-xs font-bold tracking-[0.08em] text-emerald-100">
+          <article className="data-row grid gap-4 rounded-xl p-4 sm:grid-cols-[90px_minmax(0,1fr)_160px] sm:items-center" key={item.researchId}>
+            <span className="w-fit rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold tracking-[0.08em] text-emerald-700">
               {item.symbol ?? "—"}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[#dce8e2]">{item.title ?? item.query}</p>
-              <p className="mt-2 text-[11px] text-[#647b70]">
+              <p className="truncate text-sm font-medium text-[#1f2937]">{item.title ?? item.query}</p>
+              <p className="mt-2 text-[11px] text-[#64748b]">
                 {new Date(item.createdAt).toLocaleString("zh-CN")} · {item.progress}% · {item.dataMode}
               </p>
             </div>
             <div className="flex items-center gap-3 sm:justify-end">
-              <span className="rounded border border-[#2a4037] px-2 py-1 text-[10px] text-[#8fa69b]">{item.status}</span>
-              <Link className="text-xs font-semibold text-emerald-200 hover:text-emerald-100" href={item.latestReportVersion ? `/research/${item.researchId}/reports/${item.latestReportVersion}` : `/research/${item.researchId}`}>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] text-slate-500">{item.status}</span>
+              <Link className="text-xs font-semibold text-emerald-600 hover:text-emerald-700" href={item.latestReportVersion ? `/research/${item.researchId}/reports/${item.latestReportVersion}` : `/research/${item.researchId}`}>
                 {item.latestReportVersion ? "打开报告" : "查看进度"}
               </Link>
             </div>
@@ -94,10 +94,10 @@ export function ResearchHistory() {
       </div>
 
       {research.data && research.data.page.totalPages > 1 ? (
-        <div className="flex items-center justify-between border-t border-[#1b2c25] px-5 py-4 text-xs text-[#789085] sm:px-6">
-          <button className="rounded border border-[#294137] px-3 py-2 disabled:opacity-40" disabled={research.data.page.first} onClick={() => setPage((value) => Math.max(0, value - 1))} type="button">上一页</button>
+        <div className="flex items-center justify-between px-5 py-4 text-xs text-slate-500 sm:px-6">
+          <button className="rounded-lg bg-slate-100 px-3 py-2 hover:bg-slate-200 disabled:opacity-40" disabled={research.data.page.first} onClick={() => setPage((value) => Math.max(0, value - 1))} type="button">上一页</button>
           <span>第 {research.data.page.number + 1} / {research.data.page.totalPages} 页</span>
-          <button className="rounded border border-[#294137] px-3 py-2 disabled:opacity-40" disabled={research.data.page.last} onClick={() => setPage((value) => value + 1)} type="button">下一页</button>
+          <button className="rounded-lg bg-slate-100 px-3 py-2 hover:bg-slate-200 disabled:opacity-40" disabled={research.data.page.last} onClick={() => setPage((value) => value + 1)} type="button">下一页</button>
         </div>
       ) : null}
     </section>

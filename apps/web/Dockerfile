@@ -10,7 +10,9 @@ COPY apps/web/package.json apps/web/package.json
 RUN pnpm install --frozen-lockfile --filter @ai-quant/web...
 
 FROM toolchain AS builder
+ARG DATA_MODE=MOCK
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATA_MODE=${DATA_MODE}
 COPY --from=deps /workspace/node_modules ./node_modules
 COPY --from=deps /workspace/apps/web/node_modules ./apps/web/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

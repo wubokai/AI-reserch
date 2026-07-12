@@ -102,71 +102,70 @@ export function AiAnalysisSummary({ report }: { report: CanonicalResearchReport 
   const summary = buildReportSummary(report);
   const tone = summary.direction === "BULLISH"
     ? {
-        border: "border-emerald-300/25",
-        background: "bg-emerald-300/[0.055]",
-        text: "text-emerald-100",
-        badge: "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
+        accent: "bg-emerald-500",
+        text: "text-emerald-700",
+        badge: "bg-emerald-50 text-emerald-700",
       }
     : summary.direction === "BEARISH"
       ? {
-          border: "border-rose-300/25",
-          background: "bg-rose-300/[0.045]",
-          text: "text-rose-100",
-          badge: "border-rose-300/25 bg-rose-300/10 text-rose-100",
+          accent: "bg-rose-500",
+          text: "text-rose-700",
+          badge: "bg-rose-50 text-rose-700",
         }
       : {
-          border: "border-amber-300/25",
-          background: "bg-amber-300/[0.045]",
-          text: "text-amber-100",
-          badge: "border-amber-300/25 bg-amber-300/10 text-amber-100",
+          accent: "bg-amber-500",
+          text: "text-amber-800",
+          badge: "bg-amber-50 text-amber-800",
         };
 
   return (
     <section
       aria-labelledby="ai-analysis-summary-title"
-      className={`rounded-xl border ${tone.border} ${tone.background} p-5 sm:p-7`}
+      className="surface-card relative overflow-hidden p-5 sm:p-7"
     >
+      <span className={`absolute inset-y-0 left-0 w-1 ${tone.accent}`} />
+      <span className="pointer-events-none absolute -right-24 -top-24 size-56 rounded-full bg-emerald-50 blur-2xl" />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-200/75">
+        <div className="relative">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-600">
             AI Analysis
           </p>
-          <h2 className="mt-2 text-2xl font-semibold text-white" id="ai-analysis-summary-title">
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950" id="ai-analysis-summary-title">
             AI 分析总结
           </h2>
-          <p className="mt-2 text-xs leading-5 text-[#8da59a]">
+          <p className="mt-2 text-xs leading-5 text-[#64748b]">
             先说结论，再查看详细依据。方向来自已验证数据与三情景加权，不代表确定预测。
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <span className={`rounded-full border px-3 py-1.5 text-xs font-bold ${tone.badge}`}>
+        <div className="relative flex flex-wrap gap-2">
+          <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${tone.badge}`}>
             前景：{summary.directionLabel}
           </span>
-          <span className="rounded-full border border-[#355044] bg-[#0c1713] px-3 py-1.5 text-xs font-semibold text-[#dce8e2]">
+          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
             走势：{summary.trendLabel}
           </span>
-          <span className="rounded-full border border-[#355044] bg-[#0c1713] px-3 py-1.5 text-xs font-semibold text-[#dce8e2]">
+          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
             加权空间：{formatPercent(summary.weightedChange)}
           </span>
         </div>
       </div>
 
       <div className="mt-6 grid gap-3 lg:grid-cols-2">
-        <article className="rounded-lg border border-white/5 bg-black/10 p-4">
+        <article className="soft-section p-4 transition-transform hover:-translate-y-0.5">
           <h3 className={`text-xs font-semibold ${tone.text}`}>当前怎么看</h3>
-          <p className="mt-2 text-sm leading-6 text-[#dce8e2]">{summary.currentSituation}</p>
+          <p className="mt-2 text-sm leading-6 text-[#1f2937]">{summary.currentSituation}</p>
         </article>
-        <article className="rounded-lg border border-white/5 bg-black/10 p-4">
+        <article className="soft-section p-4 transition-transform hover:-translate-y-0.5">
           <h3 className={`text-xs font-semibold ${tone.text}`}>未来可能怎样</h3>
-          <p className="mt-2 text-sm leading-6 text-[#dce8e2]">{summary.futureView}</p>
+          <p className="mt-2 text-sm leading-6 text-[#1f2937]">{summary.futureView}</p>
         </article>
-        <article className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.025] p-4">
-          <h3 className="text-xs font-semibold text-emerald-100">主要利好</h3>
-          <p className="mt-2 text-sm leading-6 text-[#dce8e2]">{summary.opportunity}</p>
+        <article className="rounded-xl bg-emerald-50 p-4 transition-transform hover:-translate-y-0.5">
+          <h3 className="text-xs font-semibold text-emerald-700">主要利好</h3>
+          <p className="mt-2 text-sm leading-6 text-[#1f2937]">{summary.opportunity}</p>
         </article>
-        <article className="rounded-lg border border-rose-300/10 bg-rose-300/[0.02] p-4">
-          <h3 className="text-xs font-semibold text-rose-100">最大风险</h3>
-          <p className="mt-2 text-sm leading-6 text-[#dce8e2]">{summary.risk}</p>
+        <article className="rounded-xl bg-rose-50 p-4 transition-transform hover:-translate-y-0.5">
+          <h3 className="text-xs font-semibold text-rose-700">最大风险</h3>
+          <p className="mt-2 text-sm leading-6 text-[#1f2937]">{summary.risk}</p>
         </article>
       </div>
     </section>

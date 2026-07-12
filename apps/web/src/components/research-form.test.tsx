@@ -29,7 +29,7 @@ describe("ResearchForm", () => {
     const user = userEvent.setup();
     render(<ResearchForm />, { wrapper });
 
-    await user.click(screen.getByRole("button", { name: "创建 DEMO 研究" }));
+    await user.click(screen.getByRole("button", { name: "开始分析" }));
 
     expect(await screen.findByText("研究问题至少需要 10 个字符")).toBeInTheDocument();
   });
@@ -60,7 +60,7 @@ describe("ResearchForm", () => {
     render(<ResearchForm />, { wrapper });
 
     await user.type(screen.getByLabelText("研究问题"), "分析增长动力、周期风险、财务质量和未来主要观察因素");
-    await user.click(screen.getByRole("button", { name: "创建 DEMO 研究" }));
+    await user.click(screen.getByRole("button", { name: "开始分析" }));
 
     await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/research/11111111-1111-4111-8111-111111111111"));
     const [, init] = fetchMock.mock.calls[0] ?? [];

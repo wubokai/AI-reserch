@@ -42,9 +42,9 @@ export function ReportExportCenter({ researchId, version, symbol, dataMode }: { 
   return (
     <div className="shrink-0">
       <div className="grid grid-cols-3 gap-2">
-        {(["markdown", "html", "pdf"] as const).map((format) => <button aria-label={format} className="min-w-20 rounded-lg border border-[#294137] bg-[#0a1511] px-3 py-2 text-xs font-semibold uppercase text-emerald-100 disabled:cursor-wait disabled:opacity-60" disabled={states[format] === "downloading"} key={format} onClick={() => download(format)} type="button">{states[format] === "downloading" ? "…" : format}<span className="mt-1 block text-[8px] font-normal normal-case text-[#647b70]">{states[format] === "success" ? "已完成" : states[format] === "error" ? "失败" : "下载"}</span></button>)}
+        {(["markdown", "html", "pdf"] as const).map((format) => <button aria-label={format} className="min-w-20 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold uppercase text-slate-700 hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-wait disabled:opacity-60" disabled={states[format] === "downloading"} key={format} onClick={() => download(format)} type="button">{states[format] === "downloading" ? "…" : format}<span className="mt-1 block text-[8px] font-normal normal-case text-slate-400">{states[format] === "success" ? "已完成" : states[format] === "error" ? "失败" : "下载"}</span></button>)}
       </div>
-      {error ? <p className="mt-2 text-right text-[10px] text-rose-200" role="alert">{error}</p> : null}
+      {error ? <p className="mt-2 text-right text-[10px] text-rose-600" role="alert">{error}</p> : null}
     </div>
   );
 }

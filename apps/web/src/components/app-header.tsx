@@ -16,58 +16,81 @@ export function AppHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-[#1d3028] bg-[#08120f]/95">
-      <div className="mx-auto flex min-h-16 max-w-[1440px] items-center justify-between gap-5 px-5 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur-xl">
+      <div className="border-b border-slate-100 bg-slate-50/80">
+        <div className="mx-auto flex h-8 max-w-[1540px] items-center justify-between px-5 text-[10px] text-slate-500 lg:px-8">
+          <p className="truncate tracking-wide">
+            美股 · ETF · SEC 公告 · 宏观数据 · 可审计量化研究
+          </p>
+          <SystemHealth />
+        </div>
+      </div>
+
+      <div className="mx-auto flex min-h-16 max-w-[1540px] items-center justify-between gap-5 px-5 lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-300/30 bg-emerald-300/10 text-emerald-200">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-emerald-600 text-white shadow-[0_7px_18px_rgba(5,150,105,0.18)]">
             <LogoMark className="size-5" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold tracking-wide text-white">
+            <p className="truncate text-sm font-bold tracking-tight text-slate-950">
               AI Quant Research
             </p>
-            <p className="truncate text-[11px] text-[#7f978c]">
-              Evidence-first workspace
-            </p>
+            <p className="truncate text-[10px] text-slate-500">量化研究工作台</p>
           </div>
         </div>
 
-        <nav
-          aria-label="主导航"
-          className="hidden items-center gap-1 rounded-lg border border-[#1d3028] bg-[#0b1712] p-1 md:flex"
-        >
+        <nav aria-label="主导航" className="hidden h-16 items-center gap-7 md:flex">
           {navItems.map((item) => {
             const active =
-              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
             return (
-            <Link
-              aria-current={active ? "page" : undefined}
-              href={item.href}
-              key={item.href}
-              className={
-                active
-                  ? "rounded-md bg-[#173529] px-4 py-2 text-xs font-medium text-emerald-100"
-                  : "rounded-md px-4 py-2 text-xs font-medium text-[#829b90] transition-colors hover:bg-white/5 hover:text-white"
-              }
-            >
-              {item.label}
-            </Link>
+              <Link
+                aria-current={active ? "page" : undefined}
+                href={item.href}
+                key={item.href}
+                className={
+                  active
+                    ? "relative flex h-full items-center text-xs font-semibold text-slate-950 after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full after:bg-emerald-600"
+                    : "flex h-full items-center text-xs font-medium text-slate-500 hover:text-slate-950"
+                }
+              >
+                {item.label}
+              </Link>
             );
           })}
         </nav>
 
         <div className="flex items-center gap-3">
-          <SystemHealth />
+          <Link
+            className="hidden rounded-lg bg-slate-900 px-3.5 py-2 text-[11px] font-semibold text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700 sm:inline-flex"
+            href="/#new-research"
+          >
+            新建研究
+          </Link>
           <div
-            aria-label="演示用户"
-            className="grid size-8 place-items-center rounded-full border border-[#294137] bg-[#14251e] text-xs font-semibold text-[#c8d8d0]"
+            aria-label="当前用户"
+            className="grid size-8 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200"
           >
             D
           </div>
         </div>
       </div>
-      <nav aria-label="移动导航" className="mx-auto flex max-w-[1440px] overflow-x-auto border-t border-[#14251e] px-5 py-2 md:hidden">
-        {navItems.map((item) => <Link className="mr-2 shrink-0 rounded-md px-3 py-2 text-xs text-[#9bb0a6]" href={item.href} key={item.href}>{item.label}</Link>)}
+
+      <nav
+        aria-label="移动导航"
+        className="mx-auto flex max-w-[1540px] overflow-x-auto border-t border-slate-100 px-5 py-2 md:hidden"
+      >
+        {navItems.map((item) => (
+          <Link
+            className="mr-2 shrink-0 rounded-full bg-slate-50 px-3 py-2 text-xs text-slate-600"
+            href={item.href}
+            key={item.href}
+          >
+            {item.label}
+          </Link>
+        ))}
       </nav>
     </header>
   );

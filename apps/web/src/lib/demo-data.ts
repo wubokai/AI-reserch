@@ -1,25 +1,25 @@
-export const demoSecurities = ["MU", "NVDA", "RKLB"] as const;
+export const demoSecurities = ["MU", "NVDA", "RKLB", "ASTS"] as const;
 
 export const coverageItems = [
   {
     title: "行情数据",
-    description: "固定五年日线 adjusted OHLCV",
-    state: "Mock 已连接",
+    description: "日线行情、成交量与最新可用收盘价",
+    state: "已接入",
   },
   {
     title: "公司基本面",
-    description: "可重复的演示财务快照",
-    state: "Mock 已连接",
+    description: "SEC 标准化财务事实与派生指标",
+    state: "已接入",
   },
   {
-    title: "Filing 与宏观",
-    description: "模拟文件与宏观序列",
-    state: "Mock 已连接",
+    title: "公告与宏观",
+    description: "公司公告、利率与经济环境序列",
+    state: "已接入",
   },
   {
     title: "Evidence Registry",
     description: "结论、数字与来源建立关联",
-    state: "约束已启用",
+    state: "约束启用",
   },
 ] as const;
 

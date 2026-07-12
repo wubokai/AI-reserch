@@ -28,6 +28,9 @@ services:
 
   web:
     restart: unless-stopped
+    build:
+      args:
+        DATA_MODE: REAL
     environment:
       DATA_MODE: REAL
       SERVICE_JWT_HMAC_SECRET: ${SERVICE_JWT_HMAC_SECRET:?SERVICE_JWT_HMAC_SECRET is required}

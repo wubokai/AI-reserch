@@ -4,7 +4,7 @@ test("首页呈现专业研究工作台与明确 DEMO 语义", async ({ page }) 
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: /从数据与证据出发/ }),
+    page.getByRole("heading", { name: "美股量化研究工作台" }),
   ).toBeVisible();
   await expect(
     page.getByText("DEMO DATA — NOT REAL MARKET DATA"),
@@ -12,7 +12,7 @@ test("首页呈现专业研究工作台与明确 DEMO 语义", async ({ page }) 
   await expect(page.getByText("dataMode: MOCK")).toBeVisible();
   await expect(page.getByLabel("证券代码")).toHaveValue("MU");
   await expect(
-    page.getByRole("button", { name: "创建 DEMO 研究" }),
+    page.getByRole("button", { name: "开始分析" }),
   ).toBeVisible();
 });
 

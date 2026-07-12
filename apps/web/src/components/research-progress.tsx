@@ -147,10 +147,10 @@ export function ResearchProgress({ researchId }: { researchId: string }) {
   });
 
   if (status.isPending || detail.isPending) {
-    return <div className="rounded-xl border border-[#20342b] bg-[#0c1713] p-8 text-sm text-[#849b90]">正在读取任务状态…</div>;
+    return <div className="surface-card p-8 text-sm text-[#64748b]">正在读取任务状态…</div>;
   }
   if (status.isError || detail.isError || !status.data || !detail.data) {
-    return <div className="rounded-xl border border-rose-300/20 bg-rose-300/[0.05] p-8 text-sm text-rose-100" role="alert">{errorMessage(status.error ?? detail.error)}</div>;
+    return <div className="rounded-xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700" role="alert">{errorMessage(status.error ?? detail.error)}</div>;
   }
 
   const snapshot = status.data;
@@ -165,68 +165,68 @@ export function ResearchProgress({ researchId }: { researchId: string }) {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-[#20342b] bg-[#0c1713] p-5 sm:p-6">
+      <section className="surface-card p-5 sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded border border-emerald-300/20 bg-emerald-300/[0.06] px-2 py-1 text-xs font-bold text-emerald-100">{research.symbol ?? "—"}</span>
-              <span className="rounded border border-[#294137] px-2 py-1 text-[10px] text-[#90a99d]">{statusLabels[snapshot.status]}</span>
-              <span className="rounded border border-amber-300/20 px-2 py-1 text-[10px] text-amber-100">{snapshot.dataMode}</span>
+              <span className="rounded-lg bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">{research.symbol ?? "—"}</span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] text-slate-500">{statusLabels[snapshot.status]}</span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] text-amber-800">{snapshot.dataMode}</span>
             </div>
-            <h1 className="mt-4 max-w-3xl text-2xl font-semibold leading-tight text-white">{research.title ?? research.query}</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-[#849b90]">{research.query}</p>
+            <h1 className="mt-4 max-w-3xl text-2xl font-bold leading-tight text-slate-950">{research.title ?? research.query}</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-[#64748b]">{research.query}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            {canCancel ? <button className="rounded-lg border border-rose-300/25 px-4 py-2 text-xs font-semibold text-rose-100 hover:bg-rose-300/[0.06] disabled:opacity-50" disabled={cancel.isPending} onClick={() => cancel.mutate()} type="button">{cancel.isPending ? "正在取消…" : "取消任务"}</button> : null}
-            {canRetry ? <><select aria-label="重试起点" className="rounded-lg border border-[#294137] bg-[#09130f] px-3 py-2 text-xs text-[#dce8e2]" onChange={(event) => setRetryFromStep(event.target.value)} value={retryFromStep}><option value="">首个失败步骤</option>{snapshot.steps.filter((step) => step.status === "FAILED" || step.status === "SKIPPED").map((step) => <option key={step.step} value={step.step}>{stepLabel(step.step)}</option>)}</select><button className="rounded-lg bg-emerald-300 px-4 py-2 text-xs font-bold text-[#062219] disabled:opacity-50" disabled={retry.isPending} onClick={() => retry.mutate(retryFromStep)} type="button">{retry.isPending ? "正在重试…" : "重试任务"}</button></> : null}
+            {canCancel ? <button className="rounded-lg bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-50" disabled={cancel.isPending} onClick={() => cancel.mutate()} type="button">{cancel.isPending ? "正在取消…" : "取消任务"}</button> : null}
+            {canRetry ? <><select aria-label="重试起点" className="rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 py-2 text-xs text-[#1f2937]" onChange={(event) => setRetryFromStep(event.target.value)} value={retryFromStep}><option value="">首个失败步骤</option>{snapshot.steps.filter((step) => step.status === "FAILED" || step.status === "SKIPPED").map((step) => <option key={step.step} value={step.step}>{stepLabel(step.step)}</option>)}</select><button className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:-translate-y-0.5 hover:bg-emerald-700 disabled:opacity-50" disabled={retry.isPending} onClick={() => retry.mutate(retryFromStep)} type="button">{retry.isPending ? "正在重试…" : "重试任务"}</button></> : null}
           </div>
         </div>
 
         <div className="mt-7">
           <div className="mb-2 flex items-center justify-between text-xs">
-            <span className="text-[#8da59a]">{snapshot.currentStep ? stepLabel(snapshot.currentStep) : statusLabels[snapshot.status]}</span>
-            <span className="font-semibold text-emerald-100">{snapshot.progress}%</span>
+            <span className="text-[#64748b]">{snapshot.currentStep ? stepLabel(snapshot.currentStep) : statusLabels[snapshot.status]}</span>
+            <span className="font-semibold text-emerald-700">{snapshot.progress}%</span>
           </div>
-          <div aria-label={`研究进度 ${snapshot.progress}%`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={snapshot.progress} className="h-2 overflow-hidden rounded-full bg-[#172820]" role="progressbar">
-            <div className="h-full rounded-full bg-emerald-300 transition-[width]" style={{ width: `${snapshot.progress}%` }} />
+          <div aria-label={`研究进度 ${snapshot.progress}%`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={snapshot.progress} className="h-2 overflow-hidden rounded-full bg-[#e8eef2]" role="progressbar">
+            <div className="h-full rounded-full bg-emerald-600 transition-[width] duration-700 ease-out" style={{ width: `${snapshot.progress}%` }} />
           </div>
-          <p className="mt-3 text-[11px] text-[#657b71]">已完成 {snapshot.completedSteps} / {snapshot.totalSteps} 个持久步骤；活动任务每 2 秒刷新。</p>
+          <p className="mt-3 text-[11px] text-[#64748b]">已完成 {snapshot.completedSteps} / {snapshot.totalSteps} 个持久步骤；活动任务每 2 秒刷新。</p>
         </div>
 
         {snapshot.error ? (() => {
           const copy = readableResearchError(snapshot.error);
-          return <div className="mt-5 rounded-lg border border-rose-300/20 bg-rose-300/[0.05] p-4 text-xs text-rose-100" role="alert"><p className="font-semibold">{copy.title}</p><p className="mt-2 leading-5">{copy.message}</p><p className="mt-3 text-[10px] text-rose-100/55">错误代码：{snapshot.error.code}</p></div>;
+          return <div className="mt-5 rounded-xl bg-rose-50 p-4 text-xs text-rose-700" role="alert"><p className="font-semibold">{copy.title}</p><p className="mt-2 leading-5">{copy.message}</p><p className="mt-3 text-[10px] text-rose-600/70">错误代码：{snapshot.error.code}</p></div>;
         })() : null}
-        {cancel.isError || retry.isError ? <p className="mt-4 text-xs text-rose-200" role="alert">{errorMessage(cancel.error ?? retry.error)}</p> : null}
-        {cancel.isSuccess ? <p className="mt-4 text-xs text-emerald-200" role="status">取消请求已接受。</p> : null}
-        {retry.isSuccess ? <p className="mt-4 text-xs text-emerald-200" role="status">重试任务已进入队列。</p> : null}
-        {snapshot.status === "PARTIALLY_COMPLETED" ? <p className="mt-4 rounded-lg border border-amber-300/20 bg-amber-300/[0.05] p-4 text-xs text-amber-100" role="status">报告已安全发布，但部分可选模块不可用；请查看 warnings 与 Data Quality。</p> : null}
-        {research.warnings.length > 0 ? <ul className="mt-4 space-y-2 rounded-lg border border-amber-300/15 p-4 text-[11px] text-amber-100/80">{research.warnings.map((warning) => <li key={`${warning.code}-${warning.message}`}><strong>{warning.code}</strong>：{warning.message}</li>)}</ul> : null}
+        {cancel.isError || retry.isError ? <p className="mt-4 text-xs text-rose-600" role="alert">{errorMessage(cancel.error ?? retry.error)}</p> : null}
+        {cancel.isSuccess ? <p className="mt-4 text-xs text-emerald-600" role="status">取消请求已接受。</p> : null}
+        {retry.isSuccess ? <p className="mt-4 text-xs text-emerald-600" role="status">重试任务已进入队列。</p> : null}
+        {snapshot.status === "PARTIALLY_COMPLETED" ? <p className="mt-4 rounded-xl bg-amber-50 p-4 text-xs text-amber-800" role="status">报告已安全发布，但部分可选模块不可用；请查看 warnings 与 Data Quality。</p> : null}
+        {research.warnings.length > 0 ? <ul className="mt-4 space-y-2 rounded-xl bg-amber-50 p-4 text-[11px] text-amber-700">{research.warnings.map((warning) => <li key={`${warning.code}-${warning.message}`}><strong>{warning.code}</strong>：{warning.message}</li>)}</ul> : null}
 
         {reportVersion ? (
-          <div className="mt-6 flex flex-col gap-3 rounded-lg border border-emerald-300/20 bg-emerald-300/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold text-emerald-100">安全报告版本 {reportVersion} 已发布</p><p className="mt-1 text-xs text-[#8da59a]">报告绑定当前任务的不可变 Evidence 和 Mock snapshots。</p></div>
-            <Link className="rounded-lg bg-emerald-300 px-4 py-2 text-center text-xs font-bold text-[#062219]" href={`/research/${researchId}/reports/${reportVersion}`}>打开研究报告</Link>
+          <div className="mt-6 flex flex-col gap-3 rounded-xl bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-semibold text-emerald-700">安全报告版本 {reportVersion} 已发布</p><p className="mt-1 text-xs text-[#64748b]">报告绑定当前任务的不可变数据快照与结论依据。</p></div>
+            <Link className="rounded-lg bg-emerald-600 px-4 py-2 text-center text-xs font-bold text-white shadow-sm hover:-translate-y-0.5 hover:bg-emerald-700" href={`/research/${researchId}/reports/${reportVersion}`}>打开研究报告</Link>
           </div>
         ) : null}
       </section>
 
-      <section className="rounded-xl border border-[#20342b] bg-[#0c1713]">
-        <div className="border-b border-[#1b2c25] px-5 py-4 sm:px-6"><h2 className="text-sm font-semibold text-white">执行步骤</h2></div>
-        <ol className="divide-y divide-[#192a23]">
+      <section className="surface-card">
+        <div className="px-5 pb-2 pt-5 sm:px-6"><h2 className="text-sm font-semibold text-slate-950">执行步骤</h2></div>
+        <ol className="space-y-1 px-2 pb-2">
           {snapshot.steps.map((step, index) => (
-            <li className="grid gap-3 px-5 py-4 sm:grid-cols-[36px_minmax(0,1fr)_120px] sm:items-center sm:px-6" key={step.step}>
-              <span className="grid size-7 place-items-center rounded-full border border-[#294137] text-[10px] text-[#8da59a]">{index + 1}</span>
-              <div><p className="text-xs font-semibold text-[#dce8e2]">{stepLabel(step.step)}</p><p className="mt-1 text-[11px] text-[#647b70]">尝试 {step.attemptCount}{step.durationMs !== null && step.durationMs !== undefined ? ` · ${step.durationMs} ms` : ""}</p>{step.durationMs ? <div className="mt-2 h-1.5 max-w-xs rounded bg-[#172820]"><div className="h-full rounded bg-emerald-300/60" style={{ width: `${Math.max(4, (step.durationMs / longestDuration) * 100)}%` }} /></div> : null}{step.error ? <p className="mt-2 text-[11px] text-rose-200">{readableResearchError(step.error).message}<span className="ml-1 text-rose-200/50">（{step.error.code}）</span></p> : null}</div>
-              <span className="w-fit rounded border border-[#294137] px-2 py-1 text-[10px] text-[#8fa69b] sm:justify-self-end">{stepStatusLabels[step.status] ?? step.status}</span>
+            <li className="data-row grid gap-3 rounded-xl px-3 py-3 sm:grid-cols-[36px_minmax(0,1fr)_120px] sm:items-center sm:px-4" key={step.step}>
+              <span className="grid size-7 place-items-center rounded-full bg-slate-100 text-[10px] text-slate-500">{index + 1}</span>
+              <div><p className="text-xs font-semibold text-[#1f2937]">{stepLabel(step.step)}</p><p className="mt-1 text-[11px] text-[#64748b]">尝试 {step.attemptCount}{step.durationMs !== null && step.durationMs !== undefined ? ` · ${step.durationMs} ms` : ""}</p>{step.durationMs ? <div className="mt-2 h-1.5 max-w-xs rounded bg-[#e8eef2]"><div className="h-full rounded bg-emerald-500/70" style={{ width: `${Math.max(4, (step.durationMs / longestDuration) * 100)}%` }} /></div> : null}{step.error ? <p className="mt-2 text-[11px] text-rose-600">{readableResearchError(step.error).message}<span className="ml-1 text-rose-600/70">（{step.error.code}）</span></p> : null}</div>
+              <span className="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-[10px] text-slate-500 sm:justify-self-end">{stepStatusLabels[step.status] ?? step.status}</span>
             </li>
           ))}
         </ol>
       </section>
 
-      <p className="text-right text-[10px] text-[#53695f]">最后更新 {new Date(snapshot.updatedAt).toLocaleString("zh-CN")}</p>
+      <p className="text-right text-[10px] text-[#94a3b8]">最后更新 {new Date(snapshot.updatedAt).toLocaleString("zh-CN")}</p>
 
-      <p className="rounded-lg border border-amber-300/15 bg-amber-300/[0.04] px-4 py-3 text-[11px] leading-5 text-amber-100/70">{RESEARCH_DISCLAIMER}</p>
+      <p className="rounded-xl bg-amber-50 px-4 py-3 text-[11px] leading-5 text-amber-700">{RESEARCH_DISCLAIMER}</p>
     </div>
   );
 }

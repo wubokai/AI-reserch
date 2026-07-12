@@ -45,14 +45,14 @@ export function SystemHealth() {
   return (
     <div
       aria-label={label}
-      className="hidden items-center gap-2 text-[11px] text-[#8ba298] sm:flex"
+      className="hidden items-center gap-2 text-[11px] text-[#64748b] sm:flex"
       title={label}
     >
       <span
         className={
           degraded
-            ? "size-1.5 rounded-full bg-amber-300 shadow-[0_0_0_4px_rgba(252,211,77,0.08)]"
-            : "size-1.5 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(110,231,183,0.08)]"
+            ? "size-1.5 rounded-full bg-amber-500 shadow-[0_0_0_4px_rgba(252,211,77,0.08)]"
+            : "size-1.5 rounded-full bg-emerald-600 shadow-[0_0_0_4px_rgba(110,231,183,0.08)]"
         }
       />
       <span>{label}</span>
