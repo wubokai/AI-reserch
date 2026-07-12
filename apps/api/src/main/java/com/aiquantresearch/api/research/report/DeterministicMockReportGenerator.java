@@ -448,8 +448,11 @@ public class DeterministicMockReportGenerator {
                 risks,
                 "DATA_QUALITY",
                 "risk_data_quality",
-                chinese ? "固定演示数据不能代表当前真实市场。"
-                        : "Fixed demo data cannot represent current real-market conditions.",
+                demoData
+                        ? (chinese ? "固定演示数据不能代表当前真实市场。"
+                                : "Fixed demo data cannot represent current real-market conditions.")
+                        : (chinese ? "真实数据仍可能存在延迟、修订或覆盖缺口。"
+                                : "Real-provider data may still have delays, revisions, or coverage gaps."),
                 marketEvidence,
                 claims
         );

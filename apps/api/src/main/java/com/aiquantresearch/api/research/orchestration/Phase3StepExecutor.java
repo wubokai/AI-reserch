@@ -549,7 +549,8 @@ public class Phase3StepExecutor {
             if (!repairedValidation.valid()) {
                 throw new StepExecutionException(
                         "REPORT_VALIDATION_FAILED_AFTER_REPAIR",
-                        "The report candidate failed its single constrained repair",
+                        "The report candidate failed its single constrained repair: "
+                                + String.join(", ", repairedValidation.warnings()),
                         false
                 );
             }

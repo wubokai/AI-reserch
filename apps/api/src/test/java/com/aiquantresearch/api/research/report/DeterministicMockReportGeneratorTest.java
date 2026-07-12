@@ -102,7 +102,11 @@ class DeterministicMockReportGeneratorTest {
         assertThat(report.path("dataMode").asText()).isEqualTo("REAL");
         assertThat(report.toString())
                 .contains(DeterministicMockReportGenerator.REAL_DATA_LABEL)
-                .doesNotContain(DeterministicMockReportGenerator.DEMO_WATERMARK);
+                .doesNotContain(
+                        DeterministicMockReportGenerator.DEMO_WATERMARK,
+                        "固定演示数据",
+                        "Fixed demo data"
+                );
         assertThat(report.path("disclaimer").asText())
                 .contains("not investment advice", "不构成投资建议");
 
