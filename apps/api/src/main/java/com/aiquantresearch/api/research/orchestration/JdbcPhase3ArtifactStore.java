@@ -443,7 +443,11 @@ public class JdbcPhase3ArtifactStore implements Phase3ArtifactStore {
                     false
             );
         }
-        return mode != DataMode.REAL.name();
+        return isDemoMode(mode);
+    }
+
+    static boolean isDemoMode(String mode) {
+        return !DataMode.REAL.name().equals(mode);
     }
 
     private String publicId(String prefix, UUID researchId, String key) {
