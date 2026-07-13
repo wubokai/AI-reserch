@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchApi, errorMessage } from "@/lib/api-client";
 import { AiAnalysisSummary } from "@/components/ai-analysis-summary";
 import { ReportCharts } from "@/components/report-charts";
+import { ResearchInsightsPanel } from "@/components/research-insights";
 import { ReportExportCenter } from "@/components/report-export-center";
 import { ReportVersionNav } from "@/components/report-version-nav";
 import {
@@ -273,6 +274,8 @@ export function ResearchReport({ researchId, version }: { researchId: string; ve
       <AiAnalysisSummary report={document} />
 
       <ReportCharts report={document} />
+
+      <ResearchInsightsPanel researchId={researchId} version={version} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">

@@ -211,9 +211,23 @@ weightedScenarioValue = sum(impliedPrice_i * probability_i)
 旧请求未提供 `valuationMethod` 时仍默认 `EV_EBITDA`，因此既有 `quant_v1` 结果保持不变；
 生产确定性假设使用 `deterministic_scenario_policy_v2` 显式选择方法和倍数。
 
-`quant_v1` 的敏感性由 BULL/BASE/BEAR 三组显式增长率、EBITDA margin 和倍数假设共同表达；
-不在服务端自动生成未由请求提供的 ±margin/±multiple 网格，避免把系统自造假设伪装成用户输入。
-若后续增加二维敏感性矩阵，必须扩展请求 Schema、标记每个假设来源并升级 calculationVersion。
+`quant_v1` 报告结果仍只使用 BULL/BASE/BEAR 三组显式假设。交互解释层的 `insights_v1` 在不改变
+报告结果的前提下生成二维敏感性矩阵：增长率轴为 BEAR、BEAR/BASE 中点、BASE、BASE/BULL 中点、
+BULL；倍数轴采用同样规则；利润率固定为 BASE。端点只接受已注册 SourceSnapshot ID 的完整请求，
+同时返回每格隐含股价和相对当前价变动。中点是用于解释模型敏感性的系统派生假设，不得描述为
+分析师共识或用户预测。
+
+市场隐含增长使用当前股价对应的企业价值反推：
+
+```text
+marketEnterpriseValue = currentPrice * dilutedShares + netDebt
+EV_REVENUE: impliedGrowth = marketEnterpriseValue / (baseRevenue * baseMultiple) - 1
+EV_EBITDA: impliedGrowth = marketEnterpriseValue
+                              / (baseRevenue * baseMargin * baseMultiple) - 1
+```
+
+MA20/MA50 是最近 20/50 个交易日复权收盘价的简单平均；3M、1Y、3Y、MAX 区间收益、高低价和
+平均成交量也由 `insights_v1` 计算。Java API 与 Web 不重复这些金融计算。
 
 ## 9. 输出状态与 Warning
 

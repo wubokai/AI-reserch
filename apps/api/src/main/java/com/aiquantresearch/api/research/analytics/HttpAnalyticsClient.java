@@ -21,10 +21,19 @@ public class HttpAnalyticsClient implements AnalyticsClient {
 
     @Override
     public JsonNode runFullAnalysis(JsonNode request) {
+        return execute(request, "/analytics/v1/full-analysis", "analytics_full_response_v1");
+    }
+
+    @Override
+    public JsonNode runInsights(JsonNode request) {
+        return execute(request, "/analytics/v1/insights", "analytics_insights_response_v1");
+    }
+
+    private JsonNode execute(JsonNode request, String path, String responseSchemaVersion) {
         Objects.requireNonNull(request, "request");
         try {
             JsonNode response = webClient.post()
-                    .uri("/analytics/v1/full-analysis")
+                    .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .bodyValue(request)
@@ -44,19 +53,27 @@ public class HttpAnalyticsClient implements AnalyticsClient {
                         false
                 );
             }
-            if (!"analytics_full_response_v1".equals(response.path("schemaVersion").asText())) {
+            if (!responseSchemaVersion.equals(response.path("schemaVersion").asText())) {
                 throw new AnalyticsServiceException(
                         "Analytics response schemaVersion is unsupported",
                         false
                 );
             }
-            if (!"quant_v1".equals(response.path("calculationVersion").asText())) {
+            String expectedCalculationVersion = responseSchemaVersion
+                    .equals("analytics_insights_response_v1") ? "insights_v1" : "quant_v1";
+            if (!expectedCalculationVersion.equals(
+                    response.path("calculationVersion").asText()
+            )) {
                 throw new AnalyticsServiceException(
                         "Analytics response calculationVersion is unsupported",
                         false
                 );
             }
-            validatePhase4Shape(response);
+            if (responseSchemaVersion.equals("analytics_insights_response_v1")) {
+                validateInsightsShape(response);
+            } else {
+                validatePhase4Shape(response);
+            }
             return response;
         } catch (WebClientResponseException exception) {
             boolean retryable = exception.getStatusCode().is5xxServerError()
@@ -77,6 +94,18 @@ public class HttpAnalyticsClient implements AnalyticsClient {
                     "Analytics request exceeded the configured timeout",
                     true,
                     exception
+            );
+        }
+    }
+
+    private static void validateInsightsShape(JsonNode response) {
+        if (!response.path("pricePoints").isArray()
+                || !response.path("technicalSummary").isObject()
+                || !response.path("valuation").isObject()
+                || !response.path("valuation").path("sensitivity").path("rows").isArray()) {
+            throw new AnalyticsServiceException(
+                    "Analytics response is missing insight fields",
+                    false
             );
         }
     }

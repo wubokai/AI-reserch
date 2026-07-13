@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ai_quant_analytics.contracts import AnalysisResponse, FullAnalysisRequest
+from ai_quant_analytics.contracts import AnalysisResponse, FullAnalysisRequest, InsightsResponse
 from tests.factories import make_fundamentals, make_payload, make_scenario_input
 
 if TYPE_CHECKING:
@@ -183,6 +183,10 @@ def test_pydantic_envelopes_match_canonical_schema_fields() -> None:
         (
             AnalysisResponse,
             schema_directory / "full-analysis-response.schema.json",
+        ),
+        (
+            InsightsResponse,
+            schema_directory / "insights-response.schema.json",
         ),
     )
     for model, path in pairs:

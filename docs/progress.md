@@ -14,6 +14,7 @@
 | Phase 7：真实数据源 | 工程完成 | Tiingo 个人内部许可决策、adjusted EOD Adapter、Token/header、raw hash、缓存/熔断、REAL security master、归属和非 Demo lineage 已实现；首次真实网络终验等待三个外部 Key |
 | Phase 8：完整前端产品 | 完成 | 浅色金融数据终端、Dashboard、完整表单、进度控制、报告图表、Evidence/Data Quality、版本/历史、Provider 状态、导出反馈、响应校验、移动端均完成；Gate G8 通过 |
 | Phase 9：发布硬化 | 完成 | JSON 日志、Prometheus/SLO、输入/SSRF/XSS/IDOR/PDF、全局执行截止时间、供应链、最小权限容器、运行/扩展/保留文档和远端 G9 工程 Gate 均完成 |
+| Phase 10：研究解释增强 | 完成 | 专业价格/成交量/MA20/MA50 图、四档区间、市场隐含增长、5×5 敏感性矩阵与账户内同行比较已接入；全部金融计算下沉至 Analytics insights_v1 |
 
 ## 已验证
 
@@ -40,7 +41,8 @@
 - GitHub Actions：Phase 7 Provider Runtime 检查点的 Web/Playwright、Analytics、191+48 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29142394155`](https://github.com/wubokai/AI-reserch/actions/runs/29142394155)）；真实 Redis 命中/TTL、有界缓存、故障降级、可重试熔断与低基数指标均已验证；
 - GitHub Actions：Phase 7 来源归属检查点的 Web/Playwright、Analytics、193+48 个 API/Testcontainers、secret scan 与 Compose 全部通过（[run `29143064626`](https://github.com/wubokai/AI-reserch/actions/runs/29143064626)）；SEC/FRED 归属、许可策略、REAL/Mock 标识隔离和 Markdown/HTML/PDF 模板版本均已验证；
 - GitHub Actions：Phase 8 Gate G8 的 Web/Playwright、Analytics、API/Testcontainers、secret scan 与 Compose 全部通过（[run `29144269701`](https://github.com/wubokai/AI-reserch/actions/runs/29144269701)）；完整前端状态、操作、图表、Evidence/Data Quality、版本、历史、Provider、导出与移动端闭环均已验证；
-- 2026-07-12 完成 CoinGlass 风格浅色界面升级：统一白色/浅灰设计令牌，移除非必要卡片边框，以留白、柔和背景和轻量阴影建立层级；新增卡片/按钮/抽屉/进度/图表动效，并修正生产 Web 构建阶段的 REAL 数据模式标识；Web lint、TypeScript、39 个 Vitest、production build 与 5 个 Playwright 闭环测试通过；
+- 2026-07-12 完成 CoinGlass 风格浅色界面升级：统一白色/浅灰设计令牌，移除非必要卡片边框，以留白、柔和背景和轻量阴影建立层级；新增卡片/按钮/抽屉/进度/图表动效，并修正生产 Web 构建阶段的 REAL 数据模式标识；Web lint、TypeScript、40 个 Vitest、production build 与 5 个 Playwright 闭环测试通过；
+- 2026-07-12 完成研究解释增强：报告新增可切换 3M/1Y/3Y/MAX 的复权价格、成交量和 MA20/MA50 图；新增市场隐含收入增长、基准假设差异与 5×5 股价敏感性矩阵；同行比较使用业务类别清单且仅展示当前账户已完成报告，覆盖不足明确提示。数值统一由 Python Analytics `insights_v1` 从注册输入计算，Java/Web 不重复计算；
 - GitHub Actions：Phase 9 G9 工程 Gate 的 Web/Playwright、Analytics、208 个 API Surefire 与 Testcontainers、依赖审计、secret scan、最小权限容器策略、三应用镜像 Grype 扫描及五服务闭环全部通过（[run `29145630809`](https://github.com/wubokai/AI-reserch/actions/runs/29145630809)）；本文件所在最终证据提交的同名 `ci` check 作为连续第二次主干验证；
 - GitHub Actions：最终 DOCX 需求审计增量的 231 个 Surefire、50 个 Testcontainers、Flyway V9、Research-scoped Filing FTS、规范化行情/财务/宏观投影、Outbox relay、完整安全报告、镜像扫描与 Compose 闭环全部通过（[run `29147659738`](https://github.com/wubokai/AI-reserch/actions/runs/29147659738)）。
 - Phase 3–9 详细证据见 [`phase3-test-matrix.md`](./phase3-test-matrix.md)、[`phase4-test-matrix.md`](./phase4-test-matrix.md)、[`phase5-test-matrix.md`](./phase5-test-matrix.md)、[`phase6-test-matrix.md`](./phase6-test-matrix.md)、[`phase7-test-matrix.md`](./phase7-test-matrix.md)、[`phase8-test-matrix.md`](./phase8-test-matrix.md) 和 [`phase9-test-matrix.md`](./phase9-test-matrix.md)。

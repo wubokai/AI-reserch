@@ -71,6 +71,22 @@ class HttpAnalyticsClientTest {
     }
 
     @Test
+    void acceptsVersionedInsightResponse() throws Exception {
+        start("/analytics/v1/insights", exchange -> respond(exchange, 200, """
+                {"schemaVersion":"analytics_insights_response_v1",\
+                 "calculationVersion":"insights_v1",\
+                 "inputHash":"%s",\
+                 "pricePoints":[],\
+                 "rangeStats":[],\
+                 "technicalSummary":{},\
+                 "valuation":{"sensitivity":{"rows":[]}}}
+                """.formatted(INPUT_HASH)));
+
+        assertThat(client(Duration.ofSeconds(1)).runInsights(request())
+                .path("calculationVersion").asText()).isEqualTo("insights_v1");
+    }
+
+    @Test
     void rejectsMetricVersionDriftWithoutRetrying() throws Exception {
         start(exchange -> respond(exchange, 200, """
                 {"schemaVersion":"analytics_full_response_v1",\
@@ -107,8 +123,12 @@ class HttpAnalyticsClientTest {
     }
 
     private void start(ExchangeHandler handler) throws IOException {
+        start("/analytics/v1/full-analysis", handler);
+    }
+
+    private void start(String path, ExchangeHandler handler) throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext("/analytics/v1/full-analysis", exchange -> handler.handle(exchange));
+        server.createContext(path, exchange -> handler.handle(exchange));
         server.start();
     }
 

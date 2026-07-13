@@ -2,7 +2,7 @@
 
 面向美股与 ETF 的证据驱动研究平台。系统把研究问题拆解为取数、确定性计算、Evidence 注册、Claim 验证和报告发布步骤，目标是生成可复现、可追溯、会明确说明限制的研究辅助材料，而不是交易信号或收益承诺。
 
-> 当前进度：Phase 9 工程 Gate 已完成；Phase 7 已选择并接入仅限个人内部使用的 Tiingo EOD Adapter，
+> 当前进度：Phase 9 工程 Gate 已完成；报告已增加 Phase 10 价格技术图、估值敏感性和账户内同行比较；Phase 7 已选择并接入仅限个人内部使用的 Tiingo EOD Adapter，
 > LanYi 受限 Responses endpoint、生产 Bearer、R3 保留和私有云部署资产已完成。默认本地流程仍是 Mock；
 > 首次 REAL 在线验收等待旋转后的外部 Key、LanYi 准确计价和云账户。
 
@@ -21,9 +21,9 @@
 
 | 模块 | 技术 | 当前能力 |
 | --- | --- | --- |
-| `apps/web` | Next.js 16、React 19、TypeScript、Tailwind、TanStack Query、Zod、Recharts | Dashboard、完整表单、任务控制/耗时、报告图表、Evidence、Data Quality、版本/历史筛选、Provider 状态和有反馈的三格式导出 |
+| `apps/web` | Next.js 16、React 19、TypeScript、Tailwind、TanStack Query、Zod、Recharts | Dashboard、完整表单、任务控制/耗时、价格/技术图、估值敏感性、同行比较、Evidence、版本/历史、Provider 状态和三格式导出 |
 | `apps/api` | Java 21、Spring Boot 3.5、Spring Security Resource Server、JPA、Flyway、Redis、Resilience4j、Responses API | Research API、durable Worker、Mock/Tiingo/SEC/FRED Provider、确定性 Evidence/Claim 校验与修复、短时 Bearer、Mock/Real LLM 路由、预算与审计、报告原子发布/版本/导出 |
-| `apps/analytics` | Python 3.12、FastAPI、Pydantic、Ruff、mypy、pytest | 版本化无状态分析 API：73 个收益/风险/技术/基本面/估值/情景 Metric 与可解释 Trend |
+| `apps/analytics` | Python 3.12、FastAPI、Pydantic、Ruff、mypy、pytest | 版本化无状态分析 API：73 个 Metric、可解释 Trend，以及 insights_v1 均线/区间/反推增长/敏感性计算 |
 | 基础设施 | PostgreSQL 17、Redis 7.4、Prometheus、Docker Compose、GitHub Actions | JSON 日志、SLO/告警、供应链扫描、最小权限容器和五服务闭环 CI |
 
 完整系统设计见[架构基线](docs/architecture.md)，机器可读接口见 [OpenAPI 3.1](docs/openapi.yaml)，分阶段 Gate 见[实施计划](docs/implementation-plan.md)。

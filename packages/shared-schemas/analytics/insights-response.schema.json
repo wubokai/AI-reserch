@@ -1,0 +1,442 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.local.ai-quant-research-assistant.dev/analytics/insights-response-v1.json",
+  "$defs": {
+    "InsightPricePoint": {
+      "additionalProperties": false,
+      "description": "One chart overlay point calculated from a registered price series.",
+      "properties": {
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "ma20": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ma20"
+        },
+        "ma50": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ma50"
+        }
+      },
+      "required": [
+        "date",
+        "ma20",
+        "ma50"
+      ],
+      "title": "InsightPricePoint",
+      "type": "object"
+    },
+    "InsightRangeStat": {
+      "additionalProperties": false,
+      "description": "Precalculated statistics for one supported chart range.",
+      "properties": {
+        "range": {
+          "enum": [
+            "3M",
+            "1Y",
+            "3Y",
+            "MAX"
+          ],
+          "title": "Range",
+          "type": "string"
+        },
+        "periodStart": {
+          "format": "date",
+          "title": "Periodstart",
+          "type": "string"
+        },
+        "periodEnd": {
+          "format": "date",
+          "title": "Periodend",
+          "type": "string"
+        },
+        "firstPrice": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Firstprice",
+          "type": "string"
+        },
+        "lastPrice": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Lastprice",
+          "type": "string"
+        },
+        "periodReturn": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Periodreturn",
+          "type": "string"
+        },
+        "high": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "High",
+          "type": "string"
+        },
+        "low": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Low",
+          "type": "string"
+        },
+        "averageVolume": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Averagevolume",
+          "type": "string"
+        }
+      },
+      "required": [
+        "range",
+        "periodStart",
+        "periodEnd",
+        "firstPrice",
+        "lastPrice",
+        "periodReturn",
+        "high",
+        "low",
+        "averageVolume"
+      ],
+      "title": "InsightRangeStat",
+      "type": "object"
+    },
+    "InsightSensitivityMatrix": {
+      "additionalProperties": false,
+      "description": "Five-by-five deterministic price sensitivity matrix.",
+      "properties": {
+        "revenueGrowthRates": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "title": "Revenuegrowthrates",
+          "type": "array"
+        },
+        "valuationMultiples": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "title": "Valuationmultiples",
+          "type": "array"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/InsightSensitivityRow"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "revenueGrowthRates",
+        "valuationMultiples",
+        "rows"
+      ],
+      "title": "InsightSensitivityMatrix",
+      "type": "object"
+    },
+    "InsightSensitivityRow": {
+      "additionalProperties": false,
+      "description": "One deterministic revenue-growth row in the valuation grid.",
+      "properties": {
+        "revenueGrowthRate": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Revenuegrowthrate",
+          "type": "string"
+        },
+        "impliedPrices": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "title": "Impliedprices",
+          "type": "array"
+        },
+        "upsideDownside": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "title": "Upsidedownside",
+          "type": "array"
+        }
+      },
+      "required": [
+        "revenueGrowthRate",
+        "impliedPrices",
+        "upsideDownside"
+      ],
+      "title": "InsightSensitivityRow",
+      "type": "object"
+    },
+    "InsightTechnicalSummary": {
+      "additionalProperties": false,
+      "description": "Explainable current-price relationship to chart moving averages.",
+      "properties": {
+        "currentPrice": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Currentprice",
+          "type": "string"
+        },
+        "priceVsMa20": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pricevsma20"
+        },
+        "priceVsMa50": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pricevsma50"
+        },
+        "signal": {
+          "enum": [
+            "ABOVE_BOTH",
+            "BELOW_BOTH",
+            "MIXED",
+            "INSUFFICIENT_HISTORY"
+          ],
+          "title": "Signal",
+          "type": "string"
+        }
+      },
+      "required": [
+        "currentPrice",
+        "priceVsMa20",
+        "priceVsMa50",
+        "signal"
+      ],
+      "title": "InsightTechnicalSummary",
+      "type": "object"
+    },
+    "InsightValuation": {
+      "additionalProperties": false,
+      "description": "Reverse-implied market expectation and scenario sensitivity output.",
+      "properties": {
+        "currentPrice": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Currentprice",
+          "type": "string"
+        },
+        "weightedImpliedPrice": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Weightedimpliedprice",
+          "type": "string"
+        },
+        "premiumDiscountToWeightedValue": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Premiumdiscounttoweightedvalue",
+          "type": "string"
+        },
+        "marketImpliedRevenueGrowth": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Marketimpliedrevenuegrowth"
+        },
+        "marketImpliedGrowthGap": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Marketimpliedgrowthgap"
+        },
+        "valuationMethod": {
+          "enum": [
+            "EV_EBITDA",
+            "EV_REVENUE"
+          ],
+          "title": "Valuationmethod",
+          "type": "string"
+        },
+        "baseRevenueGrowth": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Baserevenuegrowth",
+          "type": "string"
+        },
+        "baseEbitdaMargin": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Baseebitdamargin",
+          "type": "string"
+        },
+        "baseValuationMultiple": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
+          "title": "Basevaluationmultiple",
+          "type": "string"
+        },
+        "sensitivity": {
+          "$ref": "#/$defs/InsightSensitivityMatrix"
+        }
+      },
+      "required": [
+        "currentPrice",
+        "weightedImpliedPrice",
+        "premiumDiscountToWeightedValue",
+        "marketImpliedRevenueGrowth",
+        "marketImpliedGrowthGap",
+        "valuationMethod",
+        "baseRevenueGrowth",
+        "baseEbitdaMargin",
+        "baseValuationMultiple",
+        "sensitivity"
+      ],
+      "title": "InsightValuation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Versioned deterministic chart and valuation insight response.",
+  "properties": {
+    "schemaVersion": {
+      "const": "analytics_insights_response_v1",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "calculationVersion": {
+      "const": "insights_v1",
+      "title": "Calculationversion",
+      "type": "string"
+    },
+    "inputHash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Inputhash",
+      "type": "string"
+    },
+    "symbol": {
+      "pattern": "^[A-Z0-9.\\-]{1,12}$",
+      "title": "Symbol",
+      "type": "string"
+    },
+    "pricePoints": {
+      "items": {
+        "$ref": "#/$defs/InsightPricePoint"
+      },
+      "maxItems": 5000,
+      "title": "Pricepoints",
+      "type": "array"
+    },
+    "rangeStats": {
+      "items": {
+        "$ref": "#/$defs/InsightRangeStat"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Rangestats",
+      "type": "array"
+    },
+    "technicalSummary": {
+      "$ref": "#/$defs/InsightTechnicalSummary"
+    },
+    "valuation": {
+      "$ref": "#/$defs/InsightValuation"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "calculationVersion",
+    "inputHash",
+    "symbol",
+    "pricePoints",
+    "rangeStats",
+    "technicalSummary",
+    "valuation"
+  ],
+  "title": "InsightsResponse",
+  "type": "object"
+}

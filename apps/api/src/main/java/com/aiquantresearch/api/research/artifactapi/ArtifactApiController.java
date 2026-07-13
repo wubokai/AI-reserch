@@ -30,17 +30,32 @@ public class ArtifactApiController {
     private static final String SECURITY_TYPE = "COMMON_STOCK|ETF";
 
     private final ArtifactQueryService queryService;
+    private final ResearchInsightsService insightsService;
     private final AuthenticatedOwnerService authenticatedOwnerService;
     private final ReportExportService exportService;
 
     public ArtifactApiController(
             ArtifactQueryService queryService,
+            ResearchInsightsService insightsService,
             AuthenticatedOwnerService authenticatedOwnerService,
             ReportExportService exportService
     ) {
         this.queryService = queryService;
+        this.insightsService = insightsService;
         this.authenticatedOwnerService = authenticatedOwnerService;
         this.exportService = exportService;
+    }
+
+    @GetMapping("/research/{researchId}/insights")
+    public ResponseEntity<ResearchInsightsResponse> insights(
+            @PathVariable UUID researchId,
+            @RequestParam @Min(1) int reportVersion,
+            Authentication authentication
+    ) {
+        UUID ownerId = authenticatedOwnerService.requireActive(authentication).id();
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noCache().cachePrivate())
+                .body(insightsService.insights(ownerId, researchId, reportVersion));
     }
 
     @GetMapping("/securities/search")

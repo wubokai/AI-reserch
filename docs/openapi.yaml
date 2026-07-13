@@ -507,6 +507,43 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/research/{researchId}/insights:
+    parameters:
+      - $ref: '#/components/parameters/ResearchId'
+      - name: reportVersion
+        in: query
+        required: true
+        description: Published report version whose immutable inputs must be used
+        schema:
+          type: integer
+          minimum: 1
+      - $ref: '#/components/parameters/XRequestId'
+    get:
+      tags: [Reports]
+      operationId: getResearchInsights
+      summary: Get deterministic price, valuation, and peer views
+      description: |
+        Returns owner-scoped chart overlays and valuation sensitivity calculated by
+        Analytics insights_v1 from the selected report's registered inputs, plus a
+        curated peer comparison limited to the owner's completed reports.
+      responses:
+        '200':
+          description: Deterministic research insight views
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchInsights'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
   /api/v1/research/{researchId}/export:
     parameters:
       - $ref: '#/components/parameters/ResearchId'
@@ -1868,6 +1905,175 @@ components:
             $ref: '#/components/schemas/ReportVersionSummary'
         page:
           $ref: '#/components/schemas/PageMetadata'
+
+    ResearchInsights:
+      type: object
+      additionalProperties: false
+      required: [researchId, reportVersion, dataMode, priceChart, valuation, peers]
+      properties:
+        researchId:
+          type: string
+          format: uuid
+        reportVersion:
+          type: integer
+          minimum: 1
+        dataMode:
+          $ref: '#/components/schemas/DataMode'
+        priceChart:
+          $ref: '#/components/schemas/ResearchPriceChart'
+        valuation:
+          $ref: '#/components/schemas/ResearchValuationInsights'
+        peers:
+          $ref: '#/components/schemas/ResearchPeerComparison'
+
+    ResearchPriceChart:
+      type: object
+      additionalProperties: false
+      required: [symbol, currency, provider, asOfDate, retrievedAt, methodology, points, rangeStats, technicalSummary]
+      properties:
+        symbol:
+          type: string
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        provider:
+          type: [string, 'null']
+        asOfDate:
+          type: [string, 'null']
+          format: date
+        retrievedAt:
+          type: [string, 'null']
+          format: date-time
+        methodology:
+          type: string
+        points:
+          type: array
+          maxItems: 5000
+          items:
+            $ref: '#/components/schemas/ResearchPricePoint'
+        rangeStats:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/ResearchPriceRangeStats'
+        technicalSummary:
+          $ref: '#/components/schemas/ResearchTechnicalSummary'
+
+    ResearchPricePoint:
+      type: object
+      additionalProperties: false
+      required: [date, open, high, low, close, adjustedClose, volume, ma20, ma50]
+      properties:
+        date: {type: string, format: date}
+        open: {type: number}
+        high: {type: number}
+        low: {type: number}
+        close: {type: number}
+        adjustedClose: {type: number}
+        volume: {type: integer, minimum: 0}
+        ma20: {type: [number, 'null']}
+        ma50: {type: [number, 'null']}
+
+    ResearchPriceRangeStats:
+      type: object
+      additionalProperties: false
+      required: [range, periodStart, periodEnd, firstPrice, lastPrice, periodReturn, high, low, averageVolume]
+      properties:
+        range: {type: string, enum: [3M, 1Y, 3Y, MAX]}
+        periodStart: {type: string, format: date}
+        periodEnd: {type: string, format: date}
+        firstPrice: {type: number}
+        lastPrice: {type: number}
+        periodReturn: {type: number}
+        high: {type: number}
+        low: {type: number}
+        averageVolume: {type: number, minimum: 0}
+
+    ResearchTechnicalSummary:
+      type: object
+      additionalProperties: false
+      required: [currentPrice, priceVsMa20, priceVsMa50, signal]
+      properties:
+        currentPrice: {type: [number, 'null']}
+        priceVsMa20: {type: [number, 'null']}
+        priceVsMa50: {type: [number, 'null']}
+        signal: {type: string}
+
+    ResearchValuationInsights:
+      type: object
+      additionalProperties: false
+      required: [available, unavailableReason, currency, currentPrice, weightedImpliedPrice, premiumDiscountToWeightedValue, marketImpliedRevenueGrowth, marketImpliedGrowthGap, valuationMethod, baseRevenueGrowth, baseEbitdaMargin, baseValuationMultiple, formula, caveats, sensitivity]
+      properties:
+        available: {type: boolean}
+        unavailableReason: {type: [string, 'null']}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        currentPrice: {type: [number, 'null']}
+        weightedImpliedPrice: {type: [number, 'null']}
+        premiumDiscountToWeightedValue: {type: [number, 'null']}
+        marketImpliedRevenueGrowth: {type: [number, 'null']}
+        marketImpliedGrowthGap: {type: [number, 'null']}
+        valuationMethod: {type: [string, 'null'], enum: [EV_EBITDA, EV_REVENUE, null]}
+        baseRevenueGrowth: {type: [number, 'null']}
+        baseEbitdaMargin: {type: [number, 'null']}
+        baseValuationMultiple: {type: [number, 'null']}
+        formula: {type: string}
+        caveats: {type: array, items: {type: string}}
+        sensitivity:
+          oneOf:
+            - $ref: '#/components/schemas/ResearchSensitivityMatrix'
+            - type: 'null'
+
+    ResearchSensitivityMatrix:
+      type: object
+      additionalProperties: false
+      required: [revenueGrowthRates, valuationMultiples, rows]
+      properties:
+        revenueGrowthRates: {type: array, minItems: 5, maxItems: 5, items: {type: number}}
+        valuationMultiples: {type: array, minItems: 5, maxItems: 5, items: {type: number}}
+        rows:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required: [revenueGrowthRate, impliedPrices, upsideDownside]
+            properties:
+              revenueGrowthRate: {type: number}
+              impliedPrices: {type: array, minItems: 5, maxItems: 5, items: {type: number}}
+              upsideDownside: {type: array, minItems: 5, maxItems: 5, items: {type: number}}
+
+    ResearchPeerComparison:
+      type: object
+      additionalProperties: false
+      required: [available, groupKey, groupLabel, methodology, availableCount, configuredCount, coverageMessage, rows]
+      properties:
+        available: {type: boolean}
+        groupKey: {type: [string, 'null']}
+        groupLabel: {type: [string, 'null']}
+        methodology: {type: string}
+        availableCount: {type: integer, minimum: 0}
+        configuredCount: {type: integer, minimum: 0}
+        coverageMessage: {type: string}
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [symbol, researchId, reportVersion, target, currentPrice, weightedImpliedPrice, baseCaseUpside, revenueCagr, operatingMargin, dataQuality, asOfDate]
+            properties:
+              symbol: {type: string}
+              researchId: {type: string, format: uuid}
+              reportVersion: {type: integer, minimum: 1}
+              target: {type: boolean}
+              currentPrice: {type: [number, 'null']}
+              weightedImpliedPrice: {type: [number, 'null']}
+              baseCaseUpside: {type: [number, 'null']}
+              revenueCagr: {type: [number, 'null']}
+              operatingMargin: {type: [number, 'null']}
+              dataQuality: {type: number, minimum: 0, maximum: 1}
+              asOfDate: {type: string, format: date}
 
     Security:
       type: object

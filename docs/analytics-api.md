@@ -18,6 +18,7 @@ Analytics 是 Java API 调用的内部确定性计算服务，默认地址 `http
 | POST | `/analytics/v1/valuation` | 可用估值指标 | Phase 4 |
 | POST | `/analytics/v1/scenarios` | Bull/Base/Bear 情景引擎 | Phase 3-4 |
 | POST | `/analytics/v1/full-analysis` | 组合上述模块、复用清洗结果 | Phase 3-4 |
+| POST | `/analytics/v1/insights` | MA20/MA50、固定区间统计、市场隐含增长与 5×5 估值敏感性 | Phase 10 |
 
 除 health 外，所有 POST 使用相同 envelope，并由端点只执行对应模块。Java 设置 `X-Request-Id`、`X-Research-Id` 和内部服务认证头；不得把用户 Bearer Token 转发给 Analytics。
 
@@ -70,6 +71,12 @@ warnings[]
 报告必需的核心收益/风险或三情景指标缺失时把量化步骤标记为 partial。Forward P/E 等受控缺失
 不能把原有 Mock 研究闭环误判为降级。
 
+`insights` 复用同一个 `analytics_full_request_v1` 输入 envelope，但返回独立的
+`analytics_insights_response_v1 / insights_v1` 契约。输出包括：逐日 MA20/MA50；3M、1Y、3Y、MAX
+四组预计算区间收益/高低价/平均成交量；按基准利润率和倍数反推的市场隐含收入增长；以及从请求中
+BULL/BASE/BEAR 增长率和倍数派生的 5×5 网格。Java 和 Web 只传递、选择和格式化这些结果，不重复
+金融计算。机器契约见 `insights-response.schema.json`。
+
 ## 5. 错误与 HTTP
 
 - `200`：请求格式和核心输入合法；单个指标不可用通过 Metric status/warning 表达。
@@ -114,3 +121,4 @@ Java consumer 与 Python provider 共享 JSON fixture，至少覆盖：
 6. schemaVersion/calculationVersion 不兼容时快速失败。
 7. Metric 自身的 calculationVersion、sampleSize、warnings 与 Phase 4 `trend` 结构；
 8. 可选 `NOT_AVAILABLE` 不触发研究降级，报告必需指标缺失则触发 partial。
+9. `insights_v1` 的移动均线、固定区间统计、反推增长和敏感性矩阵与 Java consumer 一致。

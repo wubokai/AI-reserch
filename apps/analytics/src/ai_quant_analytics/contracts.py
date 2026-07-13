@@ -18,6 +18,10 @@ from pydantic import (
 CALCULATION_VERSION: Literal["quant_v1"] = "quant_v1"
 REQUEST_SCHEMA_VERSION: Literal["analytics_full_request_v1"] = "analytics_full_request_v1"
 RESPONSE_SCHEMA_VERSION: Literal["analytics_full_response_v1"] = "analytics_full_response_v1"
+INSIGHTS_RESPONSE_SCHEMA_VERSION: Literal["analytics_insights_response_v1"] = (
+    "analytics_insights_response_v1"
+)
+INSIGHTS_CALCULATION_VERSION: Literal["insights_v1"] = "insights_v1"
 
 DecimalString = Annotated[
     str,
@@ -265,6 +269,110 @@ class AnalysisResponse(StrictApiModel):
     metrics: tuple[Metric, ...] = Field(max_length=300)
     trend: TrendResult | None
     warnings: tuple[AnalyticsWarning, ...] = Field(max_length=100)
+
+
+class InsightPricePoint(StrictApiModel):
+    """One chart overlay point calculated from a registered price series."""
+
+    date: date
+    ma20: DecimalString | None
+    ma50: DecimalString | None
+
+
+class InsightTechnicalSummary(StrictApiModel):
+    """Explainable current-price relationship to chart moving averages."""
+
+    current_price: DecimalString = Field(alias="currentPrice")
+    price_vs_ma20: DecimalString | None = Field(alias="priceVsMa20")
+    price_vs_ma50: DecimalString | None = Field(alias="priceVsMa50")
+    signal: Literal[
+        "ABOVE_BOTH",
+        "BELOW_BOTH",
+        "MIXED",
+        "INSUFFICIENT_HISTORY",
+    ]
+
+
+class InsightSensitivityRow(StrictApiModel):
+    """One deterministic revenue-growth row in the valuation grid."""
+
+    revenue_growth_rate: DecimalString = Field(alias="revenueGrowthRate")
+    implied_prices: tuple[DecimalString, ...] = Field(
+        alias="impliedPrices",
+        min_length=5,
+        max_length=5,
+    )
+    upside_downside: tuple[DecimalString, ...] = Field(
+        alias="upsideDownside",
+        min_length=5,
+        max_length=5,
+    )
+
+
+class InsightRangeStat(StrictApiModel):
+    """Precalculated statistics for one supported chart range."""
+
+    range: Literal["3M", "1Y", "3Y", "MAX"]
+    period_start: date = Field(alias="periodStart")
+    period_end: date = Field(alias="periodEnd")
+    first_price: DecimalString = Field(alias="firstPrice")
+    last_price: DecimalString = Field(alias="lastPrice")
+    period_return: DecimalString = Field(alias="periodReturn")
+    high: DecimalString
+    low: DecimalString
+    average_volume: DecimalString = Field(alias="averageVolume")
+
+
+class InsightSensitivityMatrix(StrictApiModel):
+    """Five-by-five deterministic price sensitivity matrix."""
+
+    revenue_growth_rates: tuple[DecimalString, ...] = Field(
+        alias="revenueGrowthRates",
+        min_length=5,
+        max_length=5,
+    )
+    valuation_multiples: tuple[DecimalString, ...] = Field(
+        alias="valuationMultiples",
+        min_length=5,
+        max_length=5,
+    )
+    rows: tuple[InsightSensitivityRow, ...] = Field(min_length=5, max_length=5)
+
+
+class InsightValuation(StrictApiModel):
+    """Reverse-implied market expectation and scenario sensitivity output."""
+
+    current_price: DecimalString = Field(alias="currentPrice")
+    weighted_implied_price: DecimalString = Field(alias="weightedImpliedPrice")
+    premium_discount_to_weighted_value: DecimalString = Field(
+        alias="premiumDiscountToWeightedValue",
+    )
+    market_implied_revenue_growth: DecimalString | None = Field(
+        alias="marketImpliedRevenueGrowth",
+    )
+    market_implied_growth_gap: DecimalString | None = Field(alias="marketImpliedGrowthGap")
+    valuation_method: Literal["EV_EBITDA", "EV_REVENUE"] = Field(alias="valuationMethod")
+    base_revenue_growth: DecimalString = Field(alias="baseRevenueGrowth")
+    base_ebitda_margin: DecimalString = Field(alias="baseEbitdaMargin")
+    base_valuation_multiple: DecimalString = Field(alias="baseValuationMultiple")
+    sensitivity: InsightSensitivityMatrix
+
+
+class InsightsResponse(StrictApiModel):
+    """Versioned deterministic chart and valuation insight response."""
+
+    schema_version: Literal["analytics_insights_response_v1"] = Field(alias="schemaVersion")
+    calculation_version: Literal["insights_v1"] = Field(alias="calculationVersion")
+    input_hash: Sha256 = Field(alias="inputHash")
+    symbol: Symbol
+    price_points: tuple[InsightPricePoint, ...] = Field(alias="pricePoints", max_length=5000)
+    range_stats: tuple[InsightRangeStat, ...] = Field(
+        alias="rangeStats",
+        min_length=4,
+        max_length=4,
+    )
+    technical_summary: InsightTechnicalSummary = Field(alias="technicalSummary")
+    valuation: InsightValuation
 
 
 class AnalyticsErrorResponse(StrictApiModel):

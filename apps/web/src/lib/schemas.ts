@@ -519,6 +519,97 @@ export const evidenceSearchResponseSchema = z.object({
   dataMode: dataModeSchema,
 });
 
+const nullableDecimalSchema = decimalValueSchema.nullable();
+
+export const researchInsightsSchema = z.object({
+  researchId: z.uuid(),
+  reportVersion: z.number().int().positive(),
+  dataMode: dataModeSchema,
+  priceChart: z.object({
+    symbol: z.string().min(1),
+    currency: z.string().length(3),
+    provider: z.string().nullable(),
+    asOfDate: z.iso.date().nullable(),
+    retrievedAt: z.iso.datetime().nullable(),
+    methodology: z.string().min(1),
+    points: z.array(z.object({
+      date: z.iso.date(),
+      open: decimalValueSchema,
+      high: decimalValueSchema,
+      low: decimalValueSchema,
+      close: decimalValueSchema,
+      adjustedClose: decimalValueSchema,
+      volume: z.number().int().nonnegative(),
+      ma20: nullableDecimalSchema,
+      ma50: nullableDecimalSchema,
+    })),
+    rangeStats: z.array(z.object({
+      range: z.enum(["3M", "1Y", "3Y", "MAX"]),
+      periodStart: z.iso.date(),
+      periodEnd: z.iso.date(),
+      firstPrice: decimalValueSchema,
+      lastPrice: decimalValueSchema,
+      periodReturn: decimalValueSchema,
+      high: decimalValueSchema,
+      low: decimalValueSchema,
+      averageVolume: decimalValueSchema,
+    })).length(4),
+    technicalSummary: z.object({
+      currentPrice: nullableDecimalSchema,
+      priceVsMa20: nullableDecimalSchema,
+      priceVsMa50: nullableDecimalSchema,
+      signal: z.string(),
+    }),
+  }),
+  valuation: z.object({
+    available: z.boolean(),
+    unavailableReason: z.string().nullable(),
+    currency: z.string().length(3),
+    currentPrice: nullableDecimalSchema,
+    weightedImpliedPrice: nullableDecimalSchema,
+    premiumDiscountToWeightedValue: nullableDecimalSchema,
+    marketImpliedRevenueGrowth: nullableDecimalSchema,
+    marketImpliedGrowthGap: nullableDecimalSchema,
+    valuationMethod: z.enum(["EV_EBITDA", "EV_REVENUE"]).nullable(),
+    baseRevenueGrowth: nullableDecimalSchema,
+    baseEbitdaMargin: nullableDecimalSchema,
+    baseValuationMultiple: nullableDecimalSchema,
+    formula: z.string(),
+    caveats: z.array(z.string()),
+    sensitivity: z.object({
+      revenueGrowthRates: z.array(decimalValueSchema).length(5),
+      valuationMultiples: z.array(decimalValueSchema).length(5),
+      rows: z.array(z.object({
+        revenueGrowthRate: decimalValueSchema,
+        impliedPrices: z.array(decimalValueSchema).length(5),
+        upsideDownside: z.array(decimalValueSchema).length(5),
+      })).length(5),
+    }).nullable(),
+  }),
+  peers: z.object({
+    available: z.boolean(),
+    groupKey: z.string().nullable(),
+    groupLabel: z.string().nullable(),
+    methodology: z.string(),
+    availableCount: z.number().int().nonnegative(),
+    configuredCount: z.number().int().nonnegative(),
+    coverageMessage: z.string(),
+    rows: z.array(z.object({
+      symbol: z.string(),
+      researchId: z.uuid(),
+      reportVersion: z.number().int().positive(),
+      target: z.boolean(),
+      currentPrice: nullableDecimalSchema,
+      weightedImpliedPrice: nullableDecimalSchema,
+      baseCaseUpside: nullableDecimalSchema,
+      revenueCagr: nullableDecimalSchema,
+      operatingMargin: nullableDecimalSchema,
+      dataQuality: z.number().min(0).max(1),
+      asOfDate: z.iso.date(),
+    })),
+  }),
+});
+
 export type ResearchStatus = z.infer<typeof researchStatusSchema>;
 export type ResearchAccepted = z.infer<typeof researchAcceptedSchema>;
 export type ResearchItem = z.infer<typeof researchItemSchema>;
@@ -535,3 +626,4 @@ export type CanonicalResearchReport = z.infer<
 export type ReportVersionResponse = z.infer<
   typeof reportVersionResponseSchema
 >;
+export type ResearchInsights = z.infer<typeof researchInsightsSchema>;

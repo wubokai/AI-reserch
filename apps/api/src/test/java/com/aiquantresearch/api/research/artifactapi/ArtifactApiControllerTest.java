@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,9 @@ class ArtifactApiControllerTest {
 
     @MockitoBean
     private ArtifactQueryService queryService;
+
+    @MockitoBean
+    private ResearchInsightsService insightsService;
 
     @MockitoBean
     private ReportExportService exportService;
@@ -158,6 +162,42 @@ class ArtifactApiControllerTest {
                 .andExpect(jsonPath("$.validationStatus").value("PASSED_WITH_WARNINGS"))
                 .andExpect(jsonPath("$.report.schemaVersion").value("research_report_v1"))
                 .andExpect(jsonPath("$.report.title").value("MU report"));
+    }
+
+    @Test
+    @WithMockUser(username = ALICE, roles = "USER")
+    void insightsUsesAuthenticatedOwnerAndRequestedReportVersion() throws Exception {
+        var response = new ResearchInsightsResponse(
+                RESEARCH_ID,
+                2,
+                DataMode.REAL,
+                new ResearchInsightsResponse.PriceChart(
+                        "RKLB", "USD", "TIINGO_EOD", LocalDate.parse("2026-07-10"),
+                        NOW, "SMA methodology", List.of(), List.of(),
+                        new ResearchInsightsResponse.TechnicalSummary(
+                                new BigDecimal("52.25"), null, null, "历史长度不足"
+                        )
+                ),
+                new ResearchInsightsResponse.ValuationInsights(
+                        false, "missing fundamentals", "USD", new BigDecimal("52.25"),
+                        null, null, null, null, null, null, null, null,
+                        "formula", List.of(), null
+                ),
+                new ResearchInsightsResponse.PeerComparison(
+                        true, "SPACE_AEROSPACE", "商业航天与卫星", "curated",
+                        1, 7, "covered 1/7", List.of()
+                )
+        );
+        when(insightsService.insights(ALICE_ID, RESEARCH_ID, 2)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/research/{researchId}/insights", RESEARCH_ID)
+                        .param("reportVersion", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportVersion").value(2))
+                .andExpect(jsonPath("$.priceChart.symbol").value("RKLB"))
+                .andExpect(jsonPath("$.peers.groupKey").value("SPACE_AEROSPACE"));
+
+        verify(insightsService).insights(ALICE_ID, RESEARCH_ID, 2);
     }
 
     @Test

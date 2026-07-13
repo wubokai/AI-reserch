@@ -15,6 +15,7 @@ from ai_quant_analytics.contracts import (
     AnalysisResponse,
     AnalysisStatus,
     FullAnalysisRequest,
+    InsightsResponse,
     Metric,
     TrendResult,
 )
@@ -27,6 +28,7 @@ from ai_quant_analytics.fundamentals import (
     calculate_fundamental_metrics,
     calculate_valuation_metrics,
 )
+from ai_quant_analytics.insights import calculate_insights
 from ai_quant_analytics.normalization import clean_price_series, decimal_from_string
 from ai_quant_analytics.scenarios import calculate_scenario_metrics
 from ai_quant_analytics.serialization import sort_warnings
@@ -215,3 +217,13 @@ def analyze_scenarios(request: FullAnalysisRequest) -> AnalysisResponse:
 def analyze_full(request: FullAnalysisRequest) -> AnalysisResponse:
     """Calculate all deterministic quant_v1 modules with one cleaning pass."""
     return analyze(request, _FULL_ANALYSIS_ORDER)
+
+
+@router.post(
+    "/insights",
+    response_model=InsightsResponse,
+    summary="Calculate chart overlays and valuation explanation",
+)
+def analyze_research_insights(request: FullAnalysisRequest) -> InsightsResponse:
+    """Calculate deterministic chart and reverse-implied valuation outputs."""
+    return calculate_insights(request)
