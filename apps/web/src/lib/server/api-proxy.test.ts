@@ -106,6 +106,26 @@ describe("research BFF", () => {
     expect(response.headers.get("x-report-version")).toBe("1");
   });
 
+  it("allows the owner-scoped research insights route", async () => {
+    process.env.API_DEMO_USERNAME = "demo";
+    process.env.API_DEMO_PASSWORD = "password";
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json({
+      reportVersion: 1,
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const id = "11111111-1111-4111-8111-111111111111";
+
+    const response = await proxyResearchRequest(
+      new Request(`http://web.local/api/research/${id}/insights?reportVersion=1`),
+      [id, "insights"],
+    );
+
+    expect(response.status).toBe(200);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      `http://127.0.0.1:8080/api/v1/research/${id}/insights?reportVersion=1`,
+    );
+  });
+
   it("fails closed when server credentials are missing", async () => {
     const response = await proxyResearchRequest(new Request("http://web.local/api/research"), []);
     expect(response.status).toBe(503);

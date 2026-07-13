@@ -32,7 +32,7 @@ function allowed(method: string, segments: readonly string[]): boolean {
   const action = segments[1];
   if (segments.length === 2) {
     return method === "GET"
-      ? ["status", "evidence", "reports", "export"].includes(action ?? "")
+      ? ["status", "evidence", "reports", "export", "insights"].includes(action ?? "")
       : method === "POST" && ["cancel", "retry"].includes(action ?? "");
   }
   return (
