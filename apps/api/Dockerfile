@@ -9,7 +9,7 @@ COPY packages/shared-schemas/llm /repo/packages/shared-schemas/llm
 RUN mvn --batch-mode --no-transfer-progress -DskipTests package \
     && cp target/api-*.jar /repo/app.jar
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 RUN apk upgrade --no-cache \
     && apk add --no-cache font-noto-cjk
