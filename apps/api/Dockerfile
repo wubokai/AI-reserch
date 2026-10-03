@@ -1,4 +1,4 @@
-FROM maven:3.9.11-eclipse-temurin-21-alpine AS build
+FROM maven:3-eclipse-temurin-24-alpine AS build
 
 WORKDIR /repo/apps/api
 COPY apps/api/pom.xml ./
